@@ -1,0 +1,6 @@
+{
+  "permissions": {
+    "deny": ["Read(./.env)", "Read(./.env.*)", "Read(**/.env)", "Read(**/.env.*)", "Read(./.identity.local.env)"],
+    "ask":  ["Bash(rm *)", "Bash(git push*)", "Bash(git reset --hard*)", "Bash(git clean*)"]
+  }
+}

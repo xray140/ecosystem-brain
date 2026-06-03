@@ -1,0 +1,27 @@
+# Secrets
+.env
+.env.*
+.identity.local.env
+*.local.env
+
+# Memory vault generated files
+memory/.search-index.db
+memory/index.json
+memory/sessions/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
