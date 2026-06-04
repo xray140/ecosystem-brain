@@ -1,6 +1,7 @@
 # Secrets
 .env
 .env.*
+!.env.example
 .identity.local.env
 *.local.env
 
