@@ -2,35 +2,59 @@
 
 Bundles the claude-unified-ecosystem control tower as one installable unit: delegation subagents, secrets-safe git hooks, project scaffolding, and an Obsidian-style memory with local semantic search.
 
-## Install
+## Install (actual)
 
-**Local (development):**
+Claude Code loads commands from `~/.claude/commands/` — run this once after cloning:
+
 ```bash
-claude --plugin-dir /path/to/ecosystem-brain
+mkdir -p ~/.claude/commands/ecosystem-brain
+cp /d/Claude_projects/ecosystem-brain/commands/*.md ~/.claude/commands/ecosystem-brain/
 ```
 
-**Via marketplace (this repo self-references):**
+Then restart Claude Code. Commands are immediately available in every session.
+
+**MCP servers** (filesystem, git, github) are configured in `.mcp.json` — Claude Code picks these up automatically when you open the project folder.
+
+**Hooks** (`hooks/hooks.json`) apply when this folder is the active project.
+
+**GITHUB_TOKEN**: set once as a user environment variable so `.mcp.json` can resolve it:
+```bash
+# Windows (PowerShell)
+[Environment]::SetEnvironmentVariable("GITHUB_TOKEN", "ghp_...", "User")
 ```
-/plugin marketplace add <your-git-remote-or-path>
-/plugin install ecosystem-brain@ecosystem-brain-marketplace
+
+## After editing commands
+
+When you change a file in `commands/`, re-sync to the global commands directory:
+```bash
+cp /d/Claude_projects/ecosystem-brain/commands/*.md ~/.claude/commands/ecosystem-brain/
 ```
-Run `/reload-plugins` after changing hooks, `.mcp.json`, or agents.
+Then restart Claude Code to pick up the changes.
+
+## Commands
+
+| Command | What it does |
+|---------|-------------|
+| `/ecosystem-brain:scaffold <type> <name>` | Scaffold a new project from a template |
+| `/ecosystem-brain:health-check` | Secrets hygiene + tool versions + active projects |
+| `/ecosystem-brain:context-sync` | Brief current session on ecosystem conventions |
+| `/ecosystem-brain:memory-gc` | Prune stale vault notes |
 
 ## What's inside
 - **agents/** — `security-auditor`, `test-writer`, `bug-fixer`, `memory-curator` (each with a narrow toolset).
-- **commands/** — `/ecosystem-brain:scaffold`, `:health-check`, `:context-sync`, `:memory-gc`.
+- **commands/** — slash commands (install to `~/.claude/commands/ecosystem-brain/`).
 - **skills/** — `memory` (index + semantic search), `secrets` (doctor + identity).
 - **hooks/** — gitleaks gate before commit/push, catastrophic-command block, ruff auto-format on write, session logging.
 - **settings.json** — denies reads of `.env*`/`.identity.local.env`; asks before destructive git/rm.
-- **.mcp.json** — filesystem, git, github servers.
-- **templates/** — `python-project` blueprint used by the scaffolder.
+- **.mcp.json** — filesystem, git, github MCP servers.
+- **templates/** — `python-project` blueprint used by the scaffolder (includes `CLAUDE.md`).
 
 ## Prerequisites
-Recommended on PATH: `uv`, `ruff`, `gitleaks`, `git`, `python3`, `node`/`npx`, and `ollama` (with `ollama pull nomic-embed-text`) for semantic memory. Missing tools degrade gracefully (hooks skip, search falls back to offline).
+- **Required:** `git`, `node`/`npx`, `uv` (installs Python + ruff)
+- **Recommended:** `gitleaks` (secret scanning), `ollama` + `nomic-embed-text` (semantic memory)
+- Missing tools degrade gracefully — hooks skip, search falls back to offline hash embedder.
 
-## After install, in an ecosystem repo
-Add to `.gitignore`: `.identity.local.env`, `*.local.env`, `memory/.search-index.db`, `memory/index.json`.
-
-## Notes
-- The GitHub MCP entry uses `$GITHUB_TOKEN`; swap for the hosted GitHub MCP if you prefer.
-- Hooks execute shell commands and require workspace-trust acceptance.
+## Windows-specific notes
+- Use `uv run python` instead of bare `python` (Windows Store stub intercepts).
+- `OLLAMA_MODELS` must point to an ASCII-safe path if your username has accented characters (e.g. `D:\ollama-models\models`).
+- `GITHUB_TOKEN` set as a user environment variable is picked up by `.mcp.json`.
