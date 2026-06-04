@@ -10,7 +10,12 @@
       "type": "collection",
       "stars": 21204,
       "agents_path": "categories",
-      "tags": ["community", "subagents", "curated", "large"],
+      "tags": [
+        "community",
+        "subagents",
+        "curated",
+        "large"
+      ],
       "url": "https://github.com/VoltAgent/awesome-claude-code-subagents"
     },
     {
@@ -19,7 +24,13 @@
       "description": "Curated list of skills, hooks, slash-commands, agents, and plugins for Claude Code",
       "type": "collection",
       "stars": 45682,
-      "tags": ["community", "curated", "commands", "hooks", "skills"],
+      "tags": [
+        "community",
+        "curated",
+        "commands",
+        "hooks",
+        "skills"
+      ],
       "url": "https://github.com/hesreallyhim/awesome-claude-code"
     },
     {
@@ -28,7 +39,11 @@
       "description": "100+ production-ready development subagents for Claude Code",
       "type": "collection",
       "stars": 920,
-      "tags": ["community", "subagents", "production"],
+      "tags": [
+        "community",
+        "subagents",
+        "production"
+      ],
       "url": "https://github.com/0xfurai/claude-code-subagents"
     },
     {
@@ -37,7 +52,13 @@
       "description": "Hub for Claude Skills, Agents, Commands, Hooks, Plugins and Marketplace collections",
       "type": "collection",
       "stars": 3020,
-      "tags": ["community", "hub", "skills", "agents", "plugins"],
+      "tags": [
+        "community",
+        "hub",
+        "skills",
+        "agents",
+        "plugins"
+      ],
       "url": "https://github.com/davepoon/buildwithclaude"
     }
   ],
@@ -46,7 +67,12 @@
       "name": "security-auditor",
       "source": "local",
       "description": "Scans code for secrets, risky shell patterns, and insecure code",
-      "tags": ["security", "python", "typescript", "bash"],
+      "tags": [
+        "security",
+        "python",
+        "typescript",
+        "bash"
+      ],
       "installed": true,
       "path": "agents/security-auditor.md"
     },
@@ -54,7 +80,11 @@
       "name": "bug-fixer",
       "source": "local",
       "description": "Reproduces, isolates, and fixes one bug at a time with a regression test",
-      "tags": ["debugging", "python", "typescript"],
+      "tags": [
+        "debugging",
+        "python",
+        "typescript"
+      ],
       "installed": true,
       "path": "agents/bug-fixer.md"
     },
@@ -62,7 +92,11 @@
       "name": "test-writer",
       "source": "local",
       "description": "Writes and extends pytest tests for Python code",
-      "tags": ["testing", "python", "pytest"],
+      "tags": [
+        "testing",
+        "python",
+        "pytest"
+      ],
       "installed": true,
       "path": "agents/test-writer.md"
     },
@@ -70,9 +104,27 @@
       "name": "memory-curator",
       "source": "local",
       "description": "Keeps the Obsidian memory vault healthy and well-linked",
-      "tags": ["memory", "obsidian", "maintenance"],
+      "tags": [
+        "memory",
+        "obsidian",
+        "maintenance"
+      ],
       "installed": true,
       "path": "agents/memory-curator.md"
+    },
+    {
+      "name": "backend-developer",
+      "source": "github:VoltAgent/awesome-claude-code-subagents",
+      "description": "Senior backend developer \u2014 APIs, microservices, scalable systems",
+      "tags": [
+        "backend",
+        "python",
+        "typescript",
+        "node",
+        "api"
+      ],
+      "installed": true,
+      "path": "agents/backend-developer.md"
     }
   ],
   "skills": [],

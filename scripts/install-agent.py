@@ -31,6 +31,10 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
+# Local security scanner (same dir) — gate untrusted content before activating.
+sys.path.insert(0, str(Path(__file__).parent))
+from scan_agent import format_report, scan, worst  # noqa: E402
+
 REPO_ROOT = Path(__file__).parent.parent
 REGISTRY_DIR = REPO_ROOT / "registry"
 INSTALLED_FILE = REGISTRY_DIR / "installed.json"
@@ -130,6 +134,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--name", help="Override name (default: filename stem)")
     ap.add_argument("--list", action="store_true", help="List installed items")
+    ap.add_argument(
+        "--force", action="store_true", help="install even if the security scan flags HIGH risk"
+    )
     args = ap.parse_args(argv)
 
     if args.list:
@@ -164,6 +171,21 @@ def main(argv: list[str] | None = None) -> int:
 
     name = args.name or Path(filename).stem
     item_type = args.type or detect_type(content, filename)
+
+    # Security gate — scan untrusted content before activating it.
+    findings = scan(content)
+    level = worst(findings)
+    if findings:
+        print(f"security scan ({level}):")
+        print(format_report(findings))
+    if level == "HIGH" and not args.force:
+        print(
+            f"\n[BLOCKED] '{name}' has HIGH-risk content — refusing to install.\n"
+            f"          Review the file at {source}\n"
+            f"          Re-run with --force only if you trust it."
+        )
+        return 2
+
     install_content(content, name, item_type, source)
     return 0
 

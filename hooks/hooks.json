@@ -4,10 +4,10 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "if": "Bash(git commit*)", "command": "/d/Claude_projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
-          { "type": "command", "if": "Bash(git push*)",   "command": "/d/Claude_projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
-          { "type": "command", "if": "Bash(git push*)",   "command": "/d/Claude_projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" },
-          { "type": "command", "if": "Bash(rm *)",        "command": "/d/Claude_projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" }
+          { "type": "command", "if": "Bash(git commit*)", "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
+          { "type": "command", "if": "Bash(git push*)",   "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
+          { "type": "command", "if": "Bash(git push*)",   "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" },
+          { "type": "command", "if": "Bash(rm *)",        "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" }
         ]
       }
     ],
@@ -19,6 +19,11 @@
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "hooks": [{ "type": "command", "command": "uv run --no-project python /d/Claude_projects/ecosystem-brain/hooks/scripts/suggest-agents.py" }]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [{ "type": "command", "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/log-session.sh" }]
@@ -27,7 +32,8 @@
   },
   "_notes": {
     "matcher": "tool name only (Bash, Write, Edit)",
-    "if": "permission-rule syntax — Write(*.py) matches by filename suffix, Write(**/*.py) does NOT work",
-    "hooks_fire": "PostToolUse hooks fire without restart when settings.json is edited mid-session"
+    "if": "permission-rule syntax — Write(*.py) matches by filename suffix; Write(**/*.py) does NOT",
+    "SessionStart": "suggest-agents.py reads project cwd from stdin JSON, suggests relevant installed agents",
+    "windows_path_gotcha": "/d/ as a command ARG is auto-translated by Git Bash; /d/ hardcoded inside python code is NOT — use __file__-relative paths"
   }
 }
