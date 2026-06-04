@@ -7,7 +7,7 @@
       { "matcher": "Bash(git push*)",   "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/guard-destructive.sh" }] }
     ],
     "PostToolUse": [
-      { "matcher": "Write(*.py)", "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/fmt-python.sh" }] }
+      { "matcher": "Write(**/*.py)", "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/fmt-python.sh" }] }
     ],
     "SessionEnd": [
       { "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-session.sh" }] }
