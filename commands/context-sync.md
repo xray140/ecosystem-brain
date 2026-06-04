@@ -1,11 +1,10 @@
 ---
-description: Load a project's context for a fresh session and propose the next action.
-argument-hint: <project>
+description: Pull latest ecosystem-brain conventions into the current session context.
 ---
-Onboard onto project `$1`:
+Sync the current session with the ecosystem-brain control tower:
 
-1. Read `memory/projects/$1.md` and the decisions it links.
-2. Read `memory/00-MOC/conventions.md`.
-3. If recall is fuzzy, run `python ${CLAUDE_PLUGIN_ROOT}/skills/memory/memory-search.py search "$1 status next step" -k 5`.
+1. Read `/d/Claude_projects/ecosystem-brain/CLAUDE.md` — summarize any rules that differ from current session behavior.
+2. Read `/d/Claude_projects/ecosystem-brain/memory/index.json` — list active projects and recent decisions.
+3. Run `uv run python /d/Claude_projects/ecosystem-brain/skills/memory/memory-search.py search "recent decisions conventions" -k 5` and surface any relevant notes.
 
-Output an onboarding summary under 200 words, then propose the single next action.
+Output a compact briefing: active projects, key conventions, anything that should change in this session.
