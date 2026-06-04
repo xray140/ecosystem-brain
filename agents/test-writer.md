@@ -1,8 +1,12 @@
 ---
 name: test-writer
 description: Writes and extends pytest tests for Python code. Use when adding tests, raising coverage, or after implementing a feature.
-tools: Read, Grep, Glob, Write, Bash(uv run pytest*), Bash(uv run ruff*)
-model: inherit
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Write
+  - Bash
 ---
 You write pytest tests for the active project.
 

@@ -1,0 +1,59 @@
+{
+  "_version": 1,
+  "_updated": "2026-06-05",
+  "_note": "Curated registry of Claude Code agents, skills, and commands from public GitHub repos. Add entries here, then run install-agent.py to pull them.",
+  "sources": [
+    {
+      "name": "anthropic-quickstarts",
+      "repo": "anthropics/anthropic-quickstarts",
+      "description": "Official Anthropic quickstart examples including Claude Code patterns",
+      "type": "collection",
+      "tags": ["official", "examples", "python", "typescript"],
+      "url": "https://github.com/anthropics/anthropic-quickstarts"
+    },
+    {
+      "name": "awesome-claude-code",
+      "repo": "cloudflare/awesome-claude-code",
+      "description": "Community-curated list of Claude Code commands, hooks, and agents",
+      "type": "collection",
+      "tags": ["community", "curated", "commands", "hooks"],
+      "url": "https://github.com/cloudflare/awesome-claude-code"
+    }
+  ],
+  "agents": [
+    {
+      "name": "security-auditor",
+      "source": "local",
+      "description": "Scans code for secrets, risky shell patterns, and insecure code",
+      "tags": ["security", "python", "typescript", "bash"],
+      "installed": true,
+      "path": "agents/security-auditor.md"
+    },
+    {
+      "name": "bug-fixer",
+      "source": "local",
+      "description": "Reproduces, isolates, and fixes one bug at a time with a regression test",
+      "tags": ["debugging", "python", "typescript"],
+      "installed": true,
+      "path": "agents/bug-fixer.md"
+    },
+    {
+      "name": "test-writer",
+      "source": "local",
+      "description": "Writes and extends pytest tests for Python code",
+      "tags": ["testing", "python", "pytest"],
+      "installed": true,
+      "path": "agents/test-writer.md"
+    },
+    {
+      "name": "memory-curator",
+      "source": "local",
+      "description": "Keeps the Obsidian memory vault healthy and well-linked",
+      "tags": ["memory", "obsidian", "maintenance"],
+      "installed": true,
+      "path": "agents/memory-curator.md"
+    }
+  ],
+  "skills": [],
+  "commands": []
+}

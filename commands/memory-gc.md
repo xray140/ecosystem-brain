@@ -1,10 +1,8 @@
 ---
-description: Prune stale and duplicate notes from the memory vault, then rebuild the index.
+description: Invoke the memory-curator agent to prune stale notes, promote decisions, and rebuild the vault index.
 ---
-Clean up the memory vault at `/d/Claude_projects/ecosystem-brain/memory/`:
+Invoke the memory-curator agent on the ecosystem-brain vault.
 
-1. List all notes and identify: duplicates, notes older than 90 days with status "archived", empty notes (frontmatter only, no body).
-2. Propose a deletion list — do NOT delete without confirmation.
-3. After approval: remove approved files, then run `uv run python /d/Claude_projects/ecosystem-brain/skills/memory/memory-index.py` to rebuild the manifest.
-
-Report how many notes were pruned and the new total.
+Use the memory-curator agent from ~/.claude/agents/memory-curator.md.
+Vault path: /d/Claude_projects/ecosystem-brain/memory/
+Never delete notes without showing the list and getting explicit confirmation first.

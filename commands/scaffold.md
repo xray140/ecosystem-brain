@@ -5,7 +5,7 @@ argument-hint: <type> <name>
 The user wants to scaffold a new project. Arguments: `$ARGUMENTS`
 
 Parse the arguments as: first word = template type, second word = project name.
-Available types: `python-project`
+Available types: `python-project`, `typescript-project`
 
 Steps:
 1. Run: `uv run python /d/Claude_projects/ecosystem-brain/scripts/scaffold.py --type <type> --name <name> --templates-root /d/Claude_projects/ecosystem-brain/templates --dest-root /d/Claude_projects --git`

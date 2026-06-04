@@ -81,6 +81,8 @@ def main(argv: list[str] | None = None) -> int:
 
     substitute(dest, package, args.name)
 
+    is_ts = (dest / "package.json").exists()
+
     if args.git:
         subprocess.run(["git", "init", "-q"], cwd=dest, check=True)
         subprocess.run(["git", "add", "."], cwd=dest, check=True)
@@ -90,7 +92,10 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     print(f"[ok] {args.type} -> {dest}  (package: {package})")
-    print("next: cd into it, then `uv sync` && `uv run pytest -q`")
+    if is_ts:
+        print("next: cd into it, then `npm install` && `npm test`")
+    else:
+        print("next: cd into it, then `uv sync` && `uv run pytest -q`")
     return 0
 
 

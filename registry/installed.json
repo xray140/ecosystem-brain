@@ -1,0 +1,36 @@
+{
+  "_version": 1,
+  "_note": "Tracks installed agents/skills/commands. Managed by install-agent.py and update-agents.py.",
+  "agents": [
+    {
+      "name": "security-auditor",
+      "source": "local",
+      "installed_at": "2026-06-04",
+      "hash": null,
+      "global_path": "~/.claude/agents/security-auditor.md"
+    },
+    {
+      "name": "bug-fixer",
+      "source": "local",
+      "installed_at": "2026-06-04",
+      "hash": null,
+      "global_path": "~/.claude/agents/bug-fixer.md"
+    },
+    {
+      "name": "test-writer",
+      "source": "local",
+      "installed_at": "2026-06-04",
+      "hash": null,
+      "global_path": "~/.claude/agents/test-writer.md"
+    },
+    {
+      "name": "memory-curator",
+      "source": "local",
+      "installed_at": "2026-06-04",
+      "hash": null,
+      "global_path": "~/.claude/agents/memory-curator.md"
+    }
+  ],
+  "commands": [],
+  "skills": []
+}
