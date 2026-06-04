@@ -1,0 +1,11 @@
+{
+  "name": "ecosystem-brain-marketplace",
+  "owner": { "name": "Martin" },
+  "plugins": [
+    {
+      "name": "ecosystem-brain",
+      "source": "./",
+      "description": "Ecosystem-Brain control tower (agents, hooks, commands, memory tools)."
+    }
+  ]
+}
