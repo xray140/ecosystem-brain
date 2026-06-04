@@ -15,14 +15,19 @@
       {
         "matcher": "Write",
         "hooks": [
-          { "type": "command", "if": "Write(**/*.py)", "command": "/d/Claude_projects/ecosystem-brain/hooks/scripts/fmt-python.sh" }
+          { "type": "command", "if": "Write(*.py)", "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/fmt-python.sh" }
         ]
       }
     ],
     "SessionEnd": [
       {
-        "hooks": [{ "type": "command", "command": "/d/Claude_projects/ecosystem-brain/hooks/scripts/log-session.sh" }]
+        "hooks": [{ "type": "command", "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/log-session.sh" }]
       }
     ]
+  },
+  "_notes": {
+    "matcher": "tool name only (Bash, Write, Edit)",
+    "if": "permission-rule syntax — Write(*.py) matches by filename suffix, Write(**/*.py) does NOT work",
+    "hooks_fire": "PostToolUse hooks fire without restart when settings.json is edited mid-session"
   }
 }
