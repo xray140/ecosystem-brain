@@ -19,6 +19,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 INSTALLED = REPO_ROOT / "registry" / "installed.json"
 REGISTRY = REPO_ROOT / "registry" / "registry.json"
+CATALOG = REPO_ROOT / "registry" / "catalog.json"
 
 # marker file -> project-type tags
 MARKERS: dict[str, list[str]] = {
@@ -66,6 +67,23 @@ def agent_tags(name: str, registry: dict) -> list[str]:
     return []
 
 
+def suggest_uninstalled(project_tags: set[str], installed_names: set[str],
+                        limit: int = 5) -> list[dict]:
+    """Top uninstalled catalog agents whose tags overlap the project's tags."""
+    if not project_tags:
+        return []
+    catalog = load_json(CATALOG)
+    scored = []
+    for a in catalog.get("agents", []):
+        if a["name"] in installed_names:
+            continue
+        overlap = len(set(a.get("tags", [])) & project_tags)
+        if overlap:
+            scored.append((overlap, a))
+    scored.sort(key=lambda t: (-t[0], t[1]["name"]))
+    return [a for _, a in scored[:limit]]
+
+
 def main() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -78,25 +96,35 @@ def main() -> int:
     registry = load_json(REGISTRY)
 
     all_agents = installed.get("agents", [])
-    if not all_agents:
-        return 0  # nothing installed, say nothing
+    installed_names = {a["name"] for a in all_agents}
 
-    # Rank: agents whose registry tags intersect the project's type tags first.
+    # Rank installed: agents whose registry tags intersect the project's tags.
     relevant, generic = [], []
     for a in all_agents:
         tags = set(agent_tags(a["name"], registry))
         (relevant if tags & project_tags else generic).append(a["name"])
 
-    lines = ["Ecosystem-brain installed agents available via the Agent tool:"]
+    # Suggest UNINSTALLED catalog agents matching the project type (no network —
+    # reads the cached catalog.json built by catalog.py).
+    suggestions = suggest_uninstalled(project_tags, installed_names, limit=5)
+
+    if not all_agents and not suggestions:
+        return 0
+
+    lines = ["Ecosystem-brain agents:"]
     if relevant:
         lines.append(
-            f"  Relevant to this project ({', '.join(sorted(project_tags)) or 'generic'}): "
+            f"  Installed & relevant ({', '.join(sorted(project_tags)) or 'generic'}): "
             + ", ".join(relevant)
         )
     if generic:
-        lines.append(f"  Also available: {', '.join(generic)}")
+        lines.append(f"  Installed (other): {', '.join(generic)}")
+    if suggestions:
+        lines.append("  Available to install for this project type:")
+        for s in suggestions:
+            lines.append(f"    - {s['name']}  (install: --repo {s['repo']} --path {s['path']})")
     lines.append(
-        "  Find more: `uv run python /d/Claude_projects/ecosystem-brain/"
+        "  Search more: `uv run python /d/Claude_projects/ecosystem-brain/"
         'scripts/search_agents.py "<topic>" --files`'
     )
 

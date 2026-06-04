@@ -1,0 +1,1492 @@
+{
+  "repo": "VoltAgent/awesome-claude-code-subagents",
+  "count": 154,
+  "agents": [
+    {
+      "name": "api-designer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/api-designer.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development",
+        "api"
+      ]
+    },
+    {
+      "name": "backend-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/backend-developer.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development",
+        "backend"
+      ]
+    },
+    {
+      "name": "design-bridge",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/design-bridge.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development"
+      ]
+    },
+    {
+      "name": "electron-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/electron-pro.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development"
+      ]
+    },
+    {
+      "name": "frontend-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/frontend-developer.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development",
+        "frontend"
+      ]
+    },
+    {
+      "name": "fullstack-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/fullstack-developer.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development",
+        "fullstack"
+      ]
+    },
+    {
+      "name": "graphql-architect",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/graphql-architect.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development",
+        "api",
+        "graphql"
+      ]
+    },
+    {
+      "name": "microservices-architect",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/microservices-architect.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development",
+        "backend",
+        "microservices"
+      ]
+    },
+    {
+      "name": "mobile-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/mobile-developer.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development",
+        "mobile"
+      ]
+    },
+    {
+      "name": "ui-designer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/ui-designer.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development"
+      ]
+    },
+    {
+      "name": "websocket-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/01-core-development/websocket-engineer.md",
+      "category": "01-core-development",
+      "tags": [
+        "01-core-development"
+      ]
+    },
+    {
+      "name": "angular-architect",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/angular-architect.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "angular",
+        "frontend"
+      ]
+    },
+    {
+      "name": "cpp-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/cpp-pro.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "cpp"
+      ]
+    },
+    {
+      "name": "csharp-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/csharp-developer.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "csharp"
+      ]
+    },
+    {
+      "name": "django-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/django-developer.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "django",
+        "go",
+        "python"
+      ]
+    },
+    {
+      "name": "dotnet-core-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/dotnet-core-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "dotnet-framework-4.8-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/dotnet-framework-4.8-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "elixir-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/elixir-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "elixir"
+      ]
+    },
+    {
+      "name": "expo-react-native-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/expo-react-native-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "frontend",
+        "react"
+      ]
+    },
+    {
+      "name": "fastapi-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/fastapi-developer.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "api",
+        "python"
+      ]
+    },
+    {
+      "name": "flutter-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/flutter-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "golang-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/golang-pro.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "go"
+      ]
+    },
+    {
+      "name": "java-architect",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/java-architect.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "java"
+      ]
+    },
+    {
+      "name": "javascript-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/javascript-pro.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "java",
+        "javascript"
+      ]
+    },
+    {
+      "name": "kotlin-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/kotlin-specialist.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "kotlin"
+      ]
+    },
+    {
+      "name": "laravel-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/laravel-specialist.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "nextjs-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/nextjs-developer.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "node-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/node-specialist.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "node"
+      ]
+    },
+    {
+      "name": "php-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/php-pro.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "php"
+      ]
+    },
+    {
+      "name": "powershell-5.1-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/powershell-5.1-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "powershell-7-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/powershell-7-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "python-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/python-pro.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "python"
+      ]
+    },
+    {
+      "name": "rails-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/rails-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "ai"
+      ]
+    },
+    {
+      "name": "react-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/react-specialist.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "frontend",
+        "react"
+      ]
+    },
+    {
+      "name": "rust-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/rust-engineer.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "rust"
+      ]
+    },
+    {
+      "name": "spring-boot-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/spring-boot-engineer.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "sql-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/sql-pro.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "database"
+      ]
+    },
+    {
+      "name": "swift-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/swift-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "symfony-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/symfony-specialist.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists"
+      ]
+    },
+    {
+      "name": "typescript-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/typescript-pro.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "typescript"
+      ]
+    },
+    {
+      "name": "vue-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/02-language-specialists/vue-expert.md",
+      "category": "02-language-specialists",
+      "tags": [
+        "02-language-specialists",
+        "frontend",
+        "vue"
+      ]
+    },
+    {
+      "name": "azure-infra-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/azure-infra-engineer.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "cloud-architect",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/cloud-architect.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "database-administrator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/database-administrator.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure",
+        "database"
+      ]
+    },
+    {
+      "name": "deployment-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/deployment-engineer.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "devops-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/devops-engineer.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure",
+        "devops"
+      ]
+    },
+    {
+      "name": "devops-incident-responder",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/devops-incident-responder.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure",
+        "devops"
+      ]
+    },
+    {
+      "name": "docker-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/docker-expert.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure",
+        "devops",
+        "docker"
+      ]
+    },
+    {
+      "name": "incident-responder",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/incident-responder.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "kubernetes-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/kubernetes-specialist.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure",
+        "devops",
+        "k8s"
+      ]
+    },
+    {
+      "name": "network-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/network-engineer.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "platform-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/platform-engineer.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "security-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/security-engineer.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure",
+        "security"
+      ]
+    },
+    {
+      "name": "sre-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/sre-engineer.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "terraform-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/terraform-engineer.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "terragrunt-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/terragrunt-expert.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "windows-infra-admin",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/03-infrastructure/windows-infra-admin.md",
+      "category": "03-infrastructure",
+      "tags": [
+        "03-infrastructure"
+      ]
+    },
+    {
+      "name": "accessibility-tester",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/accessibility-tester.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security",
+        "testing"
+      ]
+    },
+    {
+      "name": "ad-security-reviewer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/ad-security-reviewer.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "ai-writing-auditor",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/ai-writing-auditor.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "ai",
+        "security"
+      ]
+    },
+    {
+      "name": "architect-reviewer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/architect-reviewer.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "chaos-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/chaos-engineer.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "code-reviewer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/code-reviewer.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "compliance-auditor",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/compliance-auditor.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "debugger",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/debugger.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "error-detective",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/error-detective.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "gdpr-ccpa-compliance",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/gdpr-ccpa-compliance.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "penetration-tester",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/penetration-tester.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security",
+        "testing"
+      ]
+    },
+    {
+      "name": "performance-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/performance-engineer.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "powershell-security-hardening",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/powershell-security-hardening.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "qa-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/qa-expert.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "security-auditor",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/security-auditor.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security"
+      ]
+    },
+    {
+      "name": "test-automator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/test-automator.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security",
+        "testing"
+      ]
+    },
+    {
+      "name": "ui-ux-tester",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/04-quality-security/ui-ux-tester.md",
+      "category": "04-quality-security",
+      "tags": [
+        "04-quality-security",
+        "security",
+        "testing"
+      ]
+    },
+    {
+      "name": "ai-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/ai-engineer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "data-analyst",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/data-analyst.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "data-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/data-engineer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "data-scientist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/data-scientist.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "database-optimizer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/database-optimizer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai",
+        "database"
+      ]
+    },
+    {
+      "name": "llm-architect",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/llm-architect.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "machine-learning-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/machine-learning-engineer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "ml-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/ml-engineer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai",
+        "ml"
+      ]
+    },
+    {
+      "name": "mlops-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/mlops-engineer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai",
+        "ml"
+      ]
+    },
+    {
+      "name": "nlp-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/nlp-engineer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "postgres-pro",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/postgres-pro.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "prompt-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/prompt-engineer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "reinforcement-learning-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/05-data-ai/reinforcement-learning-engineer.md",
+      "category": "05-data-ai",
+      "tags": [
+        "05-data-ai",
+        "ai"
+      ]
+    },
+    {
+      "name": "build-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/build-engineer.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "cli-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/cli-developer.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "dependency-manager",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/dependency-manager.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "documentation-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/documentation-engineer.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "dx-optimizer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/dx-optimizer.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "git-workflow-manager",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/git-workflow-manager.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "legacy-modernizer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/legacy-modernizer.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "mcp-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/mcp-developer.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "powershell-module-architect",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/powershell-module-architect.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "powershell-ui-architect",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/powershell-ui-architect.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "readme-generator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/readme-generator.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "refactoring-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/refactoring-specialist.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "slack-expert",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/slack-expert.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "tooling-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/tooling-engineer.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "visual-asset-generator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/visual-asset-generator.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
+      "name": "api-documenter",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/api-documenter.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai",
+        "api"
+      ]
+    },
+    {
+      "name": "blockchain-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/blockchain-developer.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "embedded-systems",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/embedded-systems.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "fintech-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/fintech-engineer.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "game-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/game-developer.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "healthcare-admin",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/healthcare-admin.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "hipaa-compliance",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/hipaa-compliance.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "iot-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/iot-engineer.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "m365-admin",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/m365-admin.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "mobile-app-developer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/mobile-app-developer.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai",
+        "mobile"
+      ]
+    },
+    {
+      "name": "payment-integration",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/payment-integration.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "quant-analyst",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/quant-analyst.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "risk-manager",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/risk-manager.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "seo-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/seo-specialist.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
+      "name": "assumption-mapping",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/assumption-mapping.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "backlog-grooming",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/backlog-grooming.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "business-analyst",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/business-analyst.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "content-marketer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/content-marketer.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "content-quality-editor",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/content-quality-editor.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "customer-success-manager",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/customer-success-manager.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "growth-loops",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/growth-loops.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "legal-advisor",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/legal-advisor.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "license-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/license-engineer.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "product-manager",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/product-manager.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "project-manager",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/project-manager.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "sales-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/sales-engineer.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "scrum-master",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/scrum-master.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "technical-writer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/technical-writer.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "ux-researcher",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/ux-researcher.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "wordpress-master",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/wordpress-master.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "agent-installer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/agent-installer.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "agent-organizer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/agent-organizer.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "codebase-orchestrator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/codebase-orchestrator.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "context-manager",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/context-manager.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "error-coordinator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/error-coordinator.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "it-ops-orchestrator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/it-ops-orchestrator.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "knowledge-synthesizer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/knowledge-synthesizer.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "multi-agent-coordinator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/multi-agent-coordinator.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "performance-monitor",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/performance-monitor.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "task-distributor",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/task-distributor.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "workflow-orchestrator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/09-meta-orchestration/workflow-orchestrator.md",
+      "category": "09-meta-orchestration",
+      "tags": [
+        "09-meta-orchestration"
+      ]
+    },
+    {
+      "name": "ab-test-analysis",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/ab-test-analysis.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis",
+        "testing"
+      ]
+    },
+    {
+      "name": "cohort-analysis",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/cohort-analysis.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "competitive-analyst",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/competitive-analyst.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "data-researcher",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/data-researcher.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "first-principles-thinking",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/first-principles-thinking.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "market-researcher",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/market-researcher.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "project-idea-validator",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/project-idea-validator.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "research-analyst",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/research-analyst.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "scientific-literature-researcher",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/scientific-literature-researcher.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "search-specialist",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/search-specialist.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    },
+    {
+      "name": "trend-analyst",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/10-research-analysis/trend-analyst.md",
+      "category": "10-research-analysis",
+      "tags": [
+        "10-research-analysis"
+      ]
+    }
+  ]
+}
