@@ -21,3 +21,10 @@ python ${CLAUDE_PLUGIN_ROOT}/skills/memory/memory-search.py search "QUERY"
 # Offline fallback
 python ${CLAUDE_PLUGIN_ROOT}/skills/memory/memory-search.py search "QUERY" --offline
 ```
+
+## Active hooks (global, ~/.claude/settings.json)
+- `PreToolUse(git commit*)` → guard-secrets.sh (gitleaks scan)
+- `PreToolUse(git push*)` → guard-secrets.sh + guard-destructive.sh
+- `PreToolUse(rm *)` → guard-destructive.sh
+- `PostToolUse(Write *.py)` → fmt-python.sh (ruff format + fix)
+- `SessionEnd` → log-session.sh (dated session note in memory/sessions/)
