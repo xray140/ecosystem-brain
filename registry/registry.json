@@ -1,23 +1,44 @@
 {
   "_version": 1,
   "_updated": "2026-06-05",
-  "_note": "Curated registry of Claude Code agents, skills, and commands from public GitHub repos. Add entries here, then run install-agent.py to pull them.",
+  "_note": "Curated registry of Claude Code agents, skills, and commands from public GitHub repos. Add entries here, then run install-agent.py to pull them. All sources verified to exist on 2026-06-05.",
   "sources": [
     {
-      "name": "anthropic-quickstarts",
-      "repo": "anthropics/anthropic-quickstarts",
-      "description": "Official Anthropic quickstart examples including Claude Code patterns",
+      "name": "voltagent-subagents",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "description": "100+ specialized Claude Code subagents organized by category (core-dev, language-specialists, etc.)",
       "type": "collection",
-      "tags": ["official", "examples", "python", "typescript"],
-      "url": "https://github.com/anthropics/anthropic-quickstarts"
+      "stars": 21204,
+      "agents_path": "categories",
+      "tags": ["community", "subagents", "curated", "large"],
+      "url": "https://github.com/VoltAgent/awesome-claude-code-subagents"
     },
     {
       "name": "awesome-claude-code",
-      "repo": "cloudflare/awesome-claude-code",
-      "description": "Community-curated list of Claude Code commands, hooks, and agents",
+      "repo": "hesreallyhim/awesome-claude-code",
+      "description": "Curated list of skills, hooks, slash-commands, agents, and plugins for Claude Code",
       "type": "collection",
-      "tags": ["community", "curated", "commands", "hooks"],
-      "url": "https://github.com/cloudflare/awesome-claude-code"
+      "stars": 45682,
+      "tags": ["community", "curated", "commands", "hooks", "skills"],
+      "url": "https://github.com/hesreallyhim/awesome-claude-code"
+    },
+    {
+      "name": "furai-subagents",
+      "repo": "0xfurai/claude-code-subagents",
+      "description": "100+ production-ready development subagents for Claude Code",
+      "type": "collection",
+      "stars": 920,
+      "tags": ["community", "subagents", "production"],
+      "url": "https://github.com/0xfurai/claude-code-subagents"
+    },
+    {
+      "name": "buildwithclaude",
+      "repo": "davepoon/buildwithclaude",
+      "description": "Hub for Claude Skills, Agents, Commands, Hooks, Plugins and Marketplace collections",
+      "type": "collection",
+      "stars": 3020,
+      "tags": ["community", "hub", "skills", "agents", "plugins"],
+      "url": "https://github.com/davepoon/buildwithclaude"
     }
   ],
   "agents": [

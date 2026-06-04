@@ -29,6 +29,13 @@
       "installed_at": "2026-06-04",
       "hash": null,
       "global_path": "~/.claude/agents/memory-curator.md"
+    },
+    {
+      "name": "backend-developer",
+      "source": "github:VoltAgent/awesome-claude-code-subagents/categories/01-core-development/backend-developer.md",
+      "hash": "96e6441f1e598a22ef3ab5fe8131a108",
+      "installed_at": "2026-06-04",
+      "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\backend-developer.md"
     }
   ],
   "commands": [],

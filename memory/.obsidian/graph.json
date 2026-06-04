@@ -7,10 +7,34 @@
   "showOrphans": true,
   "collapse-color-groups": false,
   "colorGroups": [
-    { "query": "tag:#project", "color": { "a": 1, "rgb": 4478105 } },
-    { "query": "tag:#decision", "color": { "a": 1, "rgb": 14038940 } },
-    { "query": "tag:#session", "color": { "a": 1, "rgb": 6579300 } },
-    { "query": "tag:#moc", "color": { "a": 1, "rgb": 16744272 } }
+    {
+      "query": "tag:#project",
+      "color": {
+        "a": 1,
+        "rgb": 4478105
+      }
+    },
+    {
+      "query": "tag:#decision",
+      "color": {
+        "a": 1,
+        "rgb": 14038940
+      }
+    },
+    {
+      "query": "tag:#session",
+      "color": {
+        "a": 1,
+        "rgb": 6579300
+      }
+    },
+    {
+      "query": "tag:#moc",
+      "color": {
+        "a": 1,
+        "rgb": 16744272
+      }
+    }
   ],
   "collapse-display": false,
   "showArrow": true,
@@ -22,5 +46,6 @@
   "repelStrength": 10,
   "linkStrength": 1,
   "linkDistance": 250,
-  "scale": 1
+  "scale": 0.999999999999998,
+  "close": false
 }

@@ -16,8 +16,14 @@ import argparse
 import hashlib
 import json
 import shutil
+import sys
 import urllib.request
 from pathlib import Path
+
+# Windows consoles default to cp1252, which cannot encode unicode markers.
+# Force UTF-8 so output (and accented paths) never crash the run.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 REPO_ROOT = Path(__file__).parent.parent
 INSTALLED_FILE = REPO_ROOT / "registry" / "installed.json"
