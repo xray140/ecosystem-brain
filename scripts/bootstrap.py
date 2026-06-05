@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -30,8 +31,16 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CLAUDE_DIR = Path.home() / ".claude"
+# Overridable for testing (point at a temp dir to avoid touching the real config).
+CLAUDE_DIR = Path(os.environ.get("ECOSYSTEM_CLAUDE_DIR") or (Path.home() / ".claude"))
 SETTINGS = CLAUDE_DIR / "settings.json"
+
+# The repo path as committed (the "authoring" location). Commands/agents hardcode
+# this; bootstrap rewrites it to THIS clone's real path so a clone at any location
+# works. On the authoring machine these are no-ops.
+CANON_BASH = "/d/Claude_projects/ecosystem-brain"
+CANON_WIN_FWD = "D:/Claude_projects/ecosystem-brain"
+CANON_WIN_BS = r"D:\Claude_projects\ecosystem-brain"
 
 
 def to_bash_path(p: Path) -> str:
@@ -116,18 +125,39 @@ def merge_settings(dry: bool, bash_root: str) -> None:
     print(f"  [ok] merged hooks+permissions -> {SETTINGS} (other keys preserved)")
 
 
-def copy_tree(src: Path, dst: Path, dry: bool, label: str) -> None:
+def rewrite_paths(text: str, bash_root: str) -> str:
+    """Rewrite the committed canonical repo path to THIS clone's real path.
+
+    Makes commands/agents portable: a clone at any location works after bootstrap.
+    Handles the bash mount form, both Windows forms, and the legacy
+    ${CLAUDE_PLUGIN_ROOT} token. No-op on the authoring machine.
+    """
+    return (text
+            .replace(CANON_BASH, bash_root)
+            .replace(CANON_WIN_FWD, REPO_ROOT.as_posix())
+            .replace(CANON_WIN_BS, str(REPO_ROOT))
+            .replace("${CLAUDE_PLUGIN_ROOT}", bash_root))
+
+
+def copy_tree(src: Path, dst: Path, dry: bool, label: str, bash_root: str,
+              rewrite: bool = False) -> None:
     if not src.is_dir():
         print(f"  [skip] no {label} dir at {src}")
         return
     files = sorted(src.glob("*.md"))
     if dry:
-        print(f"  [dry] would copy {len(files)} {label} -> {dst}")
+        tag = " (paths rewritten)" if rewrite else ""
+        print(f"  [dry] would copy {len(files)} {label} -> {dst}{tag}")
         return
     dst.mkdir(parents=True, exist_ok=True)
     for f in files:
-        shutil.copy2(f, dst / f.name)
-    print(f"  [ok] copied {len(files)} {label} -> {dst}")
+        if rewrite:
+            content = rewrite_paths(f.read_text(encoding="utf-8"), bash_root)
+            (dst / f.name).write_text(content, encoding="utf-8")
+        else:
+            shutil.copy2(f, dst / f.name)
+    suffix = " (paths rewritten to this clone)" if rewrite else ""
+    print(f"  [ok] copied {len(files)} {label} -> {dst}{suffix}")
 
 
 def seed_env(dry: bool) -> None:
@@ -175,8 +205,11 @@ def main(argv: list[str] | None = None) -> int:
         CLAUDE_DIR / "commands" / "ecosystem-brain",
         args.dry_run,
         "commands",
+        bash_root,
+        rewrite=True,
     )
-    copy_tree(REPO_ROOT / "agents", CLAUDE_DIR / "agents", args.dry_run, "agents")
+    copy_tree(REPO_ROOT / "agents", CLAUDE_DIR / "agents", args.dry_run,
+              "agents", bash_root, rewrite=True)
     seed_env(args.dry_run)
     check_prereqs()
 

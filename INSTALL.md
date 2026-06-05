@@ -27,11 +27,16 @@ uv run python scripts/bootstrap.py --dry-run   # preview
 uv run python scripts/bootstrap.py             # apply
 ```
 This:
-- Merges hooks + permissions into `~/.claude/settings.json` (keeps your MCPs)
-- Copies commands → `~/.claude/commands/ecosystem-brain/`
-- Copies agents → `~/.claude/agents/`
+- Merges hooks + permissions into `~/.claude/settings.json` (keeps your MCPs),
+  with hook paths generated from this clone's location
+- Copies commands → `~/.claude/commands/ecosystem-brain/` **and rewrites their
+  hardcoded repo paths to this clone** (so a clone at any location works)
+- Copies agents → `~/.claude/agents/` (paths rewritten too)
 - Seeds `.env` from `.env.example`
 - Reports missing prerequisites
+
+Testing tip: set `ECOSYSTEM_CLAUDE_DIR=/tmp/test` to bootstrap into a throwaway
+dir without touching your real `~/.claude/`.
 
 ## 4. Secrets
 Fill in `.env` (gitignored):
