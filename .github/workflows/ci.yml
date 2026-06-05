@@ -21,6 +21,9 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
 
+      - name: Lint (ruff)
+        run: uv run --with ruff --no-project ruff check scripts tests
+
       - name: Unit tests (pytest)
         run: uv run --with pytest --no-project pytest -q tests
 

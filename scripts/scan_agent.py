@@ -96,6 +96,34 @@ RULES: list[tuple[str, str, re.Pattern[str], str]] = [
     ),
     (
         "HIGH",
+        "ps-download-cradle",
+        re.compile(
+            r"(iwr|invoke-webrequest|curl|wget)[^\n|]*\|\s*(iex|invoke-expression)", re.I
+        ),
+        "PowerShell download-and-execute cradle (the iwr|iex equivalent of curl|bash)",
+    ),
+    (
+        "HIGH",
+        "ps-webclient",
+        re.compile(r"(new-object\s+[^\n]*webclient|\.downloadstring\(|\.downloadfile\()", re.I),
+        "uses a PowerShell WebClient to fetch remote code (usually piped to iex)",
+    ),
+    (
+        "HIGH",
+        "ps-encoded-command",
+        re.compile(
+            r"powershell[^\n]*\s-e(?:nc(?:odedcommand)?)?\s+[A-Za-z0-9+/]{16,}={0,2}", re.I
+        ),
+        "runs a base64-encoded PowerShell command (obfuscation)",
+    ),
+    (
+        "MEDIUM",
+        "dynamic-code-exec",
+        re.compile(r"\b(eval|exec)\s*\(", re.I),
+        "evaluates code from a string at runtime (eval/exec)",
+    ),
+    (
+        "HIGH",
         "recursive-delete",
         re.compile(r"\brm\s+-[rf]{1,2}\s+(/|~|\$HOME|\*)", re.I),
         "recursive delete of root/home/wildcard",
@@ -110,7 +138,8 @@ RULES: list[tuple[str, str, re.Pattern[str], str]] = [
         "MEDIUM",
         "tls-disabled",
         re.compile(
-            r"(curl\s+[^\n]*\s-k\b|--no-check-certificate|verify\s*=\s*False)", re.I
+            r"curl\b[^\n]*\s(-k|--insecure)\b|--no-check-certificate|verify\s*=\s*False",
+            re.I,
         ),
         "disables TLS certificate verification",
     ),

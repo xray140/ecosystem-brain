@@ -22,12 +22,15 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs `pytest -q tests` (43 tests) +
-  `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index, pytest)
-  + gitleaks. Green on GitHub.
-- **Tests**: `tests/` (63) covers scan_agent, init_project, bootstrap,
-  github_util, update-agents (pinning), doctor (drift). selfcheck runs them via
-  nested `uv run --with pytest`.
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (74
+  tests) + `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index,
+  pytest) + gitleaks. Green on GitHub.
+- **Tests**: `tests/` (74) covers scan_agent, init_project, bootstrap,
+  github_util, update-agents (pinning), doctor (drift), catalog. selfcheck runs
+  them via nested `uv run --with pytest`.
+- **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
+  curl|bash, PowerShell cradles (iwr|iex, WebClient, -enc), base64-exec,
+  eval/exec, rm -rf, TLS-off (incl. flag-first `curl -k`), exfil, hidden chars.
 - **Dogfood**: the repo's own `CLAUDE.md` imports `@AGENTS.md` — same cross-tool
   pattern it ships in templates.
 - **Doctor**: `/ecosystem-brain:doctor` (`doctor.py`) = live-hooks + repo↔~/.claude

