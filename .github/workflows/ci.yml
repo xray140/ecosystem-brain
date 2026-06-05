@@ -21,7 +21,10 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
 
-      - name: Self-check (JSON, agent scan, init engine, memory index)
+      - name: Unit tests (pytest)
+        run: uv run --with pytest --no-project pytest -q tests
+
+      - name: Self-check (JSON, agent scan, init engine, memory index, tests)
         run: uv run --no-project python scripts/selfcheck.py
 
       - name: Init engine smoke (--plan, no writes)

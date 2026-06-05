@@ -19,8 +19,12 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **Agent supply chain**: search (GitHub by stars) → install (scanned by
   `scan_agent.py`, 16 rules) → SessionStart suggests installed+catalog →
   update (re-scans upstream, blocks HIGH-risk). Catalog = 154 agents, cached.
-- **CI**: `.github/workflows/ci.yml` runs `scripts/selfcheck.py` (JSON, agent
-  scan, init-engine, memory index) + gitleaks. Green on GitHub.
+- **CI**: `.github/workflows/ci.yml` runs `pytest -q tests` (43 tests) +
+  `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index, pytest)
+  + gitleaks. Green on GitHub.
+- **Tests**: `tests/` covers `scan_agent` (security gate), `init_project`
+  (resolve/classify/compose), `bootstrap` (path rewrite + verify). selfcheck
+  runs them via nested `uv run --with pytest`.
 - **Hooks** (global settings.json): gitleaks gate, destructive guard (root/home
   only — fixed false positive), ruff-on-write, SessionStart suggester, SessionEnd log.
 - **Portability**: `bootstrap.py` rewrites hardcoded paths to the clone location;
@@ -40,7 +44,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
   this stack, scanned and tracked.
 - [ ] `update --all` convenience + a `quarantine/` dir for BLOCKED upstream agents.
 - [ ] Linux/Mac path handling in bootstrap (currently Windows/Git-Bash tuned).
-- [ ] Tests for the python scripts (pytest) so selfcheck can run them in CI.
+- [x] **Tests for the python scripts** (2026-06-05) — `tests/` with 43 pytest
+  tests across scan_agent / init_project / bootstrap; wired into selfcheck
+  (`check_tests`) + a dedicated CI step. Covers the security gate, init engine,
+  and the portability path-rewrite.
 
 ## Key decisions (see decisions/)
 - [[decisions/hook-format]] · [[decisions/windows-python-invocation]] ·

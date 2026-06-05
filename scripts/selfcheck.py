@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -110,12 +111,37 @@ def check_memory() -> None:
         ok("vault indexed")
 
 
+def check_tests() -> None:
+    print("5. Unit tests (pytest)")
+    tests_dir = REPO / "tests"
+    if not tests_dir.is_dir():
+        ok("no tests/ dir — skipped")
+        return
+    if shutil.which("uv") is None:
+        ok("uv not found — pytest skipped")
+        return
+    # Nested uv run: pulls pytest into an ephemeral env, ignores any project.
+    r = subprocess.run(
+        ["uv", "run", "--with", "pytest", "--no-project", "pytest", "-q", "tests"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+    )
+    if r.returncode != 0:
+        tail = "\n      ".join((r.stdout + r.stderr).strip().splitlines()[-12:])
+        fail(f"pytest failed:\n      {tail}")
+    else:
+        summary = (r.stdout.strip().splitlines() or ["passed"])[-1]
+        ok(f"pytest: {summary}")
+
+
 def main() -> int:
     print("ecosystem-brain selfcheck\n")
     check_json()
     check_agents()
     check_profiles()
     check_memory()
+    check_tests()
     print()
     if fails:
         print(f"[!] {len(fails)} failure(s)")
