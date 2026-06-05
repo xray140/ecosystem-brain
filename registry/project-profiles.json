@@ -1,0 +1,126 @@
+{
+  "_version": 1,
+  "_note": "Maps the /ecosystem-brain:init interview answers to a tailored project config. Agent names are validated against catalog.json (github) or treated as local (security-auditor, test-writer, bug-fixer, memory-curator). Composed additively: build_types + rigor + sensitivity + stacks.",
+  "build_types": {
+    "web": {
+      "label": "Web app",
+      "template": "typescript-project",
+      "ask_stack": true,
+      "agents": ["frontend-developer", "ui-designer"],
+      "stack_blurb": "Web application — UI + client-side state, talking to an API/data layer."
+    },
+    "api": {
+      "label": "API service",
+      "template": "typescript-project",
+      "ask_stack": true,
+      "agents": ["api-designer", "backend-developer"],
+      "stack_blurb": "Backend API service — HTTP endpoints, business logic, persistence."
+    },
+    "cli": {
+      "label": "CLI tool",
+      "template": "python-project",
+      "ask_stack": false,
+      "agents": ["cli-developer", "python-pro"],
+      "stack_blurb": "Command-line tool — argument parsing, pure core logic, thin I/O shell."
+    },
+    "library": {
+      "label": "Library / SDK",
+      "template": "python-project",
+      "ask_stack": false,
+      "agents": ["python-pro"],
+      "stack_blurb": "Reusable library/SDK — pure functions, stable public API, strong tests."
+    }
+  },
+  "rigor": {
+    "prototype": {
+      "label": "Prototype",
+      "agents_add": [],
+      "conventions": [
+        "Move fast — favor working code over structure.",
+        "Tests are optional for throwaway spikes; add them once a direction sticks.",
+        "Skip CI until the shape stabilizes."
+      ]
+    },
+    "product": {
+      "label": "Product",
+      "agents_add": ["test-writer"],
+      "conventions": [
+        "Every public function has a docstring/JSDoc and at least one test.",
+        "Keep core logic pure; isolate I/O at the edges.",
+        "Run CI (lint + test) on every push.",
+        "Commit messages: type(scope): description."
+      ]
+    },
+    "production": {
+      "label": "Production",
+      "agents_add": ["test-writer", "security-auditor"],
+      "conventions": [
+        "Full test coverage gate before merge; no untested public surface.",
+        "CI on push + observability (structured logs, error tracking).",
+        "Document every public API and its failure modes.",
+        "Review dependencies for CVEs; pin versions.",
+        "Plan-mode for any structural change."
+      ]
+    }
+  },
+  "sensitivity": {
+    "api-keys": {
+      "label": "Third-party API keys",
+      "agents_add": [],
+      "security_rules": [
+        "All keys live in `.env` (gitignored) — never hardcode, never log a key.",
+        "Provide `.env.example` with key names only (no values).",
+        "Rotate any key on suspected leak; gitleaks gates every commit."
+      ]
+    },
+    "pii": {
+      "label": "User data / PII",
+      "agents_add": ["security-auditor"],
+      "security_rules": [
+        "Collect the minimum PII necessary; document why each field is stored.",
+        "Encrypt PII at rest and in transit; never log raw PII.",
+        "Define a data-retention/deletion policy and honor deletion requests."
+      ]
+    },
+    "money": {
+      "label": "Money / payments",
+      "agents_add": ["security-auditor"],
+      "security_rules": [
+        "Treat all monetary logic as critical: validate and compute amounts server-side only.",
+        "Never trust client-supplied amounts; re-derive from source of truth.",
+        "Use idempotency keys on every write; audit-log every transaction.",
+        "Use integer minor units (cents), never floats, for money."
+      ]
+    },
+    "none": {
+      "label": "Nothing sensitive",
+      "agents_add": [],
+      "security_rules": [
+        "No secrets expected — keep it that way; gitleaks still gates commits."
+      ]
+    }
+  },
+  "stacks": {
+    "react": {
+      "label": "React / Next.js",
+      "agents_add": ["react-specialist", "nextjs-developer"],
+      "note": "React 18 + Next.js (App Router). TypeScript strict, server components where sensible."
+    },
+    "vue": {
+      "label": "Vue",
+      "agents_add": ["vue-expert"],
+      "note": "Vue 3 Composition API + Vite. TypeScript strict."
+    },
+    "svelte": {
+      "label": "Svelte",
+      "agents_add": [],
+      "note": "SvelteKit + Vite. TypeScript strict."
+    },
+    "decide": {
+      "label": "Decide for me",
+      "agents_add": ["fullstack-developer"],
+      "note": "Stack chosen by the agent based on the requirements; default to React/Next unless a constraint says otherwise."
+    }
+  },
+  "local_agents": ["security-auditor", "test-writer", "bug-fixer", "memory-curator"]
+}

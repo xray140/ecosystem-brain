@@ -1,8 +1,8 @@
 # pkgname — agent operating rules
 
 Cross-tool instructions (AGENTS.md standard). Read by Claude Code, Gemini CLI,
-OpenAI Codex, Cursor, Copilot, and others. Part of the claude-unified-ecosystem.
-Part of the claude-unified-ecosystem. Inherits ecosystem-brain conventions.
+OpenAI Codex, Cursor, Copilot, and others. Part of the claude-unified-ecosystem;
+inherits ecosystem-brain conventions.
 
 ## Stack
 - **Runtime:** Python 3.12+ via `uv`

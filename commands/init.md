@@ -1,0 +1,60 @@
+---
+description: Guided project creation — a sharp 3-4 question interview produces a fully-configured project (tailored AGENTS.md + auto-selected, security-scanned agents).
+argument-hint: [project-name]
+---
+Create a new, fully-configured project through a short, sharp interview.
+Project name (if given): `$ARGUMENTS` — otherwise ask for it as part of step 1.
+
+Run this flow exactly. Keep it tight — these questions are the whole UX.
+
+## Step 1 — The interview (use the AskUserQuestion tool)
+
+Ask Q1-Q3 in a SINGLE AskUserQuestion call (three questions at once). Then ask
+Q4 only if Q1 is "Web app" or "API service".
+
+- **Q1 "What are you building?"** (header: Build) — single select:
+  Web app | API service | CLI tool | Library / SDK
+- **Q2 "How far will it go?"** (header: Rigor) — single select:
+  Prototype | Product | Production
+- **Q3 "What does it handle?"** (header: Handles) — **multiSelect: true**:
+  API keys | User data / PII | Money | Nothing sensitive
+- **Q4 "Frontend/stack?"** (header: Stack) — single select, ONLY if web/api:
+  React / Next.js | Vue | Svelte | Decide for me
+
+If no project name was provided in `$ARGUMENTS`, also ask for it (short kebab-case).
+
+## Step 2 — Map answers to flags
+- Build: Web app→`web`, API service→`api`, CLI tool→`cli`, Library→`library`
+- Rigor: Prototype→`prototype`, Product→`product`, Production→`production`
+- Handles (comma-join the selected): API keys→`api-keys`, User data/PII→`pii`,
+  Money→`money`, Nothing→`none`
+- Stack: React/Next→`react`, Vue→`vue`, Svelte→`svelte`, Decide for me→`decide`
+  (omit `--stack` entirely for cli/library)
+
+## Step 3 — Show the composed plan (no writes yet)
+Run:
+```
+uv run python /d/Claude_projects/ecosystem-brain/scripts/init_project.py --plan \
+  --build <b> --rigor <r> --touches <t1,t2> [--stack <s>] --name <name>
+```
+Show the user the printed summary (template, stack, agent list, AGENTS.md preview).
+
+## Step 4 — Confirm once (AskUserQuestion)
+Ask **"Apply this configuration?"** (header: Apply): Apply | Adjust agents | Cancel
+- **Apply** → go to Step 5.
+- **Adjust agents** → ask what to add/remove, note it, then proceed to Step 5
+  (you can install/remove specific agents with install-agent.py afterward).
+- **Cancel** → stop; nothing was written.
+
+## Step 5 — Apply
+```
+uv run python /d/Claude_projects/ecosystem-brain/scripts/init_project.py --apply \
+  --build <b> --rigor <r> --touches <t1,t2> [--stack <s>] --name <name>
+```
+Then sync newly-installed agents to the global dir:
+```
+cp /d/Claude_projects/ecosystem-brain/agents/*.md ~/.claude/agents/
+```
+Report the created path and next steps (`cd` in, run the setup block from its
+AGENTS.md). Each agent was security-scanned during install; mention any that were
+BLOCKED.

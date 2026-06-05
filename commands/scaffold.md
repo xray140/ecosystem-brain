@@ -2,6 +2,10 @@
 description: Scaffold a new project from a template, git-init it, and register it in the memory vault.
 argument-hint: <type> <name>
 ---
+> For a guided, auto-configured setup (tailored AGENTS.md + auto-selected agents),
+> use **`/ecosystem-brain:init`** instead. This command is the raw/manual path —
+> it drops a plain template with no agent selection.
+
 The user wants to scaffold a new project. Arguments: `$ARGUMENTS`
 
 Parse the arguments as: first word = template type, second word = project name.

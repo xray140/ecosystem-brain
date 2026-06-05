@@ -19,7 +19,8 @@ location, so it works on any machine / any path.
 
 | Command | What it does |
 |---------|-------------|
-| `/ecosystem-brain:scaffold <type> <name>` | Scaffold a new project (python or typescript) |
+| `/ecosystem-brain:init [name]` | **Guided project creation** — 3-4 sharp questions → tailored AGENTS.md + auto-selected, scanned agents |
+| `/ecosystem-brain:scaffold <type> <name>` | Raw scaffold (no interview, no agents) — the manual path |
 | `/ecosystem-brain:search <topic> [--files]` | Search GitHub live for agents, by stars |
 | `/ecosystem-brain:install` | Install an agent from GitHub (auto security-scanned) |
 | `/ecosystem-brain:catalog [build\|categories\|install]` | Browse / batch-install from cached catalog |
