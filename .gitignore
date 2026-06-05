@@ -9,6 +9,7 @@
 memory/.search-index.db
 memory/index.json
 memory/sessions/
+memory/maintenance/
 # Obsidian workspace state (config is tracked, workspace is not)
 memory/.obsidian/workspace.json
 memory/.obsidian/workspace-mobile.json

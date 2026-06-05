@@ -30,7 +30,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **Portability**: `bootstrap.py` rewrites hardcoded paths to the clone location;
   works on any PC / any path. `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
 - **Memory**: Obsidian vault, Ollama semantic search (nomic-embed-text, GPU).
-- **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh.
+- **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
+  maintenance heartbeat (`maintenance.py`: bootstrap --verify + selfcheck +
+  update --check → `memory/maintenance/<date>.md`). One-shot registrar:
+  `scripts/register-scheduled-tasks.ps1` (idempotent, path-derived).
 - **Templates**: python-project + typescript-project, each with AGENTS.md
   (cross-tool) + CLAUDE.md (imports AGENTS.md) + per-language CI. _common = .vscode.
 

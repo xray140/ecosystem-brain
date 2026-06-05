@@ -75,19 +75,23 @@ uv run python scripts/bootstrap.py    # re-sync commands/agents/hooks
 /ecosystem-brain:update               # update installed third-party agents (re-scanned)
 ```
 
-## Optional: keep the agent catalog fresh
-`scripts/refresh-catalog.bat` rebuilds `registry/catalog.json` from GitHub so the
-SessionStart suggester recommends current agents. Run it manually anytime, or
-register a weekly task (PowerShell, run once):
+## Scheduled tasks (Windows)
+One idempotent script registers all recurring jobs, path-derived from this clone:
 ```powershell
-$a = New-ScheduledTaskAction -Execute "D:\claude-projects\ecosystem-brain\scripts\refresh-catalog.bat"
-$t = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 9am
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -MultipleInstances IgnoreNew -StartWhenAvailable
-Register-ScheduledTask -TaskName "EcosystemBrain-CatalogRefresh" -Action $a -Trigger $t -Settings $s -Force
+powershell -ExecutionPolicy Bypass -File scripts\register-scheduled-tasks.ps1
 ```
-(The bat derives the repo path from its own location, so adjust the `-Execute`
-path to wherever you cloned. Requires `gh auth login` so `catalog.py build` can
-query GitHub.)
+It schedules:
+| Task | When | Does |
+|------|------|------|
+| `EcosystemBrain-OllamaServe` | at logon | starts the Ollama server (semantic memory search) |
+| `EcosystemBrain-CatalogRefresh` | weekly (Sun 9am) | `catalog.py build` — refresh the agent catalog from GitHub |
+| `EcosystemBrain-Maintenance` | weekly (Mon 9am) | health heartbeat: `bootstrap --verify` + `selfcheck` + `update --check`, writes `memory/maintenance/<date>.md` |
+
+- Re-running is safe (`-Force`). Overwriting a task first created in an **elevated**
+  shell needs an elevated PowerShell; the script reports `[exists]` and moves on otherwise.
+- Remove them all: `scripts\register-scheduled-tasks.ps1 -Unregister`.
+- The catalog + update steps need `gh auth login`. Reports land in `memory/maintenance/`
+  (gitignored) — read the latest to see the last heartbeat's verdict.
 
 ## Per-machine notes
 Things that legitimately differ per PC (paths, tokens) live in `.env` and
