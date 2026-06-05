@@ -10,8 +10,9 @@ Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
 ## Current state (v4.0.0)
-- **13 commands** (global): init, scaffold, search, install, catalog, update,
-  agents, health-check, security-audit, write-tests, fix-bug, context-sync, memory-gc
+- **14 commands** (global): init, scaffold, search, install, catalog, update,
+  agents, health-check, doctor, security-audit, write-tests, fix-bug,
+  context-sync, memory-gc
 - **Project init**: `/ecosystem-brain:init` — sharp 3-4 question interview →
   tailored AGENTS.md + auto-selected, security-scanned agents. Engine =
   `registry/project-profiles.json` + `scripts/init_project.py` (--plan/--apply).
@@ -24,17 +25,21 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **CI**: `.github/workflows/ci.yml` runs `pytest -q tests` (43 tests) +
   `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index, pytest)
   + gitleaks. Green on GitHub.
-- **Tests**: `tests/` covers `scan_agent` (security gate), `init_project`
-  (resolve/classify/compose), `bootstrap` (path rewrite + verify). selfcheck
-  runs them via nested `uv run --with pytest`.
+- **Tests**: `tests/` (63) covers scan_agent, init_project, bootstrap,
+  github_util, update-agents (pinning), doctor (drift). selfcheck runs them via
+  nested `uv run --with pytest`.
+- **Dogfood**: the repo's own `CLAUDE.md` imports `@AGENTS.md` — same cross-tool
+  pattern it ships in templates.
+- **Doctor**: `/ecosystem-brain:doctor` (`doctor.py`) = live-hooks + repo↔~/.claude
+  drift + prereqs. Wired into health-check and the weekly maintenance heartbeat.
 - **Hooks** (global settings.json): gitleaks gate, destructive guard (root/home
   only — fixed false positive), ruff-on-write, SessionStart suggester, SessionEnd log.
 - **Portability**: `bootstrap.py` rewrites hardcoded paths to the clone location;
   works on any PC / any path. `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
 - **Memory**: Obsidian vault, Ollama semantic search (nomic-embed-text, GPU).
 - **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
-  maintenance heartbeat (`maintenance.py`: bootstrap --verify + selfcheck +
-  update --check → `memory/maintenance/<date>.md`). One-shot registrar:
+  maintenance heartbeat (`maintenance.py`: doctor + selfcheck + update --check →
+  `memory/maintenance/<date>.md`). One-shot registrar:
   `scripts/register-scheduled-tasks.ps1` (idempotent, path-derived).
 - **Templates**: python-project + typescript-project, each with AGENTS.md
   (cross-tool) + CLAUDE.md (imports AGENTS.md) + per-language CI. _common = .vscode.

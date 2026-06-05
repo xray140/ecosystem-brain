@@ -40,7 +40,7 @@ def py(script: str, *args: str) -> list[str]:
 
 # (label, command, treat-nonzero-as-failure)
 CHECKS: list[tuple[str, list[str], bool]] = [
-    ("hooks live (bootstrap --verify)", py("bootstrap.py", "--verify"), True),
+    ("config in sync (doctor)", py("doctor.py"), True),
     ("selfcheck", py("selfcheck.py"), True),
     # --check is informational (updates available is not a failure); network
     # hiccups shouldn't flip the heartbeat red, so don't gate on its exit code.
