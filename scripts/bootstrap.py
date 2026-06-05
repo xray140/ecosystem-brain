@@ -31,6 +31,9 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+# Drive-letter <-> Git-Bash-mount translation only applies on Windows. On
+# Linux/macOS paths are already posix, so the translations below are no-ops.
+WINDOWS = os.name == "nt"
 # Overridable for testing (point at a temp dir to avoid touching the real config).
 CLAUDE_DIR = Path(os.environ.get("ECOSYSTEM_CLAUDE_DIR") or (Path.home() / ".claude"))
 SETTINGS = CLAUDE_DIR / "settings.json"
@@ -47,9 +50,12 @@ CANON_WIN_BS = r"D:\claude-projects\ecosystem-brain"
 
 
 def to_bash_path(p: Path) -> str:
-    """D:\\claude-projects\\eco  ->  /d/claude-projects/eco (Git Bash mount form)."""
+    """Windows D:\\claude-projects\\eco -> /d/claude-projects/eco (Git Bash mount).
+
+    On Linux/macOS a path is already its own bash form, so it passes through.
+    """
     s = p.as_posix()  # D:/claude-projects/eco
-    if len(s) >= 2 and s[1] == ":":
+    if WINDOWS and len(s) >= 2 and s[1] == ":":
         s = f"/{s[0].lower()}{s[2:]}"
     return s
 
@@ -160,8 +166,12 @@ def check_prereqs() -> None:
 
 
 def _normalize(raw: str) -> Path:
-    """/d/foo -> D:/foo (Git Bash mount form to Windows). Leaves others as-is."""
-    if len(raw) >= 3 and raw[0] == "/" and raw[2] == "/" and raw[1].isalpha():
+    """Git Bash mount /d/foo -> D:/foo on Windows. Posix paths pass through.
+
+    The drive translation is Windows-only: on Linux/macOS a path like /d/foo is
+    a genuine posix path, not a mounted drive, so it must not be rewritten.
+    """
+    if WINDOWS and len(raw) >= 3 and raw[0] == "/" and raw[2] == "/" and raw[1].isalpha():
         raw = f"{raw[1].upper()}:/{raw[3:]}"
     return Path(raw)
 

@@ -43,7 +43,11 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - [ ] Author original first-party agents (not just VoltAgent installs) tuned to
   this stack, scanned and tracked.
 - [ ] `update --all` convenience + a `quarantine/` dir for BLOCKED upstream agents.
-- [ ] Linux/Mac path handling in bootstrap (currently Windows/Git-Bash tuned).
+- [x] **Linux/Mac path handling in bootstrap** (2026-06-06) — drive-letter <->
+  Git-Bash-mount translation (`to_bash_path`, `_normalize`) now guarded by a
+  `WINDOWS` flag, so `/d/foo` is left as a real posix path off Windows. The
+  canonical-path rewrite already worked cross-platform. Platform-aware tests
+  cover both branches.
 - [x] **Tests for the python scripts** (2026-06-05) — `tests/` with 43 pytest
   tests across scan_agent / init_project / bootstrap; wired into selfcheck
   (`check_tests`) + a dedicated CI step. Covers the security gate, init engine,

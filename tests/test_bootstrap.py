@@ -13,19 +13,30 @@ import bootstrap as b
 
 # --- to_bash_path: Windows -> Git Bash mount form ------------------------
 def test_to_bash_path_windows_drive():
-    assert b.to_bash_path(Path("D:/claude-projects/x")) == "/d/claude-projects/x"
+    # Drive translation only happens on Windows; on Linux/macOS it passes through.
+    result = b.to_bash_path(Path("D:/claude-projects/x"))
+    if b.WINDOWS:
+        assert result == "/d/claude-projects/x"
+    else:
+        assert result == "D:/claude-projects/x"
 
 
-def test_to_bash_path_non_drive_unchanged():
-    assert b.to_bash_path(Path("/already/posix")) == "/already/posix"
+def test_to_bash_path_posix_unchanged_everywhere():
+    # A real posix path is already its own bash form on every platform.
+    assert b.to_bash_path(Path("/home/user/eco")) == "/home/user/eco"
 
 
 # --- _normalize: Git Bash mount form -> Windows --------------------------
-def test_normalize_mount_path():
-    assert b._normalize("/d/foo/bar") == Path("D:/foo/bar")
+def test_normalize_mount_path_is_windows_only():
+    result = b._normalize("/d/foo/bar")
+    if b.WINDOWS:
+        assert result == Path("D:/foo/bar")
+    else:
+        # On Linux/macOS, /d/foo is a genuine posix path — must not be rewritten.
+        assert result == Path("/d/foo/bar")
 
 
-def test_normalize_leaves_plain_path():
+def test_normalize_leaves_multichar_path():
     assert b._normalize("/usr/local/bin") == Path("/usr/local/bin")
 
 
