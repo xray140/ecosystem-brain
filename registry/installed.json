@@ -36,6 +36,34 @@
       "hash": "96e6441f1e598a22ef3ab5fe8131a108",
       "installed_at": "2026-06-04",
       "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\backend-developer.md"
+    },
+    {
+      "name": "frontend-developer",
+      "source": "github:VoltAgent/awesome-claude-code-subagents/categories/01-core-development/frontend-developer.md",
+      "hash": "fc7546f40f93172542c9789e5be5fe76",
+      "installed_at": "2026-06-05",
+      "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\frontend-developer.md"
+    },
+    {
+      "name": "ui-designer",
+      "source": "github:VoltAgent/awesome-claude-code-subagents/categories/01-core-development/ui-designer.md",
+      "hash": "55574a09b449198070edaaa7188a5fbd",
+      "installed_at": "2026-06-05",
+      "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\ui-designer.md"
+    },
+    {
+      "name": "react-specialist",
+      "source": "github:VoltAgent/awesome-claude-code-subagents/categories/02-language-specialists/react-specialist.md",
+      "hash": "5832a2277c610f12cdf5378f08c5176d",
+      "installed_at": "2026-06-05",
+      "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\react-specialist.md"
+    },
+    {
+      "name": "nextjs-developer",
+      "source": "github:VoltAgent/awesome-claude-code-subagents/categories/02-language-specialists/nextjs-developer.md",
+      "hash": "862316fe3ab234de717cc20b7c97f444",
+      "installed_at": "2026-06-05",
+      "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\nextjs-developer.md"
     }
   ],
   "commands": [],
