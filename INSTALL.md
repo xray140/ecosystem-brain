@@ -72,8 +72,22 @@ Hooks, commands, and the SessionStart agent-suggester load at startup.
 ```bash
 git pull
 uv run python scripts/bootstrap.py    # re-sync commands/agents/hooks
-/ecosystem-brain:update               # update installed third-party agents
+/ecosystem-brain:update               # update installed third-party agents (re-scanned)
 ```
+
+## Optional: keep the agent catalog fresh
+`scripts/refresh-catalog.bat` rebuilds `registry/catalog.json` from GitHub so the
+SessionStart suggester recommends current agents. Run it manually anytime, or
+register a weekly task (PowerShell, run once):
+```powershell
+$a = New-ScheduledTaskAction -Execute "D:\Claude_projects\ecosystem-brain\scripts\refresh-catalog.bat"
+$t = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 9am
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -MultipleInstances IgnoreNew -StartWhenAvailable
+Register-ScheduledTask -TaskName "EcosystemBrain-CatalogRefresh" -Action $a -Trigger $t -Settings $s -Force
+```
+(The bat derives the repo path from its own location, so adjust the `-Execute`
+path to wherever you cloned. Requires `gh auth login` so `catalog.py build` can
+query GitHub.)
 
 ## Per-machine notes
 Things that legitimately differ per PC (paths, tokens) live in `.env` and

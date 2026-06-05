@@ -25,6 +25,9 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from scan_agent import scan, worst  # noqa: E402
+
 REPO_ROOT = Path(__file__).parent.parent
 INSTALLED_FILE = REPO_ROOT / "registry" / "installed.json"
 GLOBAL_AGENTS = Path.home() / ".claude" / "agents"
@@ -92,6 +95,10 @@ def update_item(entry: dict, kind: str, check_only: bool) -> str:
                 return "up-to-date"
             if check_only:
                 return "update-available"
+            # Re-scan the new upstream content — an agent could be poisoned
+            # between installs. Refuse to apply a HIGH-risk update.
+            if worst(scan(new_content)) == "HIGH":
+                return "BLOCKED-unsafe (HIGH risk upstream; not applied)"
             # Write updated file
             repo_file = REPO_DIRS[kind] / f"{name}.md"
             global_file = GLOBAL_DIRS[kind] / f"{name}.md"

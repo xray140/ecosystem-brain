@@ -1,0 +1,32 @@
+name: ci
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  selfcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history so gitleaks can scan commits
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Self-check (JSON, agent scan, init engine, memory index)
+        run: uv run --no-project python scripts/selfcheck.py
+
+      - name: Init engine smoke (--plan, no writes)
+        run: |
+          uv run --no-project python scripts/init_project.py --plan \
+            --build web --rigor production --touches api-keys,money --stack react --name ci-web
+          uv run --no-project python scripts/init_project.py --plan \
+            --build mcp-server --rigor product --touches none --name ci-mcp

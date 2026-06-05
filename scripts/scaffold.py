@@ -75,6 +75,11 @@ def main(argv: list[str] | None = None) -> int:
     package = to_package(args.name)
     shutil.copytree(template, dest)
 
+    # Overlay shared files (.vscode, etc.) from templates/_common into every project.
+    common = args.templates_root / "_common"
+    if common.is_dir():
+        shutil.copytree(common, dest, dirs_exist_ok=True)
+
     src_pkg = dest / "src" / TOKEN
     if src_pkg.is_dir():
         src_pkg.rename(dest / "src" / package)

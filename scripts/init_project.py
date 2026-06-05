@@ -294,7 +294,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("--build", required=True, choices=["web", "api", "cli", "library"])
+    ap.add_argument("--build", required=True,
+                    choices=["web", "api", "cli", "library", "data-pipeline", "mcp-server"])
     ap.add_argument(
         "--rigor", required=True, choices=["prototype", "product", "production"]
     )

@@ -14,6 +14,10 @@ Q4 only if Q1 is "Web app" or "API service".
 
 - **Q1 "What are you building?"** (header: Build) — single select:
   Web app | API service | CLI tool | Library / SDK
+  (Inference: if the project is clearly a **data/ETL/ML pipeline**, use
+  `--build data-pipeline`; if it's an **MCP server**, use `--build mcp-server`
+  — these aren't buttons, infer from the name/description; ask a one-line
+  clarifier only if genuinely ambiguous.)
 - **Q2 "How far will it go?"** (header: Rigor) — single select:
   Prototype | Product | Production
 - **Q3 "What does it handle?"** (header: Handles) — **multiSelect: true**:

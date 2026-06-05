@@ -29,6 +29,20 @@
       "ask_stack": false,
       "agents": ["python-pro"],
       "stack_blurb": "Reusable library/SDK — pure functions, stable public API, strong tests."
+    },
+    "data-pipeline": {
+      "label": "Data / ML pipeline",
+      "template": "python-project",
+      "ask_stack": false,
+      "agents": ["data-engineer", "python-pro"],
+      "stack_blurb": "Data/ML pipeline — ingest, transform, validate, output. Reproducible, tested, idempotent transforms; no hidden state."
+    },
+    "mcp-server": {
+      "label": "MCP server",
+      "template": "python-project",
+      "ask_stack": false,
+      "agents": ["backend-developer", "api-designer", "python-pro"],
+      "stack_blurb": "MCP server (Model Context Protocol) — tools/resources exposed to LLM clients over stdio/HTTP. Validate every tool input; keep handlers pure and well-described."
     }
   },
   "rigor": {
