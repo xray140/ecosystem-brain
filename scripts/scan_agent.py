@@ -190,6 +190,29 @@ def worst(findings: list[dict]) -> str:
     )
 
 
+# Holding pen for blocked content — content the scanner refused to activate.
+# Gitignored (we don't commit untrusted/poisoned markdown); a human reviews it.
+QUARANTINE = Path(__file__).resolve().parent.parent / "quarantine"
+
+
+def quarantine(name: str, content: str, reason: str, base: Path | None = None) -> Path:
+    """Write blocked content to the quarantine dir for human review.
+
+    The content is NOT activated. Returns the path written so callers can point
+    the user at it. A plain-text header (not an active directive) marks it.
+    """
+    base = base or QUARANTINE
+    base.mkdir(parents=True, exist_ok=True)
+    dest = base / f"{name}.md"
+    header = (
+        f"QUARANTINED - not active. {reason}\n"
+        "Review this file manually before trusting or installing it.\n"
+        f"{'=' * 60}\n\n"
+    )
+    dest.write_text(header + content, encoding="utf-8")
+    return dest
+
+
 def format_report(findings: list[dict]) -> str:
     if not findings:
         return "  [clean] no risky patterns found"

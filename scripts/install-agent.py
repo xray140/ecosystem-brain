@@ -33,7 +33,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 # Local security scanner (same dir) — gate untrusted content before activating.
 sys.path.insert(0, str(Path(__file__).parent))
-from scan_agent import format_report, scan, worst  # noqa: E402
+from scan_agent import format_report, quarantine, scan, worst  # noqa: E402
 
 REPO_ROOT = Path(__file__).parent.parent
 REGISTRY_DIR = REPO_ROOT / "registry"
@@ -179,9 +179,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"security scan ({level}):")
         print(format_report(findings))
     if level == "HIGH" and not args.force:
+        q = quarantine(name, content, f"install blocked: HIGH risk from {source}")
         print(
             f"\n[BLOCKED] '{name}' has HIGH-risk content — refusing to install.\n"
-            f"          Review the file at {source}\n"
+            f"          Quarantined for review: {q}\n"
+            f"          Source: {source}\n"
             f"          Re-run with --force only if you trust it."
         )
         return 2

@@ -26,7 +26,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scan_agent import scan, worst  # noqa: E402
+from scan_agent import quarantine, scan, worst  # noqa: E402
 
 REPO_ROOT = Path(__file__).parent.parent
 INSTALLED_FILE = REPO_ROOT / "registry" / "installed.json"
@@ -96,9 +96,11 @@ def update_item(entry: dict, kind: str, check_only: bool) -> str:
             if check_only:
                 return "update-available"
             # Re-scan the new upstream content — an agent could be poisoned
-            # between installs. Refuse to apply a HIGH-risk update.
+            # between installs. Refuse to apply a HIGH-risk update; stash the
+            # rejected content in quarantine/ so a human can review what changed.
             if worst(scan(new_content)) == "HIGH":
-                return "BLOCKED-unsafe (HIGH risk upstream; not applied)"
+                q = quarantine(name, new_content, f"update blocked: HIGH risk upstream ({url})")
+                return f"BLOCKED-unsafe (HIGH risk; quarantined -> {q.name}, kept current)"
             # Write updated file
             repo_file = REPO_DIRS[kind] / f"{name}.md"
             global_file = GLOBAL_DIRS[kind] / f"{name}.md"
@@ -125,6 +127,10 @@ def main(argv: list[str] | None = None) -> int:
         "--check", action="store_true", help="Report updates without applying"
     )
     ap.add_argument("--name", help="Update only this item")
+    ap.add_argument(
+        "--all", action="store_true",
+        help="Update every installed item (the default; explicit for clarity)",
+    )
     args = ap.parse_args(argv)
 
     if not INSTALLED_FILE.exists():
@@ -133,6 +139,15 @@ def main(argv: list[str] | None = None) -> int:
 
     data = json.loads(INSTALLED_FILE.read_text())
     changed = False
+    blocked = 0
+    total = sum(
+        1
+        for kind in ("agents", "commands", "skills")
+        for e in data.get(kind, [])
+        if not args.name or e["name"] == args.name
+    )
+    scope = f"'{args.name}'" if args.name else f"all {total} installed items"
+    print(f"updating {scope}{' (check only)' if args.check else ''}\n")
 
     for kind in ("agents", "commands", "skills"):
         for entry in data.get(kind, []):
@@ -140,17 +155,28 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             status = update_item(entry, kind, args.check)
             symbol = (
-                "✓" if "up-to-date" in status else "↑" if "updated" in status else "!"
+                "✓" if "up-to-date" in status
+                else "↑" if "updated" in status
+                else "✗" if "BLOCKED" in status
+                else "!"
             )
             print(f"  [{symbol}] {kind[:-1]:10s} {entry['name']:30s}  {status}")
             if "updated" in status:
                 changed = True
+            if "BLOCKED" in status:
+                blocked += 1
 
     if changed and not args.check:
         INSTALLED_FILE.write_text(json.dumps(data, indent=2) + "\n")
         print("\n[ok] installed.json updated")
     elif args.check:
         print("\n[info] run without --check to apply updates")
+
+    if blocked:
+        print(
+            f"[!] {blocked} update(s) blocked as HIGH-risk and quarantined — "
+            "review quarantine/ before trusting."
+        )
 
     return 0
 
