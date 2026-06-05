@@ -13,11 +13,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
 import sys
-import urllib.request
 from pathlib import Path
 
 # Windows consoles default to cp1252, which cannot encode unicode markers.
@@ -26,6 +24,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import github_util as gh  # noqa: E402
 from scan_agent import quarantine, scan, worst  # noqa: E402
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -45,28 +44,6 @@ REPO_DIRS: dict[str, Path] = {
 }
 
 
-def md5(text: str) -> str:
-    return hashlib.md5(text.encode()).hexdigest()  # noqa: S324
-
-
-def fetch_url(url: str) -> str:
-    with urllib.request.urlopen(url, timeout=15) as r:  # noqa: S310
-        return r.read().decode()
-
-
-def is_github_source(source: str) -> bool:
-    return source.startswith("http") or source.startswith("github:")
-
-
-def github_url_from_source(source: str) -> str:
-    if source.startswith("http"):
-        return source
-    # github:user/repo/path/to/file.md
-    parts = source.removeprefix("github:").split("/", 2)
-    user, repo, path = parts
-    return f"https://raw.githubusercontent.com/{user}/{repo}/main/{path}"
-
-
 def sync_local(name: str, kind: str) -> tuple[str, bool]:
     """Re-sync a local agent from repo dir → global dir. Returns (status, changed)."""
     repo_file = REPO_DIRS[kind] / f"{name}.md"
@@ -81,42 +58,61 @@ def sync_local(name: str, kind: str) -> tuple[str, bool]:
     return "synced", True
 
 
+def _write_agent(name: str, kind: str, content: str) -> None:
+    repo_file = REPO_DIRS[kind] / f"{name}.md"
+    global_file = GLOBAL_DIRS[kind] / f"{name}.md"
+    repo_file.parent.mkdir(parents=True, exist_ok=True)
+    global_file.parent.mkdir(parents=True, exist_ok=True)
+    repo_file.write_text(content, encoding="utf-8")
+    shutil.copy2(repo_file, global_file)
+
+
 def update_item(entry: dict, kind: str, check_only: bool) -> str:
     name = entry["name"]
     source = entry.get("source", "local")
+    parsed = gh.parse_source(source) if gh.is_github_source(source) else None
 
-    if is_github_source(source):
-        try:
-            url = github_url_from_source(source)
-            new_content = fetch_url(url)
-            new_hash = md5(new_content)
-            old_hash = entry.get("hash")
-            if old_hash == new_hash:
-                return "up-to-date"
-            if check_only:
-                return "update-available"
-            # Re-scan the new upstream content — an agent could be poisoned
-            # between installs. Refuse to apply a HIGH-risk update; stash the
-            # rejected content in quarantine/ so a human can review what changed.
-            if worst(scan(new_content)) == "HIGH":
-                q = quarantine(name, new_content, f"update blocked: HIGH risk upstream ({url})")
-                return f"BLOCKED-unsafe (HIGH risk; quarantined -> {q.name}, kept current)"
-            # Write updated file
-            repo_file = REPO_DIRS[kind] / f"{name}.md"
-            global_file = GLOBAL_DIRS[kind] / f"{name}.md"
-            repo_file.parent.mkdir(parents=True, exist_ok=True)
-            global_file.parent.mkdir(parents=True, exist_ok=True)
-            repo_file.write_text(new_content, encoding="utf-8")
-            shutil.copy2(repo_file, global_file)
-            entry["hash"] = new_hash
-            return "updated"
-        except Exception as e:
-            return f"error: {e}"
-    else:
+    if not parsed:
         if check_only:
             return "local"
-        status, _ = sync_local(name, kind)
-        return status
+        return sync_local(name, kind)[0]
+
+    repo, path = parsed
+    ref = entry.get("ref", "main")
+    pinned = entry.get("commit")
+    try:
+        latest = gh.resolve_commit(repo, ref)  # branch tip via gh (None if no gh)
+        new_content = gh.fetch_url(gh.raw_url(repo, path, latest or ref))
+    except Exception as e:  # noqa: BLE001 — network/parse: report, don't crash the run
+        return f"error: {e}"
+    new_hash = gh.md5(new_content)
+
+    if new_hash == entry.get("hash"):
+        # Content identical. Advance the pin if the tip moved — this also migrates
+        # legacy unpinned entries to a SHA on the first update run.
+        if not check_only and latest and pinned != latest:
+            entry["commit"], entry["ref"] = latest, ref
+            return f"up-to-date (pinned -> {gh.short(latest)})"
+        return "up-to-date"
+
+    diff = f"{gh.short(pinned)} -> {gh.short(latest)}"
+    if check_only:
+        cmp = gh.compare_url(repo, pinned, latest) if pinned and latest else ""
+        return f"update-available ({diff})  {cmp}".rstrip()
+
+    # Re-scan the new upstream content — it could be poisoned between installs.
+    # Refuse a HIGH-risk update; stash it in quarantine/ and keep the current pin.
+    if worst(scan(new_content)) == "HIGH":
+        q = quarantine(
+            name, new_content, f"update blocked: HIGH risk upstream ({repo}@{gh.short(latest)})"
+        )
+        return f"BLOCKED-unsafe (HIGH risk; quarantined -> {q.name}, kept current)"
+
+    _write_agent(name, kind, new_content)
+    entry["hash"] = new_hash
+    if latest:
+        entry["commit"], entry["ref"] = latest, ref
+    return f"updated ({diff})"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -156,12 +152,14 @@ def main(argv: list[str] | None = None) -> int:
             status = update_item(entry, kind, args.check)
             symbol = (
                 "✓" if "up-to-date" in status
-                else "↑" if "updated" in status
                 else "✗" if "BLOCKED" in status
+                else "↑" if "update" in status  # updated or update-available
                 else "!"
             )
             print(f"  [{symbol}] {kind[:-1]:10s} {entry['name']:30s}  {status}")
-            if "updated" in status:
+            # "updated (...)" applies new content; "pinned ->" advances provenance —
+            # both mutate the entry and must be persisted.
+            if "updated" in status or "pinned ->" in status:
                 changed = True
             if "BLOCKED" in status:
                 blocked += 1

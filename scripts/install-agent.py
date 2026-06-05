@@ -18,11 +18,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
 import sys
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,8 +29,9 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
-# Local security scanner (same dir) — gate untrusted content before activating.
+# Local modules (same dir): security scanner + shared GitHub helpers.
 sys.path.insert(0, str(Path(__file__).parent))
+import github_util as gh  # noqa: E402
 from scan_agent import format_report, quarantine, scan, worst  # noqa: E402
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -46,10 +45,6 @@ TYPE_DIRS: dict[str, tuple[Path, Path]] = {
     "command": (REPO_ROOT / "commands", GLOBAL_COMMANDS),
     "skill": (REPO_ROOT / "skills", GLOBAL_COMMANDS),
 }
-
-
-def md5(text: str) -> str:
-    return hashlib.md5(text.encode()).hexdigest()  # noqa: S324
 
 
 def load_installed() -> dict:
@@ -71,7 +66,14 @@ def detect_type(content: str, filename: str) -> str:
     return "skill"
 
 
-def install_content(content: str, name: str, item_type: str, source: str) -> None:
+def install_content(
+    content: str,
+    name: str,
+    item_type: str,
+    source: str,
+    ref: str | None = None,
+    commit: str | None = None,
+) -> None:
     repo_dir, global_dir = TYPE_DIRS[item_type]
     repo_dir.mkdir(parents=True, exist_ok=True)
     global_dir.mkdir(parents=True, exist_ok=True)
@@ -83,41 +85,31 @@ def install_content(content: str, name: str, item_type: str, source: str) -> Non
     repo_path.write_text(content, encoding="utf-8")
     shutil.copy2(repo_path, global_path)
 
+    # Provenance: ref (branch) + commit (immutable SHA the content was vetted at).
+    prov = {k: v for k, v in (("ref", ref), ("commit", commit)) if v}
     installed = load_installed()
     key = f"{item_type}s"
     entries = installed.setdefault(key, [])
-    # Update or append
-    for entry in entries:
+    today = datetime.now(timezone.utc).date().isoformat()
+    for entry in entries:  # update in place if already present
         if entry["name"] == name:
-            entry.update(
-                {
-                    "source": source,
-                    "hash": md5(content),
-                    "installed_at": datetime.now(timezone.utc).date().isoformat(),
-                }
-            )
+            entry.update({"source": source, "hash": gh.md5(content), "installed_at": today})
+            entry.update(prov)
             break
     else:
         entries.append(
             {
                 "name": name,
                 "source": source,
-                "hash": md5(content),
-                "installed_at": datetime.now(timezone.utc).date().isoformat(),
+                "hash": gh.md5(content),
+                "installed_at": today,
                 "global_path": str(global_path),
+                **prov,
             }
         )
     save_installed(installed)
-    print(f"[ok] installed {item_type} '{name}' -> {global_path}")
-
-
-def fetch_url(url: str) -> str:
-    with urllib.request.urlopen(url, timeout=15) as r:  # noqa: S310
-        return r.read().decode()
-
-
-def github_raw_url(repo: str, path: str, branch: str = "main") -> str:
-    return f"https://raw.githubusercontent.com/{repo}/{branch}/{path}"
+    pin = f"  @ {gh.short(commit)}" if commit else ""
+    print(f"[ok] installed {item_type} '{name}' -> {global_path}{pin}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -152,13 +144,18 @@ def main(argv: list[str] | None = None) -> int:
                     )
         return 0
 
+    ref = commit = None
     if args.url:
-        content = fetch_url(args.url)
+        content = gh.fetch_url(args.url)
         filename = args.url.rstrip("/").split("/")[-1]
         source = args.url
     elif args.repo and args.path:
-        url = github_raw_url(args.repo, args.path, args.branch)
-        content = fetch_url(url)
+        # Pin: resolve the branch tip to a commit SHA, then fetch the file AT that
+        # SHA so the content is immutable (a moved/force-pushed branch can't swap
+        # what we vetted). Fall back to the branch if gh can't resolve.
+        ref = args.branch
+        commit = gh.resolve_commit(args.repo, ref)
+        content = gh.fetch_url(gh.raw_url(args.repo, args.path, commit or ref))
         filename = args.path.split("/")[-1]
         source = f"github:{args.repo}/{args.path}"
     elif args.file:
@@ -188,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    install_content(content, name, item_type, source)
+    install_content(content, name, item_type, source, ref=ref, commit=commit)
     return 0
 
 

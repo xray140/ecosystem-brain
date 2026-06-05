@@ -8,10 +8,12 @@ Run:
 ```
 uv run python /d/claude-projects/ecosystem-brain/scripts/install-agent.py --url <url>
 ```
-Or for a GitHub repo+path:
+Or for a GitHub repo+path (this path **pins to the current commit SHA** so the
+content is reproducible and tamper-evident — a moved branch can't swap it):
 ```
 uv run python /d/claude-projects/ecosystem-brain/scripts/install-agent.py --repo <user/repo> --path <path/to/file.md>
 ```
+Every install is security-scanned; HIGH-risk content is refused and quarantined.
 
 After installing, sync the command files:
 ```

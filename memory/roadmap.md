@@ -17,8 +17,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
   `registry/project-profiles.json` + `scripts/init_project.py` (--plan/--apply).
 - **6 build types**: web, api, cli, library, data-pipeline, mcp-server.
 - **Agent supply chain**: search (GitHub by stars) → install (scanned by
-  `scan_agent.py`, 16 rules) → SessionStart suggests installed+catalog →
-  update (re-scans upstream, blocks HIGH-risk). Catalog = 154 agents, cached.
+  `scan_agent.py`; **pinned to commit SHA**) → SessionStart suggests
+  installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
+  compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
+  `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
 - **CI**: `.github/workflows/ci.yml` runs `pytest -q tests` (43 tests) +
   `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index, pytest)
   + gitleaks. Green on GitHub.
@@ -47,7 +49,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
   (writes scripts honoring the Windows/uv/path conventions) and `convention-keeper`
   (read-only auditor for CLAUDE.md/AGENTS.md/agents/scripts vs official + ecosystem
   best practices). Both scanned CLEAN and registered local. Now 6 first-party agents.
-- [ ] `update --all` convenience + a `quarantine/` dir for BLOCKED upstream agents.
+- [x] **`update --all` + `quarantine/`** (2026-06-06) — explicit --all flag; a
+  HIGH-risk install or upstream update is stashed in `quarantine/` for review.
+- [x] **Supply-chain hardening** (2026-06-06) — agents pinned to commit SHAs +
+  provenance; update shows oldsha→newsha + compare URL. See [[decisions/agent-pinning]].
 - [x] **Linux/Mac path handling in bootstrap** (2026-06-06) — drive-letter <->
   Git-Bash-mount translation (`to_bash_path`, `_normalize`) now guarded by a
   `WINDOWS` flag, so `/d/foo` is left as a real posix path off Windows. The
@@ -61,4 +66,5 @@ Read this first in a fresh session (after CLAUDE.md). Run
 ## Key decisions (see decisions/)
 - [[decisions/hook-format]] · [[decisions/windows-python-invocation]] ·
   [[decisions/windows-path-translation]] · [[decisions/ollama-accented-path]] ·
-  [[decisions/powershell-utf8-bom]] · [[decisions/claude-best-practices]]
+  [[decisions/powershell-utf8-bom]] · [[decisions/claude-best-practices]] ·
+  [[decisions/agent-pinning]]

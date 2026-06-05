@@ -4,8 +4,11 @@ argument-hint: [--all | --check | --name <name>]
 ---
 Update all installed ecosystem agents/skills/commands. Arguments: $ARGUMENTS
 
-Each GitHub-sourced update is re-scanned by `scan_agent.py`; a HIGH-risk upstream
-is refused and stashed in `quarantine/` (current version kept) for manual review.
+Each GitHub-sourced agent is **pinned to a commit SHA**. `update` re-resolves the
+branch tip via `gh`, and on a real content change shows `oldsha -> newsha` plus a
+GitHub compare URL so you can review the diff. Updates are re-scanned by
+`scan_agent.py`; a HIGH-risk upstream is refused and stashed in `quarantine/`
+(current pin kept) for manual review.
 
 Steps:
 1. Run check first: `uv run python /d/claude-projects/ecosystem-brain/scripts/update-agents.py --check`
