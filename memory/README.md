@@ -28,6 +28,7 @@ uv run python /d/Claude_projects/ecosystem-brain/skills/memory/memory-search.py 
 - `PreToolUse` `if: Bash(git push*)` → guard-secrets.sh + guard-destructive.sh
 - `PreToolUse` `if: Bash(rm *)` → guard-destructive.sh
 - `PostToolUse` `if: Write(*.py)` → fmt-python.sh (ruff format + fix)
+- `SessionStart` → suggest-agents.py (recommends relevant installed + catalog agents)
 - `SessionEnd` → log-session.sh (dated session note in memory/sessions/)
 
 Note: `matcher` = tool name only; `if` = argument filter. See [[decisions/hook-format]].
@@ -35,4 +36,6 @@ Note: `matcher` = tool name only; `if` = argument filter. See [[decisions/hook-f
 ## Key decisions
 - [[decisions/hook-format]] — correct Claude Code hook structure
 - [[decisions/windows-python-invocation]] — use `uv run python`, not bare `python`
+- [[decisions/windows-path-translation]] — `/d/` works as a CLI arg, not inside Python code
 - [[decisions/ollama-accented-path]] — OLLAMA_MODELS must be ASCII-safe
+- [[decisions/powershell-utf8-bom]] — avoid Out-File `-Encoding utf8` (adds a BOM)

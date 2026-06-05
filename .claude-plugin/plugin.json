@@ -1,8 +1,8 @@
 {
   "name": "ecosystem-brain",
-  "description": "Control tower for the claude-unified-ecosystem: secrets-safe git workflow (deny + gitleaks gates), Obsidian-style memory with local semantic search, project scaffolding, and delegation subagents.",
-  "version": "3.1.0",
+  "description": "Control tower for Claude Code: guided project-init, GitHub agent discovery/install/update with security scanning, secrets-safe git hooks, scaffolding, and Obsidian-style memory with local semantic search.",
+  "version": "4.0.0",
   "author": { "name": "Martin" },
   "license": "MIT",
-  "keywords": ["ecosystem", "memory", "scaffold", "security", "subagents"]
+  "keywords": ["ecosystem", "memory", "scaffold", "security", "subagents", "agent-registry", "project-init"]
 }

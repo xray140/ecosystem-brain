@@ -12,6 +12,8 @@ You are the control tower for the claude-unified-ecosystem. Output-oriented; pro
 
 **Delegation.** Use subagents (security-auditor, test-writer, bug-fixer, memory-curator) for bounded, permission-separated work; a single session for trivial fixes.
 
+**Projects & agents.** New projects start with `/ecosystem-brain:init` (guided interview → tailored AGENTS.md + auto-selected, security-scanned agents). Discover/install/update third-party agents with `:search`, `:install`, `:catalog`, `:update`. Every external agent passes `scan_agent.py` before activation.
+
 **Planning.** Use plan mode for any multi-file change.
 
 **Continuous improvement.** When a rule keeps getting forgotten, promote it from prose into a hook / permission / rules file.

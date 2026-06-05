@@ -1,6 +1,9 @@
-# Ecosystem-Brain (Claude Code plugin)
+# Ecosystem-Brain
 
-Bundles the claude-unified-ecosystem control tower as one installable unit: delegation subagents, secrets-safe git hooks, project scaffolding, and an Obsidian-style memory with local semantic search.
+The control tower for your Claude Code setup: a guided project-init interview,
+GitHub agent discovery/install/update with security scanning, secrets-safe git
+hooks, project scaffolding, and an Obsidian-style memory with local semantic
+search. Installed into `~/.claude/` from a single clone via `bootstrap.py`.
 
 ## Install
 

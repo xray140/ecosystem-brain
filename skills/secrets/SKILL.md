@@ -6,13 +6,17 @@ description: Secrets hygiene and identity. Use before commits/pushes, when setti
 
 ## Audit (read-only)
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/skills/secrets/secrets-doctor.sh
+bash /d/Claude_projects/ecosystem-brain/skills/secrets/secrets-doctor.sh
 ```
 Checks: `.gitignore` covers `.env*`/`.identity.local.env`, nothing secret is tracked, `.env` vs `.env.example` parity, gitleaks clean, a git credential helper is set.
 
-## Identity
-Public identity (git author, handle, public usernames) lives in `memory/identity.md` and is applied with:
+## Identity (optional — setup required)
+Public identity (git author name/email) can be stored in `memory/identity.md`
+frontmatter and applied to git config:
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/skills/secrets/apply-identity.sh [--local]
+bash /d/Claude_projects/ecosystem-brain/skills/secrets/apply-identity.sh [--local]
 ```
+**Setup:** this requires a `memory/identity.md` with `git_name:` and `git_email:`
+in its frontmatter (does not exist by default — create it to use this).
+
 Private contact (phone, personal email) lives only in `.identity.local.env` (gitignored). Read a key by name when filling a private field, but never echo its value into a committed file, a log, or anything pushed.
