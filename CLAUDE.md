@@ -10,7 +10,7 @@ You are the control tower for the claude-unified-ecosystem. Output-oriented; pro
 
 **Memory.** `memory/` is an Obsidian vault: frontmatter + `[[wikilinks]]`, atomic decision/tool/convention notes, MOCs as hubs. Load `index.json` first; recall with the memory skill; promote significant decisions into their own notes.
 
-**Delegation.** Give bounded or high-volume work to a focused subagent (security-auditor, test-writer, bug-fixer, memory-curator): isolated context, least-privilege tools, returns a summary. Trivial fixes stay in the main session.
+**Delegation.** Give bounded or high-volume work to a focused subagent (security-auditor, convention-keeper, script-smith, test-writer, bug-fixer, memory-curator): isolated context, least-privilege tools, returns a summary. Trivial fixes stay in the main session.
 
 **Projects & agents.** New projects start with `/ecosystem-brain:init` (guided interview → tailored AGENTS.md + auto-selected, security-scanned agents). Discover/install/update third-party agents with `:search`, `:install`, `:catalog`, `:update`. Every external agent passes `scan_agent.py` before activation.
 

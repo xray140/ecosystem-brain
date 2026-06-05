@@ -40,8 +40,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
   guidance: added Verification discipline, nuanced plan-mode, focused/isolated/
   least-privilege subagent framing, explicit `model:` grants. Grounding +
   source links in [[decisions/claude-best-practices]].
-- [ ] Author original first-party agents (not just VoltAgent installs) tuned to
-  this stack, scanned and tracked.
+- [x] **Author original first-party agents** (2026-06-06) — added `script-smith`
+  (writes scripts honoring the Windows/uv/path conventions) and `convention-keeper`
+  (read-only auditor for CLAUDE.md/AGENTS.md/agents/scripts vs official + ecosystem
+  best practices). Both scanned CLEAN and registered local. Now 6 first-party agents.
 - [ ] `update --all` convenience + a `quarantine/` dir for BLOCKED upstream agents.
 - [x] **Linux/Mac path handling in bootstrap** (2026-06-06) — drive-letter <->
   Git-Bash-mount translation (`to_bash_path`, `_normalize`) now guarded by a

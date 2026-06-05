@@ -64,6 +64,20 @@
       "hash": "862316fe3ab234de717cc20b7c97f444",
       "installed_at": "2026-06-05",
       "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\nextjs-developer.md"
+    },
+    {
+      "name": "script-smith",
+      "source": "local",
+      "hash": "66bc337e1fcfe4b60160c658bd250aaa",
+      "installed_at": "2026-06-05",
+      "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\script-smith.md"
+    },
+    {
+      "name": "convention-keeper",
+      "source": "local",
+      "hash": "1bb7f2541d22c61dbe3769d8487a7cba",
+      "installed_at": "2026-06-05",
+      "global_path": "C:\\Users\\Martin Cayr\u00e9\\.claude\\agents\\convention-keeper.md"
     }
   ],
   "commands": [],
