@@ -7,6 +7,7 @@ tools:
   - Glob
   - Write
   - Bash
+model: inherit
 ---
 You write pytest tests for the active project.
 

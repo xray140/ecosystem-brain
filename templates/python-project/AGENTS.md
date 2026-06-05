@@ -11,8 +11,9 @@ inherits ecosystem-brain conventions.
 - **Secrets:** `.env` only (gitignored); never committed, never echoed
 
 ## Workflow
+- Explore → plan → implement. Use plan mode when a change spans multiple files, the approach is unclear, or the code is unfamiliar; for a one-sentence diff, just do it.
 - Propose → get approval → execute for any multi-file change
-- Use plan mode (`/plan`) for structural changes
+- After changes, run the check and show its output — `uv run pytest -q` (and `uv run ruff check`). Never claim success you haven't verified.
 - Commit messages: `type(scope): description` (feat, fix, chore, docs, test)
 
 ## Commands available (via ecosystem-brain plugin)

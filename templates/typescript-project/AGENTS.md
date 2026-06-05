@@ -11,8 +11,9 @@ OpenAI Codex, Cursor, Copilot, and others. Part of the claude-unified-ecosystem.
 - **Secrets:** `.env` only (gitignored); never committed, never echoed
 
 ## Workflow
+- Explore → plan → implement. Use plan mode when a change spans multiple files, the approach is unclear, or the code is unfamiliar; for a one-sentence diff, just do it.
 - Propose → get approval → execute for any multi-file change
-- Use plan mode for structural changes
+- After changes, run the check and show its output — `npm test` (and `npm run lint`). Never claim success you haven't verified.
 - Commit messages: `type(scope): description` (feat, fix, chore, docs, test)
 
 ## Key files

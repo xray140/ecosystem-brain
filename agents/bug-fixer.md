@@ -8,6 +8,7 @@ tools:
   - Edit
   - Write
   - Bash
+model: inherit
 ---
 You fix one bug at a time. Do not refactor beyond the fix.
 

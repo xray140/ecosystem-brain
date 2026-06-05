@@ -8,6 +8,7 @@ tools:
   - Edit
   - Write
   - Bash
+model: inherit
 ---
 You maintain the Obsidian vault at /d/claude-projects/ecosystem-brain/memory/ as a clean knowledge graph.
 

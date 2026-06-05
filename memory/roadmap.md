@@ -31,12 +31,11 @@ Read this first in a fresh session (after CLAUDE.md). Run
   (cross-tool) + CLAUDE.md (imports AGENTS.md) + per-language CI. _common = .vscode.
 
 ## Candidate next steps
-- [ ] **Official Claude best practices** — distill Anthropic's Claude Code +
-  subagent guidance (anthropic.com/engineering/claude-code-best-practices, the
-  docs, and the subagent design guide) into: the ecosystem CLAUDE.md, the
-  template AGENTS.md files, and the agent definitions. Make the conventions
-  match official advice (concise CLAUDE.md, context-isolated subagents, explicit
-  tool grants, plan-mode discipline).
+- [x] **Official Claude best practices** (2026-06-05) — aligned CLAUDE.md,
+  template AGENTS.md, and the 4 first-party agents with Anthropic's published
+  guidance: added Verification discipline, nuanced plan-mode, focused/isolated/
+  least-privilege subagent framing, explicit `model:` grants. Grounding +
+  source links in [[decisions/claude-best-practices]].
 - [ ] Author original first-party agents (not just VoltAgent installs) tuned to
   this stack, scanned and tracked.
 - [ ] `update --all` convenience + a `quarantine/` dir for BLOCKED upstream agents.
@@ -46,4 +45,4 @@ Read this first in a fresh session (after CLAUDE.md). Run
 ## Key decisions (see decisions/)
 - [[decisions/hook-format]] · [[decisions/windows-python-invocation]] ·
   [[decisions/windows-path-translation]] · [[decisions/ollama-accented-path]] ·
-  [[decisions/powershell-utf8-bom]]
+  [[decisions/powershell-utf8-bom]] · [[decisions/claude-best-practices]]

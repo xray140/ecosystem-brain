@@ -6,6 +6,7 @@ tools:
   - Grep
   - Glob
   - Bash
+model: inherit
 ---
 You are a read-only security auditor for the claude-unified-ecosystem.
 
