@@ -10,13 +10,13 @@ tags: [project, python]
 Scaffolded from `python-project` template on 2026-06-04.
 
 ## Paths
-- Project: `D:\Claude_projects\my-first-tool`
+- Project: `D:\claude-projects\my-first-tool`
 - Package: `my_first_tool`
 - Entry point: `src/my_first_tool/cli.py`
 
 ## First-time setup
 ```bash
-cd /d/Claude_projects/my-first-tool
+cd /d/claude-projects/my-first-tool
 uv sync
 pre-commit install
 cp .env.example .env

@@ -4,10 +4,10 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "if": "Bash(git commit*)", "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
-          { "type": "command", "if": "Bash(git push*)",   "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
-          { "type": "command", "if": "Bash(git push*)",   "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" },
-          { "type": "command", "if": "Bash(rm *)",        "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" }
+          { "type": "command", "if": "Bash(git commit*)", "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
+          { "type": "command", "if": "Bash(git push*)",   "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
+          { "type": "command", "if": "Bash(git push*)",   "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" },
+          { "type": "command", "if": "Bash(rm *)",        "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" }
         ]
       }
     ],
@@ -15,18 +15,18 @@
       {
         "matcher": "Write",
         "hooks": [
-          { "type": "command", "if": "Write(*.py)", "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/fmt-python.sh" }
+          { "type": "command", "if": "Write(*.py)", "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/fmt-python.sh" }
         ]
       }
     ],
     "SessionStart": [
       {
-        "hooks": [{ "type": "command", "command": "uv run --no-project python /d/Claude_projects/ecosystem-brain/hooks/scripts/suggest-agents.py" }]
+        "hooks": [{ "type": "command", "command": "uv run --no-project python /d/claude-projects/ecosystem-brain/hooks/scripts/suggest-agents.py" }]
       }
     ],
     "SessionEnd": [
       {
-        "hooks": [{ "type": "command", "command": "bash /d/Claude_projects/ecosystem-brain/hooks/scripts/log-session.sh" }]
+        "hooks": [{ "type": "command", "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/log-session.sh" }]
       }
     ]
   },

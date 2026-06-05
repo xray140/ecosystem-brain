@@ -6,7 +6,7 @@ description: Secrets hygiene and identity. Use before commits/pushes, when setti
 
 ## Audit (read-only)
 ```bash
-bash /d/Claude_projects/ecosystem-brain/skills/secrets/secrets-doctor.sh
+bash /d/claude-projects/ecosystem-brain/skills/secrets/secrets-doctor.sh
 ```
 Checks: `.gitignore` covers `.env*`/`.identity.local.env`, nothing secret is tracked, `.env` vs `.env.example` parity, gitleaks clean, a git credential helper is set.
 
@@ -14,7 +14,7 @@ Checks: `.gitignore` covers `.env*`/`.identity.local.env`, nothing secret is tra
 Public identity (git author name/email) can be stored in `memory/identity.md`
 frontmatter and applied to git config:
 ```bash
-bash /d/Claude_projects/ecosystem-brain/skills/secrets/apply-identity.sh [--local]
+bash /d/claude-projects/ecosystem-brain/skills/secrets/apply-identity.sh [--local]
 ```
 **Setup:** this requires a `memory/identity.md` with `git_name:` and `git_email:`
 in its frontmatter (does not exist by default — create it to use this).

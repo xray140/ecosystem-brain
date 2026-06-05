@@ -124,7 +124,7 @@ def main() -> int:
         for s in suggestions:
             lines.append(f"    - {s['name']}  (install: --repo {s['repo']} --path {s['path']})")
     lines.append(
-        "  Search more: `uv run python /d/Claude_projects/ecosystem-brain/"
+        "  Search more: `uv run python /d/claude-projects/ecosystem-brain/"
         'scripts/search_agents.py "<topic>" --files`'
     )
 

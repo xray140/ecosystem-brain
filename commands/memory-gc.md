@@ -4,5 +4,5 @@ description: Invoke the memory-curator agent to prune stale notes, promote decis
 Invoke the memory-curator agent on the ecosystem-brain vault.
 
 Use the memory-curator agent from ~/.claude/agents/memory-curator.md.
-Vault path: /d/Claude_projects/ecosystem-brain/memory/
+Vault path: /d/claude-projects/ecosystem-brain/memory/
 Never delete notes without showing the list and getting explicit confirmation first.

@@ -19,7 +19,7 @@ to avoid searching for a pyproject.toml).
 uv run --no-project python -c 'import json,sys; ...'
 
 # In skill/command instructions
-uv run python /d/Claude_projects/ecosystem-brain/skills/memory/memory-index.py
+uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-index.py
 ```
 
 ## Real Python location

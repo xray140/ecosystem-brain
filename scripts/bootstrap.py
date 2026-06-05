@@ -3,7 +3,7 @@
 
 Makes the repo portable: run this after `git clone` on any PC and it wires up
 ~/.claude/ with the correct absolute paths derived from THIS clone's location —
-no hardcoded D:\\Claude_projects assumptions.
+no hardcoded D:\\claude-projects assumptions.
 
 What it does:
   1. Detects the repo root (this script's location) and its bash-form path.
@@ -34,69 +34,35 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Overridable for testing (point at a temp dir to avoid touching the real config).
 CLAUDE_DIR = Path(os.environ.get("ECOSYSTEM_CLAUDE_DIR") or (Path.home() / ".claude"))
 SETTINGS = CLAUDE_DIR / "settings.json"
+# Single source of truth for hook wiring. bootstrap reads it and rewrites the
+# canonical path to this clone's real path — no second copy to drift out of sync.
+HOOKS_TEMPLATE = REPO_ROOT / "hooks" / "hooks.json"
 
 # The repo path as committed (the "authoring" location). Commands/agents hardcode
 # this; bootstrap rewrites it to THIS clone's real path so a clone at any location
 # works. On the authoring machine these are no-ops.
-CANON_BASH = "/d/Claude_projects/ecosystem-brain"
-CANON_WIN_FWD = "D:/Claude_projects/ecosystem-brain"
-CANON_WIN_BS = r"D:\Claude_projects\ecosystem-brain"
+CANON_BASH = "/d/claude-projects/ecosystem-brain"
+CANON_WIN_FWD = "D:/claude-projects/ecosystem-brain"
+CANON_WIN_BS = r"D:\claude-projects\ecosystem-brain"
 
 
 def to_bash_path(p: Path) -> str:
-    """D:\\Claude_projects\\eco  ->  /d/Claude_projects/eco (Git Bash mount form)."""
-    s = p.as_posix()  # D:/Claude_projects/eco
+    """D:\\claude-projects\\eco  ->  /d/claude-projects/eco (Git Bash mount form)."""
+    s = p.as_posix()  # D:/claude-projects/eco
     if len(s) >= 2 and s[1] == ":":
         s = f"/{s[0].lower()}{s[2:]}"
     return s
 
 
-def build_hooks(bash_root: str) -> dict:
-    h = f"bash {bash_root}/hooks/scripts"
-    return {
-        "PreToolUse": [
-            {
-                "matcher": "Bash",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "if": "Bash(git commit*)",
-                        "command": f"{h}/guard-secrets.sh",
-                    },
-                    {
-                        "type": "command",
-                        "if": "Bash(git push*)",
-                        "command": f"{h}/guard-secrets.sh",
-                    },
-                    {
-                        "type": "command",
-                        "if": "Bash(git push*)",
-                        "command": f"{h}/guard-destructive.sh",
-                    },
-                    {"type": "command", "if": "Bash(rm *)", "command": f"{h}/guard-destructive.sh"},
-                ],
-            }
-        ],
-        "PostToolUse": [
-            {
-                "matcher": "Write",
-                "hooks": [
-                    {"type": "command", "if": "Write(*.py)", "command": f"{h}/fmt-python.sh"}
-                ],
-            }
-        ],
-        "SessionStart": [
-            {
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": f"uv run --no-project python {bash_root}/hooks/scripts/suggest-agents.py",
-                    }
-                ]
-            }
-        ],
-        "SessionEnd": [{"hooks": [{"type": "command", "command": f"{h}/log-session.sh"}]}],
-    }
+def load_hooks(bash_root: str) -> dict:
+    """Read hooks/hooks.json (the single source of truth) and rewrite the
+    canonical repo path to this clone's real path. Drops the `_notes` doc key.
+
+    Editing the hook wiring means editing one JSON file — no second hardcoded
+    copy here to keep in sync.
+    """
+    raw = rewrite_paths(HOOKS_TEMPLATE.read_text(encoding="utf-8"), bash_root)
+    return json.loads(raw).get("hooks", {})
 
 
 PERMISSIONS = {
@@ -107,7 +73,12 @@ PERMISSIONS = {
         "Read(**/.env.*)",
         "Read(./.identity.local.env)",
     ],
-    "ask": ["Bash(rm *)", "Bash(git push*)", "Bash(git reset --hard*)", "Bash(git clean*)"],
+    "ask": [
+        "Bash(rm *)",
+        "Bash(git push*)",
+        "Bash(git reset --hard*)",
+        "Bash(git clean*)",
+    ],
 }
 
 
@@ -115,7 +86,7 @@ def merge_settings(dry: bool, bash_root: str) -> None:
     existing: dict = {}
     if SETTINGS.exists():
         existing = json.loads(SETTINGS.read_text(encoding="utf-8"))
-    existing["hooks"] = build_hooks(bash_root)
+    existing["hooks"] = load_hooks(bash_root)
     existing["permissions"] = PERMISSIONS
     if dry:
         print(f"  [dry] would write hooks+permissions to {SETTINGS}")
@@ -132,15 +103,17 @@ def rewrite_paths(text: str, bash_root: str) -> str:
     Handles the bash mount form, both Windows forms, and the legacy
     ${CLAUDE_PLUGIN_ROOT} token. No-op on the authoring machine.
     """
-    return (text
-            .replace(CANON_BASH, bash_root)
-            .replace(CANON_WIN_FWD, REPO_ROOT.as_posix())
-            .replace(CANON_WIN_BS, str(REPO_ROOT))
-            .replace("${CLAUDE_PLUGIN_ROOT}", bash_root))
+    return (
+        text.replace(CANON_BASH, bash_root)
+        .replace(CANON_WIN_FWD, REPO_ROOT.as_posix())
+        .replace(CANON_WIN_BS, str(REPO_ROOT))
+        .replace("${CLAUDE_PLUGIN_ROOT}", bash_root)
+    )
 
 
-def copy_tree(src: Path, dst: Path, dry: bool, label: str, bash_root: str,
-              rewrite: bool = False) -> None:
+def copy_tree(
+    src: Path, dst: Path, dry: bool, label: str, bash_root: str, rewrite: bool = False
+) -> None:
     if not src.is_dir():
         print(f"  [skip] no {label} dir at {src}")
         return
@@ -186,12 +159,59 @@ def check_prereqs() -> None:
         )
 
 
+def _normalize(raw: str) -> Path:
+    """/d/foo -> D:/foo (Git Bash mount form to Windows). Leaves others as-is."""
+    if len(raw) >= 3 and raw[0] == "/" and raw[2] == "/" and raw[1].isalpha():
+        raw = f"{raw[1].upper()}:/{raw[3:]}"
+    return Path(raw)
+
+
+def _hook_script_paths(hooks: dict):
+    """Yield the .sh/.py filesystem paths referenced by hook command strings."""
+    for event in hooks.values():
+        for group in event:
+            for hook in group.get("hooks", []):
+                for tok in (hook.get("command") or "").split():
+                    if tok.endswith((".sh", ".py")):
+                        yield tok
+
+
+def verify_live() -> int:
+    """Check that the live settings.json hook scripts actually exist on disk.
+
+    Catches the classic breakage: the repo was renamed or moved but bootstrap
+    was never re-run, so every hook silently points at a dead path.
+    """
+    print("verify: live hook paths resolve")
+    if not SETTINGS.exists():
+        print(f"  [skip] no live settings at {SETTINGS} — run bootstrap first")
+        return 0
+    hooks = json.loads(SETTINGS.read_text(encoding="utf-8")).get("hooks", {})
+    stale = sorted({t for t in _hook_script_paths(hooks) if not _normalize(t).exists()})
+    if stale:
+        print(f"  [STALE] {len(stale)} hook script(s) point at non-existent paths:")
+        for t in stale:
+            print(f"    - {t}")
+        print("  fix: re-run  uv run --no-project python scripts/bootstrap.py")
+        return 1
+    print("  [ok] all live hook scripts resolve")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--verify",
+        action="store_true",
+        help="check the live config's hook paths resolve, then exit",
+    )
     args = ap.parse_args(argv)
+
+    if args.verify:
+        return verify_live()
 
     bash_root = to_bash_path(REPO_ROOT)
     print("ecosystem-brain bootstrap")
@@ -208,8 +228,14 @@ def main(argv: list[str] | None = None) -> int:
         bash_root,
         rewrite=True,
     )
-    copy_tree(REPO_ROOT / "agents", CLAUDE_DIR / "agents", args.dry_run,
-              "agents", bash_root, rewrite=True)
+    copy_tree(
+        REPO_ROOT / "agents",
+        CLAUDE_DIR / "agents",
+        args.dry_run,
+        "agents",
+        bash_root,
+        rewrite=True,
+    )
     seed_env(args.dry_run)
     check_prereqs()
 

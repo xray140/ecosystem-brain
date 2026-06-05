@@ -38,7 +38,7 @@ If no project name was provided in `$ARGUMENTS`, also ask for it (short kebab-ca
 ## Step 3 — Show the composed plan (no writes yet)
 Run:
 ```
-uv run python /d/Claude_projects/ecosystem-brain/scripts/init_project.py --plan \
+uv run python /d/claude-projects/ecosystem-brain/scripts/init_project.py --plan \
   --build <b> --rigor <r> --touches <t1,t2> [--stack <s>] --name <name>
 ```
 Show the user the printed summary (template, stack, agent list, AGENTS.md preview).
@@ -52,12 +52,12 @@ Ask **"Apply this configuration?"** (header: Apply): Apply | Adjust agents | Can
 
 ## Step 5 — Apply
 ```
-uv run python /d/Claude_projects/ecosystem-brain/scripts/init_project.py --apply \
+uv run python /d/claude-projects/ecosystem-brain/scripts/init_project.py --apply \
   --build <b> --rigor <r> --touches <t1,t2> [--stack <s>] --name <name>
 ```
 Then sync newly-installed agents to the global dir:
 ```
-cp /d/Claude_projects/ecosystem-brain/agents/*.md ~/.claude/agents/
+cp /d/claude-projects/ecosystem-brain/agents/*.md ~/.claude/agents/
 ```
 Report the created path and next steps (`cd` in, run the setup block from its
 AGENTS.md). Each agent was security-scanned during install; mention any that were

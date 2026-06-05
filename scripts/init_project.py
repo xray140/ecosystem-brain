@@ -36,7 +36,7 @@ CATALOG = REPO_ROOT / "registry" / "catalog.json"
 SCAFFOLD = REPO_ROOT / "scripts" / "scaffold.py"
 INSTALLER = REPO_ROOT / "scripts" / "install-agent.py"
 INDEXER = REPO_ROOT / "skills" / "memory" / "memory-index.py"
-DEST_ROOT = REPO_ROOT.parent  # sibling of the repo, e.g. D:\Claude_projects
+DEST_ROOT = REPO_ROOT.parent  # sibling of the repo, e.g. D:\claude-projects
 
 # Per-template fragments used to compose AGENTS.md.
 TEMPLATE_BITS = {

@@ -8,7 +8,7 @@ throughout. stdlib only.
 Usage:
     python skills/scaffold.py --type python-project --name my-tool
     python skills/scaffold.py --type python-project --name my-tool \
-        --dest-root /d/Claude_projects --templates-root templates [--git] [--force]
+        --dest-root /d/claude-projects --templates-root templates [--git] [--force]
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--type", required=True, help="template name under --templates-root")
     ap.add_argument("--name", required=True, help="project name (kebab-case)")
     ap.add_argument("--templates-root", default="templates", type=Path)
-    ap.add_argument("--dest-root", default="/d/Claude_projects", type=Path)
+    ap.add_argument("--dest-root", default="/d/claude-projects", type=Path)
     ap.add_argument("--git", action="store_true", help="git init + first commit")
     ap.add_argument("--force", action="store_true", help="overwrite if dest exists")
     args = ap.parse_args(argv)

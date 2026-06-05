@@ -80,7 +80,7 @@ uv run python scripts/bootstrap.py    # re-sync commands/agents/hooks
 SessionStart suggester recommends current agents. Run it manually anytime, or
 register a weekly task (PowerShell, run once):
 ```powershell
-$a = New-ScheduledTaskAction -Execute "D:\Claude_projects\ecosystem-brain\scripts\refresh-catalog.bat"
+$a = New-ScheduledTaskAction -Execute "D:\claude-projects\ecosystem-brain\scripts\refresh-catalog.bat"
 $t = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 9am
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -MultipleInstances IgnoreNew -StartWhenAvailable
 Register-ScheduledTask -TaskName "EcosystemBrain-CatalogRefresh" -Action $a -Trigger $t -Settings $s -Force

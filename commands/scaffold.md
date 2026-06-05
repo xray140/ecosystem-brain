@@ -12,8 +12,8 @@ Parse the arguments as: first word = template type, second word = project name.
 Available types: `python-project`, `typescript-project`
 
 Steps:
-1. Run: `uv run python /d/Claude_projects/ecosystem-brain/scripts/scaffold.py --type <type> --name <name> --templates-root /d/Claude_projects/ecosystem-brain/templates --dest-root /d/Claude_projects --git`
-2. Create `memory/projects/<name>.md` in `/d/Claude_projects/ecosystem-brain/memory/projects/` using this format:
+1. Run: `uv run python /d/claude-projects/ecosystem-brain/scripts/scaffold.py --type <type> --name <name> --templates-root /d/claude-projects/ecosystem-brain/templates --dest-root /d/claude-projects --git`
+2. Create `memory/projects/<name>.md` in `/d/claude-projects/ecosystem-brain/memory/projects/` using this format:
    ```
    ---
    type: project
@@ -25,9 +25,9 @@ Steps:
    # <name>
    Scaffolded from `<type>` template on <today>.
    ## Paths
-   - Project: `D:\Claude_projects\<name>`
+   - Project: `D:\claude-projects\<name>`
    - Package: `<name with hyphens replaced by underscores>`
    ```
-3. Refresh the manifest: `uv run python /d/Claude_projects/ecosystem-brain/skills/memory/memory-index.py`
+3. Refresh the manifest: `uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-index.py`
 
 Report the created path and next steps (`uv sync`, `pre-commit install`). If the destination already exists, confirm before passing `--force`.

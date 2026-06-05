@@ -5,7 +5,7 @@ human-readable window into the same knowledge base Claude searches semantically.
 
 ## Open it
 1. Launch Obsidian
-2. **Open folder as vault** → select `D:\Claude_projects\ecosystem-brain\memory`
+2. **Open folder as vault** → select `D:\claude-projects\ecosystem-brain\memory`
 3. The `.obsidian/` config (graph colors, templates, plugins) loads automatically
 
 ## What's in the vault

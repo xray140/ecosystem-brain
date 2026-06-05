@@ -8,11 +8,11 @@ tags: [project]
 # {{title}}
 
 ## Paths
-- Project: `D:\Claude_projects\{{title}}`
+- Project: `D:\claude-projects\{{title}}`
 
 ## First-time setup
 ```bash
-cd /d/Claude_projects/{{title}}
+cd /d/claude-projects/{{title}}
 uv sync
 pre-commit install
 cp .env.example .env

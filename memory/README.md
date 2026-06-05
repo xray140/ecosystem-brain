@@ -14,13 +14,13 @@ Obsidian-style vault. Each note has YAML frontmatter + `[[wikilinks]]`.
 ## Usage
 ```bash
 # Rebuild the structural manifest
-uv run python /d/Claude_projects/ecosystem-brain/skills/memory/memory-index.py
+uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-index.py
 
 # Semantic search (requires Ollama running with nomic-embed-text)
-uv run python /d/Claude_projects/ecosystem-brain/skills/memory/memory-search.py search "QUERY"
+uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-search.py search "QUERY"
 
 # Offline fallback (hash embedder, no Ollama needed)
-uv run python /d/Claude_projects/ecosystem-brain/skills/memory/memory-search.py search "QUERY" --offline
+uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-search.py search "QUERY" --offline
 ```
 
 ## Active hooks (global, ~/.claude/settings.json)

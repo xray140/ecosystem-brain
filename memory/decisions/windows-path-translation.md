@@ -7,7 +7,7 @@ tags: [windows, git-bash, python, paths]
 # Windows /d/ Path Translation in Hooks & Scripts
 
 ## Problem
-Git Bash mount paths like `/d/Claude_projects/foo` behave inconsistently:
+Git Bash mount paths like `/d/claude-projects/foo` behave inconsistently:
 
 | Context | `/d/foo` becomes | Works? |
 |---------|------------------|--------|
@@ -20,11 +20,11 @@ into a native Windows process. A `/d/` string written inside a `.py` file is
 never translated — Python reads it literally and resolves to `D:\d\foo`.
 
 ## Rules
-- **In hook commands / shell:** `uv run python /d/Claude_projects/.../x.py` works
+- **In hook commands / shell:** `uv run python /d/claude-projects/.../x.py` works
   (the path arg is auto-translated).
 - **Inside Python code:** never hardcode `/d/...`. Either:
   - resolve relative to `__file__`: `Path(__file__).resolve().parent.parent`
-  - or use Windows form: `Path("D:/Claude_projects/...")`
+  - or use Windows form: `Path("D:/claude-projects/...")`
   - or convert at runtime: translate leading `/<drive>/` → `<DRIVE>:/`
 
 ## Where this bit us

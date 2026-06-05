@@ -17,4 +17,4 @@ React 18 + Next.js (App Router). TypeScript strict, server components where sens
 frontend-developer, ui-designer, security-auditor, react-specialist, nextjs-developer
 
 ## Paths
-- Project: `D:\Claude_projects\betting-tracker`
+- Project: `D:\claude-projects\betting-tracker`
