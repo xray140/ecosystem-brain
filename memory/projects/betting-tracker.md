@@ -1,7 +1,7 @@
 ---
 type: project
 status: active
-created: see-git
+created: 2026-06-05
 stack: [typescript]
 tags: [project, typescript]
 ---
@@ -9,12 +9,12 @@ tags: [project, typescript]
 
 Configured via /ecosystem-brain:init.
 
-## Stack
-Web application — UI + client-side state, talking to an API/data layer.
-React 18 + Next.js (App Router). TypeScript strict, server components where sensible.
-
-## Agents installed
-frontend-developer, ui-designer, security-auditor, react-specialist, nextjs-developer
+## Stack & agents
+Web app on React 18 + Next.js (App Router), TypeScript strict. Stack rationale
+and the installed agent roster live in [[betting-tracker-stack]].
 
 ## Paths
 - Project: `D:\claude-projects\betting-tracker`
+
+## Links
+- [[betting-tracker-stack]]

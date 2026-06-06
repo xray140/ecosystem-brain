@@ -24,5 +24,5 @@ uv run pytest -q
 ```
 
 ## Links
-- [[tools/uv]]
-- [[tools/ruff]]
+- [[windows-python-invocation]] — uv / `uv run python` invocation rule
+- [[powershell-utf8-bom]] — ruff-formatted files must stay BOM-free

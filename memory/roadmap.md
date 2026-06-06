@@ -81,4 +81,4 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - [[decisions/hook-format]] · [[decisions/windows-python-invocation]] ·
   [[decisions/windows-path-translation]] · [[decisions/ollama-accented-path]] ·
   [[decisions/powershell-utf8-bom]] · [[decisions/claude-best-practices]] ·
-  [[decisions/agent-pinning]]
+  [[decisions/agent-pinning]] · [[decisions/betting-tracker-stack]]
