@@ -21,6 +21,17 @@ INSTALLED = REPO_ROOT / "registry" / "installed.json"
 REGISTRY = REPO_ROOT / "registry" / "registry.json"
 CATALOG = REPO_ROOT / "registry" / "catalog.json"
 
+# First-party squad: name -> when the control tower should delegate to it.
+# Shown every session so the soldiers actually get used, not just defined.
+FIRST_PARTY: dict[str, str] = {
+    "security-auditor": "before any commit/push, or to review a diff",
+    "convention-keeper": "before committing changes to rules / agents / scripts",
+    "script-smith": "writing or fixing any .sh / .py script",
+    "test-writer": "after implementing a feature, or to raise coverage",
+    "bug-fixer": "given a stack trace, failing test, or \"X is broken\"",
+    "memory-curator": "at session close, or for weekly vault hygiene",
+}
+
 # marker file -> project-type tags
 MARKERS: dict[str, list[str]] = {
     "pyproject.toml": ["python", "pytest"],
@@ -99,10 +110,16 @@ def main() -> int:
     installed_names = {a["name"] for a in all_agents}
 
     # Rank installed: agents whose registry tags intersect the project's tags.
+    # First-party agents are surfaced separately (with triggers), so skip them here.
     relevant, generic = [], []
     for a in all_agents:
-        tags = set(agent_tags(a["name"], registry))
-        (relevant if tags & project_tags else generic).append(a["name"])
+        name = a["name"]
+        if name in FIRST_PARTY:
+            continue
+        tags = set(agent_tags(name, registry))
+        (relevant if tags & project_tags else generic).append(name)
+
+    squad = [(n, t) for n, t in FIRST_PARTY.items() if n in installed_names]
 
     # Suggest UNINSTALLED catalog agents matching the project type (no network —
     # reads the cached catalog.json built by catalog.py).
@@ -112,6 +129,10 @@ def main() -> int:
         return 0
 
     lines = ["Ecosystem-brain agents:"]
+    if squad:
+        lines.append("  Delegate proactively (first-party squad):")
+        for n, t in squad:
+            lines.append(f"    - {n}: {t}")
     if relevant:
         lines.append(
             f"  Installed & relevant ({', '.join(sorted(project_tags)) or 'generic'}): "

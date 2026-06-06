@@ -10,8 +10,8 @@ Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
 ## Current state (v4.0.0)
-- **14 commands** (global): init, scaffold, search, install, catalog, update,
-  agents, health-check, doctor, security-audit, write-tests, fix-bug,
+- **15 commands** (global): init, scaffold, search, install, catalog, update,
+  agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
 - **Project init**: `/ecosystem-brain:init` — sharp 3-4 question interview →
   tailored AGENTS.md + auto-selected, security-scanned agents. Engine =
@@ -35,6 +35,12 @@ Read this first in a fresh session (after CLAUDE.md). Run
   pattern it ships in templates.
 - **Doctor**: `/ecosystem-brain:doctor` (`doctor.py`) = live-hooks + repo↔~/.claude
   drift + prereqs. Wired into health-check and the weekly maintenance heartbeat.
+- **First-party squad** (6): security-auditor, convention-keeper, script-smith,
+  test-writer, bug-fixer, memory-curator. The SessionStart suggester surfaces them
+  every session *with trigger moments* so they actually get delegated to.
+- **Recruiter**: `/ecosystem-brain:new-agent` (`new_agent.py`) scaffolds a new
+  agent to standard (frontmatter, least-privilege tools, model, "use proactively"
+  description, numbered workflow), self-scans, and registers via install-agent.
 - **Hooks** (global settings.json): gitleaks gate, destructive guard (root/home
   only — fixed false positive), ruff-on-write, SessionStart suggester, SessionEnd log.
 - **Portability**: `bootstrap.py` rewrites hardcoded paths to the clone location;
