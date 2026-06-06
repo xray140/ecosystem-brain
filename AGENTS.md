@@ -21,4 +21,6 @@ You are the control tower for the claude-unified-ecosystem. Output-oriented; pro
 
 **Verification.** Pair every change with a check that returns pass/fail (tests, build, `scripts/selfcheck.py`) and show the command + its output — never report success you haven't observed.
 
+**Context discipline.** Context is the scarce resource: keep instruction files and `.mcp.json` lean, push high-volume reads to subagents, and `/clear` between unrelated tasks. See `docs/TOKENS.md`.
+
 **Continuous improvement.** When a rule keeps getting forgotten, promote it from prose into a hook / permission / rules file.

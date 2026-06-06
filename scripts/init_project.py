@@ -176,6 +176,7 @@ def compose_agents_md(name: str, cfg: dict) -> str:
         L += [f"- {r}" for r in cfg["security"]]
     L += ["", "## Workflow & rigor"]
     L += [f"- {c}" for c in cfg["conventions"]]
+    L += ["- Context discipline: keep this file lean; delegate high-volume reads to subagents; `/clear` between unrelated tasks."]
     L += ["", "## Key files", "| File | Purpose |", "|------|---------|"]
     L += [f"| `{p.format(pkg=pkg)}` | {d} |" for p, d in bits["key_files"]]
     L += [

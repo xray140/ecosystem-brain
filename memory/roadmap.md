@@ -51,7 +51,16 @@ Read this first in a fresh session (after CLAUDE.md). Run
   `memory/maintenance/<date>.md`). One-shot registrar:
   `scripts/register-scheduled-tasks.ps1` (idempotent, path-derived).
 - **Templates**: python-project + typescript-project, each with AGENTS.md
-  (cross-tool) + CLAUDE.md (imports AGENTS.md) + per-language CI. _common = .vscode.
+  (cross-tool) + CLAUDE.md + GEMINI.md (both `@AGENTS.md` importers) + per-language
+  CI. `_common` = .vscode + GEMINI.md.
+- **Multi-LLM**: AGENTS.md is the single source; Codex/Cursor/Copilot/Windsurf
+  read it natively, Gemini via the GEMINI.md stub, Claude via CLAUDE.md. DeepSeek
+  (a model, not a reader) runs through an AGENTS.md-aware host tool via its
+  OpenAI-compatible endpoint. See `docs/MULTI-LLM.md`.
+- **Token discipline**: `docs/TOKENS.md` + a Context-discipline rule in AGENTS.md
+  and the template/`init` AGENTS.md — lean instruction files + `.mcp.json`,
+  subagents for high-volume reads, `/clear` between tasks. (SessionStart suggester
+  output is already lean at ~700 chars.)
 
 ## Candidate next steps
 - [x] **Official Claude best practices** (2026-06-05) — aligned CLAUDE.md,

@@ -51,8 +51,8 @@ SessionStart hook suggests relevant installed + uninstalled agents
 - **skills/** — `memory` (index + semantic search), `secrets` (doctor + identity).
 - **hooks/** — gitleaks gate, catastrophic-command block, ruff auto-format, SessionStart agent-suggester, session logging.
 - **registry/** — `registry.json` (curated sources), `installed.json`, `catalog.json` (cached agent catalog).
-- **templates/** — `python-project` + `typescript-project` blueprints (each with `AGENTS.md` + `CLAUDE.md`).
-- **docs/** — [OBSIDIAN.md](docs/OBSIDIAN.md) (vault usage), [MULTI-LLM.md](docs/MULTI-LLM.md) (Gemini/Codex/Cursor).
+- **templates/** — `python-project` + `typescript-project` blueprints (each with `AGENTS.md` + `CLAUDE.md` + `GEMINI.md`).
+- **docs/** — [OBSIDIAN.md](docs/OBSIDIAN.md) (vault usage), [MULTI-LLM.md](docs/MULTI-LLM.md) (Gemini/Codex/Cursor/Copilot/DeepSeek), [TOKENS.md](docs/TOKENS.md) (context discipline).
 
 ## Prerequisites
 - **Required:** `git`, `node`/`npx`, `uv` (installs Python + ruff)

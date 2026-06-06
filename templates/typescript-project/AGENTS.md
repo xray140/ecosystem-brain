@@ -14,6 +14,7 @@ OpenAI Codex, Cursor, Copilot, and others. Part of the claude-unified-ecosystem.
 - Explore → plan → implement. Use plan mode when a change spans multiple files, the approach is unclear, or the code is unfamiliar; for a one-sentence diff, just do it.
 - Propose → get approval → execute for any multi-file change
 - After changes, run the check and show its output — `npm test` (and `npm run lint`). Never claim success you haven't verified.
+- Context discipline: keep this file lean, delegate high-volume reads to subagents, `/clear` between unrelated tasks.
 - Commit messages: `type(scope): description` (feat, fix, chore, docs, test)
 
 ## Key files
