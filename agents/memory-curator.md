@@ -8,7 +8,9 @@ tools:
   - Edit
   - Write
   - Bash
-model: inherit
+# Mechanical vault hygiene (links, frontmatter, index) — routed to haiku.
+# See memory/decisions/model-routing.md; override per-invocation if needed.
+model: haiku
 ---
 You maintain the Obsidian vault at /d/claude-projects/ecosystem-brain/memory/ as a clean knowledge graph.
 

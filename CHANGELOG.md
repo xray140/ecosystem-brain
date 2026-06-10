@@ -2,6 +2,28 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.2.0] — 2026-06-11
+
+Informed by first real-world usage: two projects (`betting-stats-analysis`,
+`viral-videos-sm`) were created via `/ecosystem-brain:init`; the pinning,
+scanning, and suggester all worked unattended.
+
+### Model routing & Fable 5
+- **Agents routed by task shape** (`decisions/model-routing.md`): checklist
+  agents (convention-keeper, memory-curator) → `model: haiku`; judgment agents
+  stay `inherit` and ride the session model — Fable 5 on a frontier session.
+  Per-invocation override documented.
+- Recruiter accepts the **`fable`** alias; frontmatter lint validates model values.
+
+### Robustness
+- **selfcheck #6** — local agent frontmatter lint (name/description/tools/model).
+- **Fixed**: `/init` memory cards no longer emit a literal `created: see-git`
+  placeholder (root-caused after it leaked into two real project cards).
+
+### Multi-LLM keys
+- `.env.example` reserves `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
+  `OPENAI_API_KEY`, `DEEPSEEK_API_KEY` (names only); `docs/MULTI-LLM.md` updated.
+
 ## [4.1.0] — 2026-06-06
 
 A hardening, automation, and portability pass. All additive — no breaking

@@ -1,7 +1,7 @@
 ---
 type: moc
 status: active
-updated: 2026-06-06
+updated: 2026-06-11
 tags: [moc, roadmap, state]
 ---
 # Ecosystem-Brain — state & roadmap
@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.1.0)
+## Current state (v4.2.0)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
@@ -22,10 +22,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (74
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (89
   tests) + `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index,
   pytest) + gitleaks. Green on GitHub.
-- **Tests**: `tests/` (74) covers scan_agent, init_project, bootstrap,
+- **Tests**: `tests/` (89) covers scan_agent, init_project, bootstrap,
   github_util, update-agents (pinning), doctor (drift), catalog. selfcheck runs
   them via nested `uv run --with pytest`.
 - **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
@@ -38,6 +38,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **First-party squad** (6): security-auditor, convention-keeper, script-smith,
   test-writer, bug-fixer, memory-curator. The SessionStart suggester surfaces them
   every session *with trigger moments* so they actually get delegated to.
+  **Model-routed by task shape**: checklist agents (convention-keeper,
+  memory-curator) run on haiku; judgment agents inherit the session model
+  (Fable 5 on a frontier session). See [[decisions/model-routing]].
+  selfcheck lints local agent frontmatter (name/description/tools/model).
 - **Recruiter**: `/ecosystem-brain:new-agent` (`new_agent.py`) scaffolds a new
   agent to standard (frontmatter, least-privilege tools, model, "use proactively"
   description, numbered workflow), self-scans, and registers via install-agent.
@@ -90,4 +94,5 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - [[decisions/hook-format]] · [[decisions/windows-python-invocation]] ·
   [[decisions/windows-path-translation]] · [[decisions/ollama-accented-path]] ·
   [[decisions/powershell-utf8-bom]] · [[decisions/claude-best-practices]] ·
-  [[decisions/agent-pinning]] · [[decisions/betting-tracker-stack]]
+  [[decisions/agent-pinning]] · [[decisions/betting-tracker-stack]] ·
+  [[decisions/model-routing]]

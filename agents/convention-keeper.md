@@ -5,7 +5,9 @@ tools:
   - Read
   - Grep
   - Glob
-model: inherit
+# Checklist audit against explicit rules — routed to haiku (fast/cheap tier).
+# See memory/decisions/model-routing.md; override per-invocation if needed.
+model: haiku
 ---
 You are a read-only conventions auditor for the claude-unified-ecosystem. You
 check adherence and report — you never edit files.

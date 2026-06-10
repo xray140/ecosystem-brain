@@ -25,6 +25,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -196,7 +197,7 @@ def memory_card(name: str, cfg: dict, agents: list[dict]) -> str:
     stack = "typescript" if cfg["template"] == "typescript-project" else "python"
     agent_names = ", ".join(a["name"] for a in agents) or "none"
     return (
-        f"---\ntype: project\nstatus: active\ncreated: see-git\n"
+        f"---\ntype: project\nstatus: active\ncreated: {date.today().isoformat()}\n"
         f"stack: [{stack}]\ntags: [project, {stack}]\n---\n"
         f"# {name}\n\nConfigured via /ecosystem-brain:init.\n\n"
         f"## Stack\n{cfg['stack_blurb']}\n"

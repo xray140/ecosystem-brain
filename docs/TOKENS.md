@@ -28,8 +28,14 @@ lean. Most apply to any AGENTS.md-aware tool, not just Claude Code.
 - Corrected the model twice on the same point? `/clear` and restate — accumulated
   failed attempts pollute the context more than they help.
 
-## Model tiers (cost, not just tokens)
-- First-party agents use `model: inherit`, so they ride your session's model
-  choice rather than hard-coding an expensive tier.
-- Run a cheap mechanical pass (or a subagent) on a smaller/faster model; reserve
-  the largest model for design and debugging judgment.
+## Model routing (cost, not just tokens)
+Agents are routed by **task shape** (policy: `memory/decisions/model-routing.md`):
+- **Checklist / mechanical** (convention-keeper, memory-curator) → `model: haiku`
+  — explicit rules, bounded output; the fast tier is enough and ~10× cheaper.
+- **Judgment / code-gen** (security-auditor, bug-fixer, test-writer, script-smith)
+  → `model: inherit` — they ride the session model, so a Fable 5 session gives
+  them Fable 5 and a cheap session stays cheap.
+- Per-case override without editing files: the harness honors a per-invocation
+  model param (and `CLAUDE_CODE_SUBAGENT_MODEL`) over frontmatter.
+- Don't hard-pin the frontier tier in frontmatter — it defeats cheap sessions
+  and goes stale as models advance.

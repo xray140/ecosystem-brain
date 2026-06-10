@@ -6,6 +6,8 @@ Checks, in order (fails fast with a non-zero exit on any problem):
   2. Every agent in agents/ passes the security scanner (no HIGH-risk content).
   3. The init profile engine resolves all build types without error.
   4. The memory vault indexes cleanly.
+  5. The pytest suite passes.
+  6. Local agent frontmatter meets the standard (name/description/tools/model).
 
 Usage:
     uv run --no-project python scripts/selfcheck.py
@@ -14,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -135,6 +138,47 @@ def check_tests() -> None:
         ok(f"pytest: {summary}")
 
 
+KNOWN_MODELS = {"inherit", "fable", "opus", "sonnet", "haiku"}
+
+
+def frontmatter_problems(text: str) -> list[str]:
+    """Lint an agent definition against the first-party standard.
+
+    Required: YAML frontmatter with name, description, tools (explicit
+    least-privilege grant), and model (a known alias or a full claude-* id).
+    """
+    if not text.startswith("---"):
+        return ["missing frontmatter"]
+    end = text.find("\n---", 3)
+    if end == -1:
+        return ["unterminated frontmatter"]
+    fm = text[3:end]
+    problems = [
+        f"missing '{key}:'"
+        for key in ("name", "description", "tools", "model")
+        if not re.search(rf"^{key}:", fm, re.M)
+    ]
+    m = re.search(r"^model:\s*(\S+)", fm, re.M)
+    if m and m.group(1) not in KNOWN_MODELS and not m.group(1).startswith("claude-"):
+        problems.append(f"unknown model '{m.group(1)}'")
+    return problems
+
+
+def check_frontmatter() -> None:
+    print("6. Local agent frontmatter meets the standard")
+    installed = json.loads((REPO / "registry" / "installed.json").read_text(encoding="utf-8"))
+    local = {a["name"] for a in installed.get("agents", []) if a.get("source") == "local"}
+    checked = 0
+    for a in sorted((REPO / "agents").glob("*.md")):
+        if a.stem not in local:
+            continue  # third-party definitions are upstream-owned; not linted
+        checked += 1
+        for p in frontmatter_problems(a.read_text(encoding="utf-8")):
+            fail(f"agents/{a.name}: {p}")
+    if not any(m.startswith("agents/") for m in fails):
+        ok(f"{checked} local agents conform (name/description/tools/model)")
+
+
 def main() -> int:
     print("ecosystem-brain selfcheck\n")
     check_json()
@@ -142,6 +186,7 @@ def main() -> int:
     check_profiles()
     check_memory()
     check_tests()
+    check_frontmatter()
     print()
     if fails:
         print(f"[!] {len(fails)} failure(s)")

@@ -38,7 +38,7 @@ REPO = Path(__file__).resolve().parent.parent
 INSTALLER = REPO / "scripts" / "install-agent.py"
 
 KNOWN_TOOLS = {"Read", "Grep", "Glob", "Edit", "Write", "Bash", "WebFetch", "WebSearch"}
-KNOWN_MODELS = {"inherit", "sonnet", "opus", "haiku"}
+KNOWN_MODELS = {"inherit", "fable", "opus", "sonnet", "haiku"}
 NAME_RE = re.compile(r"[a-z][a-z0-9-]*$")
 
 
@@ -119,7 +119,12 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="comma list, least-privilege (e.g. Read,Grep,Glob)",
     )
-    ap.add_argument("--model", default="inherit", choices=sorted(KNOWN_MODELS))
+    ap.add_argument(
+        "--model", default="inherit", choices=sorted(KNOWN_MODELS),
+        help="route by task shape: haiku for checklist/mechanical work, inherit "
+             "(rides the session model) for judgment/code-gen; fable/opus only "
+             "with a clear reason (see memory/decisions/model-routing.md)",
+    )
     ap.add_argument(
         "--step", action="append", dest="steps", help="a When-invoked step (repeatable)"
     )

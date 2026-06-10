@@ -38,6 +38,11 @@ OpenAI-compatible API, and that host tool feeds it your `AGENTS.md`:
 **Secrets:** the DeepSeek API key goes in the host tool's own config or `.env`
 (gitignored) — never in `AGENTS.md` or any committed file.
 
+## Key naming
+The repo's `.env.example` reserves the standard names — `ANTHROPIC_API_KEY`,
+`GEMINI_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY` (names only; real values
+live in the gitignored `.env`). Most CLIs and SDKs pick these up automatically.
+
 ## What does NOT transfer
 The *project rules* are shared; the *control-tower automation* stays Claude-native:
 - **Agents** (`~/.claude/agents/`), **slash commands**, **hooks** (gitleaks / ruff),

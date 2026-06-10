@@ -90,6 +90,15 @@ def test_compose_adds_security_section_when_sensitive(profiles):
     assert "## Security" in md
 
 
+def test_memory_card_has_real_created_date(profiles):
+    # Regression: the composer used to emit a literal `created: see-git`
+    # placeholder, which leaked into real project cards twice.
+    cfg = ip.resolve(profiles, "cli", "product", ["none"], None)
+    card = ip.memory_card("demo", cfg, [{"name": "test-writer"}])
+    assert "see-git" not in card
+    assert "created: 20" in card  # real ISO date
+
+
 def test_all_build_types_resolve_and_compose(profiles):
     for build in profiles["build_types"]:
         stack = "react" if profiles["build_types"][build]["ask_stack"] else None
