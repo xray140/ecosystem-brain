@@ -2,6 +2,32 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.0] — 2026-06-14
+
+`/ecosystem-brain:init` upgraded from "scaffolds fast" to "hands over a proven,
+connected, publishable project." Closes the four gaps found by reviewing real usage.
+
+### `/init` now also
+- **Verifies a green baseline** — after scaffolding it runs the template's real
+  build + tests (`uv sync` + `pytest` / `npm install` + `npm test`); a red
+  baseline returns non-zero. No more handing over unproven scaffolds. *(proven
+  end-to-end: `uv sync` + `pytest` run green on a fresh scaffold.)*
+- **Names project API keys** — `--api-keys youtube,tiktok` seeds normalized
+  placeholders (`YOUTUBE_API_KEY=`) into `.env.example`; names only, never values.
+- **Optional GitHub publish** — `--github` creates a private repo and pushes,
+  but only if the baseline passed (never pushes broken code).
+- **Links memory cards into the graph** — every card links to a new
+  `projects-moc` hub + stack decision notes, ending the orphan-card problem.
+
+### Memory graph
+- New `memory/projects-moc.md` hub; the four existing project cards backfilled
+  (graph edges 25 → 39 — projects now connect to the decisions cluster).
+
+### Internals
+- `ECOSYSTEM_DEST_ROOT` override (testability); 10 new init-engine tests
+  (env-key normalization, verify commands, gh command, card links, idempotent
+  MOC append). 101 tests total.
+
 ## [4.2.0] — 2026-06-11
 
 Informed by first real-world usage: two projects (`betting-stats-analysis`,

@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import date
@@ -37,7 +39,21 @@ CATALOG = REPO_ROOT / "registry" / "catalog.json"
 SCAFFOLD = REPO_ROOT / "scripts" / "scaffold.py"
 INSTALLER = REPO_ROOT / "scripts" / "install-agent.py"
 INDEXER = REPO_ROOT / "skills" / "memory" / "memory-index.py"
-DEST_ROOT = REPO_ROOT.parent  # sibling of the repo, e.g. D:\claude-projects
+PROJECTS_MOC = REPO_ROOT / "memory" / "projects-moc.md"
+# Sibling of the repo by default (e.g. D:\claude-projects); overridable for tests.
+DEST_ROOT = Path(os.environ.get("ECOSYSTEM_DEST_ROOT") or REPO_ROOT.parent)
+
+# Stack -> decision notes a project card should link into (de-orphans the graph).
+STACK_DECISIONS = {
+    "python": ["windows-python-invocation", "powershell-utf8-bom"],
+    "typescript": [],
+}
+# Per-template "green baseline" — build + test commands run after scaffolding to
+# prove the scaffold actually works before handing it over.
+VERIFY = {
+    "python-project": [["uv", "sync"], ["uv", "run", "pytest", "-q"]],
+    "typescript-project": [["npm", "install"], ["npm", "test"]],
+}
 
 # Per-template fragments used to compose AGENTS.md.
 TEMPLATE_BITS = {
@@ -194,8 +210,10 @@ def compose_agents_md(name: str, cfg: dict) -> str:
 
 
 def memory_card(name: str, cfg: dict, agents: list[dict]) -> str:
-    stack = "typescript" if cfg["template"] == "typescript-project" else "python"
+    stack = card_stack(cfg)
     agent_names = ", ".join(a["name"] for a in agents) or "none"
+    # Links de-orphan the card in the graph: the projects hub + stack decisions.
+    links = ["[[projects-moc]]"] + [f"[[{d}]]" for d in STACK_DECISIONS.get(stack, [])]
     return (
         f"---\ntype: project\nstatus: active\ncreated: {date.today().isoformat()}\n"
         f"stack: [{stack}]\ntags: [project, {stack}]\n---\n"
@@ -203,12 +221,103 @@ def memory_card(name: str, cfg: dict, agents: list[dict]) -> str:
         f"## Stack\n{cfg['stack_blurb']}\n"
         f"{cfg['stack_note']}\n\n"
         f"## Agents installed\n{agent_names}\n\n"
-        f"## Paths\n- Project: `{(DEST_ROOT / name)}`\n"
+        f"## Paths\n- Project: `{(DEST_ROOT / name)}`\n\n"
+        f"## Links\n" + "\n".join(f"- {link}" for link in links) + "\n"
     )
 
 
+def card_stack(cfg: dict) -> str:
+    return "typescript" if cfg["template"] == "typescript-project" else "python"
+
+
+def env_key(name: str) -> str:
+    """Normalize a free-text API name into an env-var key. 'youtube' -> YOUTUBE_API_KEY."""
+    key = re.sub(r"[^A-Z0-9]+", "_", name.upper()).strip("_")
+    if not key:
+        return ""
+    if not key.endswith(("_KEY", "_TOKEN", "_SECRET")):
+        key += "_API_KEY"
+    return key
+
+
+def env_block(names: list[str]) -> str:
+    """Compose `.env.example` lines (placeholders only) for named API keys."""
+    keys = [k for k in (env_key(n) for n in names) if k]
+    if not keys:
+        return ""
+    lines = ["", "# --- Project API keys (names only; real values go in .env) ---"]
+    lines += [f"{k}=" for k in dict.fromkeys(keys)]  # dedupe, preserve order
+    return "\n".join(lines) + "\n"
+
+
+def verify_commands(template: str) -> list[list[str]]:
+    return VERIFY.get(template, [])
+
+
+def gh_create_cmd(name: str, dest: Path, private: bool = True) -> list[str]:
+    return [
+        "gh", "repo", "create", name,
+        "--private" if private else "--public",
+        "--source", str(dest), "--push",
+    ]
+
+
+def moc_line(name: str, blurb: str) -> str:
+    return f"- [[{name}]] — {blurb}"
+
+
+def append_to_moc(name: str, blurb: str, moc: Path = PROJECTS_MOC) -> bool:
+    """Idempotently register a project in the projects MOC. Returns True if added."""
+    header = (
+        "---\ntype: moc\nstatus: active\ntags: [moc, projects]\n---\n"
+        "# Projects\n\nEvery project scaffolded via `/ecosystem-brain:init`. "
+        "Each card also links back here.\n\n"
+    )
+    text = moc.read_text(encoding="utf-8") if moc.exists() else header
+    if f"[[{name}]]" in text:
+        return False
+    if not text.endswith("\n"):
+        text += "\n"
+    moc.parent.mkdir(parents=True, exist_ok=True)
+    moc.write_text(text + moc_line(name, blurb) + "\n", encoding="utf-8")
+    return True
+
+
+def verify_baseline(dest: Path, template: str) -> bool:
+    """Run the template's build + test commands in `dest`. The verification loop
+    the ecosystem preaches: prove the scaffold is green before handing it over.
+    """
+    cmds = verify_commands(template)
+    if not cmds:
+        print("  [skip] no baseline check for this template")
+        return True
+    print("  verifying green baseline ...")
+    for cmd in cmds:
+        r = subprocess.run(cmd, cwd=str(dest), capture_output=True, text=True, encoding="utf-8")
+        label = " ".join(cmd)
+        if r.returncode != 0:
+            tail = "\n      ".join((r.stdout + r.stderr).strip().splitlines()[-8:])
+            print(f"  [FAIL] {label}\n      {tail}")
+            return False
+        print(f"  [ok]   {label}")
+    return True
+
+
+def gh_publish(name: str, dest: Path, private: bool = True) -> bool:
+    if not shutil.which("gh"):
+        print("  [skip] github — gh CLI not found")
+        return False
+    r = run(gh_create_cmd(name, dest, private))
+    if r.returncode != 0:
+        print(f"  [error] github: {(r.stderr or r.stdout).strip()[:120]}")
+        return False
+    print(f"  [ok] pushed to GitHub ({'private' if private else 'public'})")
+    return True
+
+
 def print_summary(
-    name: str, cfg: dict, resolved: list[dict], dropped: list[str]
+    name: str, cfg: dict, resolved: list[dict], dropped: list[str],
+    api_keys: list[str] | None = None,
 ) -> None:
     print(f"\n=== init plan: {name} ===")
     print(f"  template : {cfg['template']}")
@@ -220,7 +329,10 @@ def print_summary(
         print(f"             - {a['name']:24s} ({src})")
     if dropped:
         print(f"  dropped  : {', '.join(dropped)} (not in catalog — skipped)")
+    if api_keys:
+        print(f"  env keys : {', '.join(env_key(k) for k in api_keys)}")
     print(f"  dest     : {DEST_ROOT / name}")
+    print("  on apply : scaffold + agents + linked memory card + green-baseline check")
     print("\n--- composed AGENTS.md preview ---")
     print(compose_agents_md(name, cfg))
 
@@ -229,25 +341,21 @@ def run(cmd: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
 
 
-def apply(name: str, cfg: dict, resolved: list[dict]) -> int:
+def apply(
+    name: str,
+    cfg: dict,
+    resolved: list[dict],
+    *,
+    build: str,
+    api_keys: list[str],
+    do_verify: bool,
+    do_github: bool,
+) -> int:
     dest = DEST_ROOT / name
     print(f"scaffolding {cfg['template']} -> {dest} ...")
     r = run(
-        [
-            "uv",
-            "run",
-            "python",
-            str(SCAFFOLD),
-            "--type",
-            cfg["template"],
-            "--name",
-            name,
-            "--templates-root",
-            str(REPO_ROOT / "templates"),
-            "--dest-root",
-            str(DEST_ROOT),
-            "--git",
-        ]
+        ["uv", "run", "python", str(SCAFFOLD), "--type", cfg["template"], "--name", name,
+         "--templates-root", str(REPO_ROOT / "templates"), "--dest-root", str(DEST_ROOT), "--git"]
     )
     if r.returncode != 0:
         print(f"[error] scaffold failed: {r.stderr.strip() or r.stdout.strip()}")
@@ -257,24 +365,20 @@ def apply(name: str, cfg: dict, resolved: list[dict]) -> int:
     (dest / "AGENTS.md").write_text(compose_agents_md(name, cfg), encoding="utf-8")
     print("  [ok] wrote tailored AGENTS.md")
 
+    # Name the project's API keys in .env.example (placeholders only, never values).
+    if api_keys:
+        envf = dest / ".env.example"
+        prior = envf.read_text(encoding="utf-8") if envf.exists() else ""
+        envf.write_text(prior + env_block(api_keys), encoding="utf-8")
+        print(f"  [ok] named {len(api_keys)} API key(s) in .env.example")
+
     installed = 0
     for a in resolved:
         if a["source"] == "local":
             print(f"  [ok]      {a['name']} (local, already available)")
             installed += 1
             continue
-        ir = run(
-            [
-                "uv",
-                "run",
-                "python",
-                str(INSTALLER),
-                "--repo",
-                a["repo"],
-                "--path",
-                a["path"],
-            ]
-        )
+        ir = run(["uv", "run", "python", str(INSTALLER), "--repo", a["repo"], "--path", a["path"]])
         if ir.returncode == 0:
             installed += 1
             print(f"  [ok]      {a['name']} (installed + scanned)")
@@ -283,12 +387,31 @@ def apply(name: str, cfg: dict, resolved: list[dict]) -> int:
         else:
             print(f"  [error]   {a['name']}: {ir.stderr.strip()[:60]}")
 
+    # Memory card (linked into the graph) + register in the projects MOC.
     card = REPO_ROOT / "memory" / "projects" / f"{name}.md"
     card.parent.mkdir(parents=True, exist_ok=True)
     card.write_text(memory_card(name, cfg, resolved), encoding="utf-8")
+    if append_to_moc(name, f"{build} · {card_stack(cfg)}"):
+        print("  [ok] registered in projects-moc")
     run(["uv", "run", "python", str(INDEXER)])
     print("  [ok] memory card + index refreshed")
+
+    # Verification loop: prove the scaffold is green before handing it over.
+    baseline_ok = True
+    if do_verify:
+        baseline_ok = verify_baseline(dest, cfg["template"])
+
+    # Publish only a verified-green scaffold — never push broken code.
+    if do_github:
+        if baseline_ok:
+            gh_publish(name, dest)
+        else:
+            print("  [skip] github push — baseline is red; not pushing broken code")
+
     print(f"\ndone. {installed}/{len(resolved)} agents ready. cd {dest}")
+    if not baseline_ok:
+        print("[!] green baseline FAILED — fix the scaffold before building on it.")
+        return 1
     return 0
 
 
@@ -298,14 +421,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--build", required=True,
                     choices=["web", "api", "cli", "library", "data-pipeline", "mcp-server"])
-    ap.add_argument(
-        "--rigor", required=True, choices=["prototype", "product", "production"]
-    )
-    ap.add_argument(
-        "--touches", default="none", help="comma list: api-keys,pii,money,none"
-    )
+    ap.add_argument("--rigor", required=True, choices=["prototype", "product", "production"])
+    ap.add_argument("--touches", default="none", help="comma list: api-keys,pii,money,none")
     ap.add_argument("--stack", choices=["react", "vue", "svelte", "decide"])
     ap.add_argument("--name", required=True)
+    ap.add_argument("--api-keys", default="",
+                    help="comma list of API names to seed into .env.example (e.g. youtube,tiktok)")
+    ap.add_argument("--github", action="store_true",
+                    help="create a private GitHub repo and push (requires gh; only if baseline passes)")
+    ap.add_argument("--no-verify", action="store_true",
+                    help="skip the green-baseline build+test check after scaffolding")
     mode = ap.add_mutually_exclusive_group(required=True)
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
@@ -313,13 +438,18 @@ def main(argv: list[str] | None = None) -> int:
 
     profiles = load(PROFILES)
     touches = [t.strip() for t in args.touches.split(",") if t.strip()]
+    api_keys = [k.strip() for k in args.api_keys.split(",") if k.strip()]
     cfg = resolve(profiles, args.build, args.rigor, touches, args.stack)
     resolved, dropped = classify_agents(cfg["agents"], profiles)
 
     if args.plan:
-        print_summary(args.name, cfg, resolved, dropped)
+        print_summary(args.name, cfg, resolved, dropped, api_keys=api_keys)
         return 0
-    return apply(args.name, cfg, resolved)
+    return apply(
+        args.name, cfg, resolved,
+        build=args.build, api_keys=api_keys,
+        do_verify=not args.no_verify, do_github=args.github,
+    )
 
 
 if __name__ == "__main__":

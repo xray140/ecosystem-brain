@@ -27,6 +27,13 @@ Q4 only if Q1 is "Web app" or "API service".
 
 If no project name was provided in `$ARGUMENTS`, also ask for it (short kebab-case).
 
+**Follow-ups (only when relevant):**
+- If Q3 includes **API keys**, ask *which* services (free text, e.g. "YouTube,
+  TikTok, Stripe"). These become named placeholders in the project's
+  `.env.example` via `--api-keys` — names only, never values.
+- Ask **"Create a private GitHub repo and push?"** (Yes/No). Yes → add `--github`
+  (it only pushes if the green-baseline check passes).
+
 ## Step 2 — Map answers to flags
 - Build: Web app→`web`, API service→`api`, CLI tool→`cli`, Library→`library`
 - Rigor: Prototype→`prototype`, Product→`product`, Production→`production`
@@ -34,6 +41,8 @@ If no project name was provided in `$ARGUMENTS`, also ask for it (short kebab-ca
   Money→`money`, Nothing→`none`
 - Stack: React/Next→`react`, Vue→`vue`, Svelte→`svelte`, Decide for me→`decide`
   (omit `--stack` entirely for cli/library)
+- API services → `--api-keys youtube,tiktok,...` (the names from the follow-up)
+- GitHub yes → `--github`
 
 ## Step 3 — Show the composed plan (no writes yet)
 Run:
@@ -53,12 +62,18 @@ Ask **"Apply this configuration?"** (header: Apply): Apply | Adjust agents | Can
 ## Step 5 — Apply
 ```
 uv run python /d/claude-projects/ecosystem-brain/scripts/init_project.py --apply \
-  --build <b> --rigor <r> --touches <t1,t2> [--stack <s>] --name <name>
+  --build <b> --rigor <r> --touches <t1,t2> [--stack <s>] --name <name> \
+  [--api-keys <k1,k2>] [--github]
 ```
+Apply does it all: scaffold + git, tailored AGENTS.md, named API keys in
+`.env.example`, scanned+pinned agents, a memory card linked into `projects-moc`,
+**a green-baseline check** (`uv sync`/`npm install` + tests — it must pass), and
+an optional GitHub push. A red baseline returns non-zero — surface it, don't
+gloss over it.
+
 Then sync newly-installed agents to the global dir:
 ```
 cp /d/claude-projects/ecosystem-brain/agents/*.md ~/.claude/agents/
 ```
-Report the created path and next steps (`cd` in, run the setup block from its
-AGENTS.md). Each agent was security-scanned during install; mention any that were
-BLOCKED.
+Report: the created path, the green-baseline result, the repo URL (if `--github`),
+and any agent that was BLOCKED by the security scan.

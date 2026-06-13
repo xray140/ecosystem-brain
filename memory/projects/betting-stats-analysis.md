@@ -18,3 +18,8 @@ cli-developer, python-pro, test-writer
 
 ## Paths
 - Project: `D:\claude-projects\betting-stats-analysis`
+
+## Links
+- [[projects-moc]]
+- [[windows-python-invocation]]
+- [[powershell-utf8-bom]]

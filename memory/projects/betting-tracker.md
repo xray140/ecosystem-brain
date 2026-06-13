@@ -17,4 +17,5 @@ and the installed agent roster live in [[betting-tracker-stack]].
 - Project: `D:\claude-projects\betting-tracker`
 
 ## Links
+- [[projects-moc]]
 - [[betting-tracker-stack]]

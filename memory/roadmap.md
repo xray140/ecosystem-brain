@@ -1,7 +1,7 @@
 ---
 type: moc
 status: active
-updated: 2026-06-11
+updated: 2026-06-14
 tags: [moc, roadmap, state]
 ---
 # Ecosystem-Brain — state & roadmap
@@ -9,12 +9,14 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.2.0)
+## Current state (v4.3.0)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
 - **Project init**: `/ecosystem-brain:init` — sharp 3-4 question interview →
-  tailored AGENTS.md + auto-selected, security-scanned agents. Engine =
+  tailored AGENTS.md + scanned/pinned agents + named API keys in .env.example +
+  a **verified green baseline** (build+test must pass) + memory card linked into
+  `projects-moc` + optional `--github` push (only if baseline passes). Engine =
   `registry/project-profiles.json` + `scripts/init_project.py` (--plan/--apply).
 - **6 build types**: web, api, cli, library, data-pipeline, mcp-server.
 - **Agent supply chain**: search (GitHub by stars) → install (scanned by
@@ -22,10 +24,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (89
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (101
   tests) + `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index,
   pytest) + gitleaks. Green on GitHub.
-- **Tests**: `tests/` (89) covers scan_agent, init_project, bootstrap,
+- **Tests**: `tests/` (101) covers scan_agent, init_project, bootstrap,
   github_util, update-agents (pinning), doctor (drift), catalog. selfcheck runs
   them via nested `uv run --with pytest`.
 - **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
@@ -49,7 +51,8 @@ Read this first in a fresh session (after CLAUDE.md). Run
   only — fixed false positive), ruff-on-write, SessionStart suggester, SessionEnd log.
 - **Portability**: `bootstrap.py` rewrites hardcoded paths to the clone location;
   works on any PC / any path. `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
-- **Memory**: Obsidian vault, Ollama semantic search (nomic-embed-text, GPU).
+- **Memory**: Obsidian vault (project cards linked into `projects-moc` hub +
+  stack decisions — no orphans), Ollama semantic search (nomic-embed-text, GPU).
 - **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
   maintenance heartbeat (`maintenance.py`: doctor + selfcheck + update --check →
   `memory/maintenance/<date>.md`). One-shot registrar:

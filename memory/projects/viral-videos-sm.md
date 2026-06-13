@@ -24,3 +24,8 @@ cli-developer, python-pro, test-writer, security-auditor
 ## Paths
 - Project: `D:\claude-projects\viral-videos-sm`
 - Package: `viral_videos_sm`
+
+## Links
+- [[projects-moc]]
+- [[windows-python-invocation]]
+- [[powershell-utf8-bom]]

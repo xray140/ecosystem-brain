@@ -99,6 +99,73 @@ def test_memory_card_has_real_created_date(profiles):
     assert "created: 20" in card  # real ISO date
 
 
+# --- Gap 4: named API keys -----------------------------------------------
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("youtube", "YOUTUBE_API_KEY"),
+        ("YOUTUBE_API_KEY", "YOUTUBE_API_KEY"),  # already a key, unchanged
+        ("stripe secret", "STRIPE_SECRET"),  # ends in SECRET, no _API_KEY suffix
+        ("tik-tok", "TIK_TOK_API_KEY"),
+        ("  ", ""),
+    ],
+)
+def test_env_key_normalization(name, expected):
+    assert ip.env_key(name) == expected
+
+
+def test_env_block_composes_placeholders_and_dedupes():
+    block = ip.env_block(["youtube", "youtube", "tiktok"])
+    assert "YOUTUBE_API_KEY=" in block
+    assert "TIKTOK_API_KEY=" in block
+    assert block.count("YOUTUBE_API_KEY=") == 1  # deduped
+    assert "real values go in .env" in block
+
+
+def test_env_block_empty_for_no_names():
+    assert ip.env_block([]) == ""
+    assert ip.env_block(["   "]) == ""
+
+
+# --- Gap 2: verified green baseline --------------------------------------
+def test_verify_commands_per_template():
+    assert ip.verify_commands("python-project") == [["uv", "sync"], ["uv", "run", "pytest", "-q"]]
+    assert ip.verify_commands("typescript-project") == [["npm", "install"], ["npm", "test"]]
+    assert ip.verify_commands("unknown") == []
+
+
+# --- Gap 3: GitHub remote ------------------------------------------------
+def test_gh_create_cmd_private_by_default(tmp_path):
+    cmd = ip.gh_create_cmd("my-proj", tmp_path)
+    assert cmd[:4] == ["gh", "repo", "create", "my-proj"]
+    assert "--private" in cmd and "--push" in cmd
+    assert "--public" not in cmd
+
+
+def test_gh_create_cmd_public_when_asked(tmp_path):
+    assert "--public" in ip.gh_create_cmd("p", tmp_path, private=False)
+
+
+# --- Gap 1: card links + projects MOC ------------------------------------
+def test_memory_card_links_into_graph(profiles):
+    cfg = ip.resolve(profiles, "cli", "product", ["none"], None)
+    card = ip.memory_card("demo", cfg, [{"name": "test-writer"}])
+    assert "## Links" in card
+    assert "[[projects-moc]]" in card
+    assert "[[windows-python-invocation]]" in card  # python stack decision
+
+
+def test_append_to_moc_is_idempotent(tmp_path):
+    moc = tmp_path / "projects-moc.md"
+    assert ip.append_to_moc("alpha", "cli · python", moc=moc) is True
+    assert ip.append_to_moc("alpha", "cli · python", moc=moc) is False  # already there
+    assert ip.append_to_moc("beta", "web · typescript", moc=moc) is True
+    text = moc.read_text(encoding="utf-8")
+    assert text.count("[[alpha]]") == 1
+    assert "[[beta]]" in text
+    assert "type: moc" in text  # header written on first create
+
+
 def test_all_build_types_resolve_and_compose(profiles):
     for build in profiles["build_types"]:
         stack = "react" if profiles["build_types"][build]["ask_stack"] else None
