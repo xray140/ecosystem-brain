@@ -2,6 +2,23 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.1] — 2026-06-14
+
+Make the Obsidian graph show every connection — root-caused, not papered over.
+
+- **Indexer resolver fixed**: `memory-index.py` matched note ids by basename
+  only, so path-qualified links (`[[decisions/hook-format]]`) dangled — which
+  orphaned `roadmap` (the hub linking every decision) and shattered the graph
+  into **11 components**. The resolver is now path-aware (resolves
+  `decisions/hook-format` → `hook-format`, like Obsidian) and **surfaces**
+  dangling links under each note's `unresolved` + `counts.unresolved` instead of
+  silently faking edges. Result: **1 connected component, 0 orphans, 0 dangling.**
+- Vault README rebuilt as a true hub (links `roadmap` + `projects-moc` + all
+  decisions by basename); removed the literal `[[wikilinks]]` phantom node.
+- `docs/OBSIDIAN.md`: a "See every connection" graph-view guide (global/local
+  graph, color groups by type, hiding auto-generated session/maintenance noise).
+- +4 resolver tests (path-form resolves, dangling surfaced not faked, no self-edges).
+
 ## [4.3.0] — 2026-06-14
 
 `/ecosystem-brain:init` upgraded from "scaffolds fast" to "hands over a proven,

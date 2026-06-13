@@ -56,13 +56,41 @@ def wikilinks(text: str) -> list[str]:
     return out
 
 
+def link_basename(target: str) -> str:
+    """Resolve a wikilink target to a note id, the way Obsidian does.
+
+    `decisions/hook-format` -> `hook-format`; strips folder paths and any
+    `#heading` / `^block` ref. So a path-qualified link resolves to its note
+    instead of dangling as a phantom.
+    """
+    target = target.split("#", 1)[0].split("^", 1)[0]
+    return target.rstrip("/").rsplit("/", 1)[-1].strip()
+
+
 def build(vault: Path) -> dict:
-    """Scan the vault and return the index structure."""
-    notes, edges = [], []
+    """Scan the vault and return the index structure.
+
+    Links are resolved to real note ids (basename match, path-aware). A link to
+    something that isn't a note is recorded under `unresolved` — surfaced, never
+    faked into a graph edge — so dangling links are visible to the curator.
+    """
+    raw = []
     for path in sorted(vault.rglob("*.md")):
         text = path.read_text(encoding="utf-8", errors="replace")
-        fm = parse_frontmatter(text)
-        links = wikilinks(text)
+        raw.append((path, parse_frontmatter(text), wikilinks(text)))
+    ids = {path.stem for path, _, _ in raw}
+
+    notes, edges, unresolved_total = [], [], 0
+    for path, fm, links in raw:
+        resolved: list[str] = []
+        unresolved: list[str] = []
+        for t in links:
+            base = link_basename(t)
+            if base in ids and base != path.stem:
+                if base not in resolved:
+                    resolved.append(base)
+            elif base not in ids and t not in unresolved:
+                unresolved.append(t)
         notes.append({
             "id": path.stem,
             "path": path.relative_to(vault).as_posix(),
@@ -70,9 +98,11 @@ def build(vault: Path) -> dict:
             "status": fm.get("status"),
             "tags": fm.get("tags", []),
             "updated": fm.get("updated"),
-            "links": links,
+            "links": resolved,
+            "unresolved": unresolved,
         })
-        edges.extend([path.stem, t] for t in links)
+        edges.extend([path.stem, t] for t in resolved)
+        unresolved_total += len(unresolved)
 
     by_type: dict[str, int] = {}
     for n in notes:
@@ -81,7 +111,10 @@ def build(vault: Path) -> dict:
     return {
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "vault": vault.as_posix(),
-        "counts": {"notes": len(notes), "by_type": by_type, "edges": len(edges)},
+        "counts": {
+            "notes": len(notes), "by_type": by_type,
+            "edges": len(edges), "unresolved": unresolved_total,
+        },
         "notes": notes,
         "edges": edges,
     }
