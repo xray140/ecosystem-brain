@@ -18,6 +18,11 @@ Make the Obsidian graph show every connection — root-caused, not papered over.
 - `docs/OBSIDIAN.md`: a "See every connection" graph-view guide (global/local
   graph, color groups by type, hiding auto-generated session/maintenance noise).
 - +4 resolver tests (path-form resolves, dangling surfaced not faked, no self-edges).
+- Graph view: the saved `memory/.obsidian/graph.json` now hides attachments,
+  orphans, unresolved nodes, and the auto-generated `sessions/`+`maintenance/`
+  logs — so opening `memory/` shows only the connected knowledge web.
+  `docs/OBSIDIAN.md` warns to open `memory/` (not a parent folder, which would
+  pull in screenshots, `__pycache__`, scripts, and per-project instruction files).
 
 ## [4.3.0] — 2026-06-14
 

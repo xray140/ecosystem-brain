@@ -1,10 +1,10 @@
 {
   "collapse-filter": false,
-  "search": "",
+  "search": "-path:sessions -path:maintenance",
   "showTags": true,
   "showAttachments": false,
-  "hideUnresolved": false,
-  "showOrphans": true,
+  "hideUnresolved": true,
+  "showOrphans": false,
   "collapse-color-groups": false,
   "colorGroups": [
     {

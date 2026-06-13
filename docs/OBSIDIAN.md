@@ -5,8 +5,20 @@ human-readable window into the same knowledge base Claude searches semantically.
 
 ## Open it
 1. Launch Obsidian
-2. **Open folder as vault** → select `D:\claude-projects\ecosystem-brain\memory`
+2. **Open folder as vault** → select **`D:\claude-projects\ecosystem-brain\memory`**
 3. The `.obsidian/` config (graph colors, templates, plugins) loads automatically
+
+> **Open `memory/`, not a parent folder.** If you open `D:\claude-projects` (or
+> the repo root) the graph fills with noise that isn't part of the knowledge
+> base — screenshots (`.png`), compiled files (`__pycache__/*.pyc`), scripts
+> (`.py`), and a `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`/`README.md` from every
+> project and template (operational files that don't wiki-link to anything). The
+> `memory/` vault is the curated, fully-connected knowledge graph; everything
+> else is code, not notes.
+>
+> If you *do* want a repo-wide view, declutter it in **Settings → Files & Links →
+> Excluded files** (`__pycache__`, `.git`, `.venv`, `node_modules`) and turn off
+> **Show attachments** in graph settings.
 
 ## What's in the vault
 | Folder | Contents |
