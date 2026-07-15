@@ -1,17 +1,3 @@
 {
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/d/claude-projects"]
-    },
-    "git": {
-      "command": "uvx",
-      "args": ["mcp-server-git"]
-    },
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}" }
-    }
-  }
+  "mcpServers": {}
 }
