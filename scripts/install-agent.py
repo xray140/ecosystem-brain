@@ -155,6 +155,12 @@ def main(argv: list[str] | None = None) -> int:
         # what we vetted). Fall back to the branch if gh can't resolve.
         ref = args.branch
         commit = gh.resolve_commit(args.repo, ref)
+        if not commit:
+            print(
+                f"[warn] could not resolve a commit SHA for {args.repo}@{ref} "
+                "(gh missing or API call failed) — installing UNPINNED from the "
+                "mutable branch. Re-run later to pin, or check `gh auth status`."
+            )
         content = gh.fetch_url(gh.raw_url(args.repo, args.path, commit or ref))
         filename = args.path.split("/")[-1]
         source = f"github:{args.repo}/{args.path}"

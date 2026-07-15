@@ -19,6 +19,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -53,6 +54,21 @@ def drift_in(
     return problems
 
 
+def hooks_wiring_drift(bash_root: str) -> bool:
+    """True when the live settings.json hook wiring differs from what
+    bootstrap would write from hooks/hooks.json.
+
+    verify_live only checks that referenced scripts exist — it stays green when
+    hooks.json gains/changes an entry that was never re-bootstrapped. This check
+    closes that gap by comparing the wiring itself.
+    """
+    if not bs.SETTINGS.exists():
+        return False
+    expected = bs.load_hooks(bash_root)
+    live = json.loads(bs.SETTINGS.read_text(encoding="utf-8")).get("hooks", {})
+    return live != expected
+
+
 def main() -> int:
     bash_root = bs.to_bash_path(REPO)
     print("ecosystem-brain doctor")
@@ -64,6 +80,11 @@ def main() -> int:
     print("1. Hooks")
     if bs.verify_live() != 0:
         fails.append("hooks")
+    if hooks_wiring_drift(bash_root):
+        print("  [drift] hook wiring in settings.json != hooks/hooks.json — re-run bootstrap")
+        fails.append("hook-wiring")
+    else:
+        print("  [ok] hook wiring matches hooks/hooks.json")
 
     # 2. sync drift
     print("\n2. Sync (repo -> ~/.claude)")

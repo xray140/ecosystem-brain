@@ -45,6 +45,14 @@ MARKERS: dict[str, list[str]] = {
 }
 
 
+def to_bash_path(p: Path) -> str:
+    """Windows C:/foo -> /c/foo (Git Bash mount form). Posix paths pass through."""
+    s = p.as_posix()
+    if len(s) >= 2 and s[1] == ":":
+        s = f"/{s[0].lower()}{s[2:]}"
+    return s
+
+
 def normalize_path(raw: str) -> Path:
     """Convert a Git Bash mount path (/d/foo) to Windows form (D:/foo).
 
@@ -144,8 +152,10 @@ def main() -> int:
         lines.append("  Available to install for this project type:")
         for s in suggestions:
             lines.append(f"    - {s['name']}  (install: --repo {s['repo']} --path {s['path']})")
+    # Built from this clone's real location — a hardcoded canonical path here
+    # would send every session to a script that may not exist on this machine.
     lines.append(
-        "  Search more: `uv run python /d/claude-projects/ecosystem-brain/"
+        f"  Search more: `uv run python {to_bash_path(REPO_ROOT)}/"
         'scripts/search_agents.py "<topic>" --files`'
     )
 

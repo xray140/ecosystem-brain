@@ -2,6 +2,27 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.2] — 2026-07-15
+
+Robustness sweep — every issue found by auditing the live install, not the repo.
+
+- **SessionStart hint fixed**: `suggest-agents.py` printed the canonical
+  authoring path (`/d/claude-projects/...`) in its "Search more" hint, sending
+  every session to a script that doesn't exist on this machine. The hint is now
+  built from the script's own resolved location.
+- **Doctor closes the hook-wiring gap**: `verify_live` only checked that hook
+  *scripts* exist — a changed/added entry in `hooks/hooks.json` that was never
+  re-bootstrapped stayed invisible. Doctor now diffs the live `settings.json`
+  wiring against what bootstrap would write (path-rewrite aware). +4 tests.
+- **Unpinned installs now warn**: when `gh` can't resolve a commit SHA (not
+  authenticated, offline), `install-agent.py` said nothing and silently
+  installed from the mutable branch. It now prints a loud `[warn]` with the fix.
+- **Registry hygiene**: backfilled the missing commit pin on `data-engineer`
+  (content at main@947b44c verified against the vetted md5 before pinning);
+  repaired 9 `global_path` entries still pointing at the previous machine's
+  user profile.
+- Re-bootstrapped: live `memory-curator.md` had unrewritten `/d/` paths.
+
 ## [4.3.1] — 2026-06-14
 
 Make the Obsidian graph show every connection — root-caused, not papered over.

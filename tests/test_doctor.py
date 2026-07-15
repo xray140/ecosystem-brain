@@ -7,6 +7,8 @@ is the intended per-clone path substitution.
 
 from __future__ import annotations
 
+import json
+
 import doctor
 
 
@@ -56,3 +58,50 @@ def test_path_rewrite_is_not_drift(tmp_path):
 
 def test_missing_repo_dir_is_empty(tmp_path):
     assert doctor.drift_in(tmp_path / "nope", tmp_path, "/x", "commands") == []
+
+
+# --- hooks_wiring_drift: live settings hooks vs hooks/hooks.json ------------
+
+
+def _wire(tmp_path, monkeypatch, template_hooks, live_hooks):
+    template = tmp_path / "hooks.json"
+    _write(template, json.dumps({"hooks": template_hooks}))
+    settings = tmp_path / "settings.json"
+    if live_hooks is not None:
+        _write(settings, json.dumps({"hooks": live_hooks}))
+    monkeypatch.setattr(doctor.bs, "HOOKS_TEMPLATE", template)
+    monkeypatch.setattr(doctor.bs, "SETTINGS", settings)
+
+
+def test_wiring_in_sync_is_not_drift(tmp_path, monkeypatch):
+    hooks = {"SessionStart": [{"hooks": [{"type": "command", "command": "echo hi"}]}]}
+    _wire(tmp_path, monkeypatch, hooks, hooks)
+    assert doctor.hooks_wiring_drift("/c/clone/eco") is False
+
+
+def test_wiring_edit_is_drift(tmp_path, monkeypatch):
+    repo_hooks = {"SessionStart": [{"hooks": [{"type": "command", "command": "echo new"}]}]}
+    live_hooks = {"SessionStart": [{"hooks": [{"type": "command", "command": "echo old"}]}]}
+    _wire(tmp_path, monkeypatch, repo_hooks, live_hooks)
+    assert doctor.hooks_wiring_drift("/c/clone/eco") is True
+
+
+def test_wiring_missing_settings_is_not_drift(tmp_path, monkeypatch):
+    hooks = {"SessionStart": [{"hooks": [{"type": "command", "command": "echo hi"}]}]}
+    _wire(tmp_path, monkeypatch, hooks, None)
+    assert doctor.hooks_wiring_drift("/c/clone/eco") is False
+
+
+def test_wiring_path_rewrite_is_not_drift(tmp_path, monkeypatch):
+    # hooks.json holds the canonical authoring path; live holds this clone's
+    # rewritten path — that is bootstrap's intended substitution, not drift.
+    repo_hooks = {
+        "SessionStart": [
+            {"hooks": [{"type": "command", "command": f"bash {doctor.bs.CANON_BASH}/x.sh"}]}
+        ]
+    }
+    live_hooks = {
+        "SessionStart": [{"hooks": [{"type": "command", "command": "bash /c/clone/eco/x.sh"}]}]
+    }
+    _wire(tmp_path, monkeypatch, repo_hooks, live_hooks)
+    assert doctor.hooks_wiring_drift("/c/clone/eco") is False
