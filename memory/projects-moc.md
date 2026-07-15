@@ -11,3 +11,4 @@ Every project scaffolded via `/ecosystem-brain:init`. Each card also links back 
 - [[my-first-tool]] — cli · python
 - [[betting-stats-analysis]] — cli · python
 - [[viral-videos-sm]] — cli · python
+- [[sensor-csv-pipeline]] — data-pipeline · python
