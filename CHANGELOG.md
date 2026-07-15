@@ -2,6 +2,25 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.3] — 2026-07-15
+
+Model-routing revision for the Sonnet 5 era (released 2026-06-30).
+
+- **New routing tier — spec-driven code-gen → `sonnet`**: test-writer and
+  script-smith move from `inherit` to `sonnet`. Sonnet 5 delivers frontier-level
+  coding at scale, so committed code gets a constant quality floor on any
+  session tier without burning frontier tokens on bounded work.
+- security-auditor and bug-fixer deliberately stay `inherit` (verdicts and
+  root-causing ride the session model); convention-keeper and memory-curator
+  stay `haiku`.
+- **Portability rule made explicit** in `model-routing.md`: tier aliases only in
+  frontmatter, never full model IDs — audited: zero full IDs in
+  scripts/templates/agents. Aliases float across model generations and the repo
+  bootstraps identically on every machine; non-Claude tools read AGENTS.md and
+  ignore `model:` frontmatter, so nothing breaks cross-tool.
+- `docs/TOKENS.md` routing section + `new_agent.py` `--model` help updated to
+  the three-tier scheme; model landscape refreshed (Claude 5 family, Sonnet 5).
+
 ## [4.3.2] — 2026-07-15
 
 Robustness sweep — every issue found by auditing the live install, not the repo.

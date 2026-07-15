@@ -8,7 +8,7 @@ tools:
   - Write
   - Edit
   - Bash
-model: inherit
+model: sonnet
 ---
 You write scripts that run correctly on this Windows + Git Bash + uv stack the
 first time. The conventions below are hard-won (see `memory/decisions/`) — follow

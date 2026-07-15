@@ -121,9 +121,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument(
         "--model", default="inherit", choices=sorted(KNOWN_MODELS),
-        help="route by task shape: haiku for checklist/mechanical work, inherit "
-             "(rides the session model) for judgment/code-gen; fable/opus only "
-             "with a clear reason (see memory/decisions/model-routing.md)",
+        help="route by task shape: haiku for checklist/mechanical work, sonnet "
+             "for spec-driven code-gen, inherit (rides the session model) for "
+             "judgment/diagnosis; fable/opus only with a clear reason "
+             "(see memory/decisions/model-routing.md)",
     )
     ap.add_argument(
         "--step", action="append", dest="steps", help="a When-invoked step (repeatable)"

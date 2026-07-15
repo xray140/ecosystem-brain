@@ -32,9 +32,13 @@ lean. Most apply to any AGENTS.md-aware tool, not just Claude Code.
 Agents are routed by **task shape** (policy: `memory/decisions/model-routing.md`):
 - **Checklist / mechanical** (convention-keeper, memory-curator) → `model: haiku`
   — explicit rules, bounded output; the fast tier is enough and ~10× cheaper.
-- **Judgment / code-gen** (security-auditor, bug-fixer, test-writer, script-smith)
-  → `model: inherit` — they ride the session model, so a Fable 5 session gives
-  them Fable 5 and a cheap session stays cheap.
+- **Spec-driven code-gen** (test-writer, script-smith) → `model: sonnet` — since
+  Sonnet 5 (2026-06) the sonnet tier delivers frontier-level coding at scale, so
+  committed code gets a constant quality floor without spending the session's
+  frontier tokens.
+- **Judgment / diagnosis** (security-auditor, bug-fixer) → `model: inherit` —
+  they ride the session model, so a Fable 5 session gives them Fable 5; a missed
+  verdict or misdiagnosis costs more than the tokens saved.
 - Per-case override without editing files: the harness honors a per-invocation
   model param (and `CLAUDE_CODE_SUBAGENT_MODEL`) over frontmatter.
 - Don't hard-pin the frontier tier in frontmatter — it defeats cheap sessions
