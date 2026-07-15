@@ -1,7 +1,7 @@
 ---
 type: moc
 status: active
-updated: 2026-06-14
+updated: 2026-07-15
 tags: [moc, roadmap, state]
 ---
 # Ecosystem-Brain — state & roadmap
@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.0)
+## Current state (v4.3.3)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
@@ -24,12 +24,12 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (101
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (109
   tests) + `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index,
   pytest) + gitleaks. Green on GitHub.
-- **Tests**: `tests/` (101) covers scan_agent, init_project, bootstrap,
-  github_util, update-agents (pinning), doctor (drift), catalog. selfcheck runs
-  them via nested `uv run --with pytest`.
+- **Tests**: `tests/` (109) covers scan_agent, init_project, bootstrap,
+  github_util, update-agents (pinning), doctor (drift + hook wiring), catalog.
+  selfcheck runs them via nested `uv run --with pytest`.
 - **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
   curl|bash, PowerShell cradles (iwr|iex, WebClient, -enc), base64-exec,
   eval/exec, rm -rf, TLS-off (incl. flag-first `curl -k`), exfil, hidden chars.
@@ -40,9 +40,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **First-party squad** (6): security-auditor, convention-keeper, script-smith,
   test-writer, bug-fixer, memory-curator. The SessionStart suggester surfaces them
   every session *with trigger moments* so they actually get delegated to.
-  **Model-routed by task shape**: checklist agents (convention-keeper,
-  memory-curator) run on haiku; judgment agents inherit the session model
-  (Fable 5 on a frontier session). See [[decisions/model-routing]].
+  **Model-routed by task shape** (3 tiers since v4.3.3): checklist agents
+  (convention-keeper, memory-curator) on haiku; spec-driven code-gen
+  (test-writer, script-smith) on sonnet; judgment agents (security-auditor,
+  bug-fixer) inherit the session model. See [[decisions/model-routing]].
   selfcheck lints local agent frontmatter (name/description/tools/model).
 - **Recruiter**: `/ecosystem-brain:new-agent` (`new_agent.py`) scaffolds a new
   agent to standard (frontmatter, least-privilege tools, model, "use proactively"
@@ -70,6 +71,18 @@ Read this first in a fresh session (after CLAUDE.md). Run
   output is already lean at ~700 chars.)
 
 ## Candidate next steps
+- [x] **Live-install audit → v4.3.2** (2026-07-15) — fixed the hardcoded /d/
+  SessionStart hint, added doctor's hook-wiring drift check, unpinned-install
+  warning, registry repair (stale global_path, backfilled data-engineer pin).
+- [x] **Model routing rev. for Sonnet 5 → v4.3.3** (2026-07-15) — sonnet tier
+  for spec-driven code-gen; aliases-only portability rule made explicit.
+- [x] **Heartbeat live** (2026-07-15) — all 3 scheduled tasks registered on this
+  machine; first maintenance run verified end-to-end (report all-green).
+- [x] **.mcp.json emptied** (2026-07-15) — filesystem server pointed at a dead
+  path; git/github duplicated native tools.
+- [ ] **profile_machine.py** (proposed 2026-07-15, parked) — per-machine vault
+  note (OS, tools, apps, drives/shares, project dirs) generated at bootstrap and
+  injected at SessionStart, so any PC is known from the first second.
 - [x] **Official Claude best practices** (2026-06-05) — aligned CLAUDE.md,
   template AGENTS.md, and the 4 first-party agents with Anthropic's published
   guidance: added Verification discipline, nuanced plan-mode, focused/isolated/
