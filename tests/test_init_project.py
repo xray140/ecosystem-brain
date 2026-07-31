@@ -7,9 +7,8 @@ just "doesn't raise".
 
 from __future__ import annotations
 
-import pytest
-
 import init_project as ip
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -170,6 +169,6 @@ def test_all_build_types_resolve_and_compose(profiles):
     for build in profiles["build_types"]:
         stack = "react" if profiles["build_types"][build]["ask_stack"] else None
         cfg = ip.resolve(profiles, build, "product", ["api-keys"], stack)
-        resolved, dropped = ip.classify_agents(cfg["agents"], profiles)
+        _resolved, dropped = ip.classify_agents(cfg["agents"], profiles)
         assert dropped == [], f"build {build} maps to unknown agents: {dropped}"
         assert ip.compose_agents_md(f"demo-{build}", cfg)

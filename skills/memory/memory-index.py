@@ -14,7 +14,7 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 FM_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
@@ -109,7 +109,7 @@ def build(vault: Path) -> dict:
         by_type[n["type"]] = by_type.get(n["type"], 0) + 1
 
     return {
-        "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated": datetime.now(UTC).isoformat(timespec="seconds"),
         "vault": vault.as_posix(),
         "counts": {
             "notes": len(notes), "by_type": by_type,

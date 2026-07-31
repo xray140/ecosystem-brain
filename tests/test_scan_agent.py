@@ -6,7 +6,14 @@ activated, so these lock the detection rules and the exit-code contract.
 
 from __future__ import annotations
 
+import pytest
+
 import scan_agent as sa
+
+# The five invisible characters the zero-width rule must catch. Written as
+# code points, not literals, so the test source stays greppable and no
+# editor or copy-paste can silently drop one.
+ZERO_WIDTH = [chr(0x200B), chr(0x200C), chr(0x200D), chr(0x2060), chr(0xFEFF)]
 
 
 def labels(content: str) -> set[str]:
@@ -116,8 +123,15 @@ def test_dynamic_code_exec_ignores_the_word_execute():
 
 
 # --- hidden content ------------------------------------------------------
-def test_zero_width_char_is_high():
-    assert "zero-width-chars" in labels("normal text ​ hidden")
+@pytest.mark.parametrize("ch", ZERO_WIDTH)
+def test_every_zero_width_char_is_detected(ch):
+    """The rule's character class was rewritten from literal invisible characters
+    to escapes; this pins all five so the rewrite can't silently drop one."""
+    assert "zero-width-chars" in labels(f"normal text {ch} hidden")
+
+
+def test_ordinary_text_has_no_zero_width_finding():
+    assert "zero-width-chars" not in labels("perfectly normal text\n")
 
 
 def test_html_comment_directive_is_medium():
@@ -173,6 +187,33 @@ def test_quarantine_creates_base_dir(tmp_path):
     dest = sa.quarantine("x", "content", "reason", base=base)
     assert base.is_dir()
     assert dest.exists()
+
+
+def test_quarantine_name_cannot_escape_its_directory(tmp_path):
+    """A hostile name reaches this path too — blocked content must not be able
+    to choose where the forensic copy lands."""
+    base = tmp_path / "q"
+    outside = tmp_path / "evil.md"
+    dest = sa.quarantine("../evil", "payload", "reason", base=base)
+    assert dest.parent == base
+    assert not outside.exists()
+
+
+# --- report ordering ------------------------------------------------------
+def test_report_lists_severities_worst_first():
+    """Sorting on the severity *string* ordered HIGH, LOW, MEDIUM — burying
+    mid-severity findings under trivia in every scan report."""
+    findings = [
+        {"severity": "LOW", "label": "low-thing", "why": "w", "snippet": "s"},
+        {"severity": "MEDIUM", "label": "medium-thing", "why": "w", "snippet": "s"},
+        {"severity": "HIGH", "label": "high-thing", "why": "w", "snippet": "s"},
+    ]
+    report = sa.format_report(findings)
+    assert report.index("high-thing") < report.index("medium-thing") < report.index("low-thing")
+
+
+def test_empty_report_is_clean():
+    assert "clean" in sa.format_report([])
 
 
 # --- exit-code contract via main() ---------------------------------------

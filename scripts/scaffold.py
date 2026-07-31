@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-TOKEN = "pkgname"
+TOKEN = "pkgname"  # noqa: S105 — a template placeholder, not a credential
 
 # Where projects land when --dest-root is omitted. Mirrors init_project.py:
 # the clone's parent, overridable by env. Never a hardcoded absolute path —

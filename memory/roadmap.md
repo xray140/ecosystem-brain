@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.4)
+## Current state (v4.3.5)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
@@ -24,19 +24,25 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (109
-  tests) + `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index,
-  pytest) + gitleaks. Green on GitHub.
-- **Tests**: `tests/` (109) covers scan_agent, init_project, bootstrap,
-  github_util, update-agents (pinning), doctor (drift + hook wiring), catalog.
-  selfcheck runs them via nested `uv run --with pytest`.
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (157
+  tests) + `scripts/selfcheck.py` + gitleaks. Toolchain pinned in
+  `requirements-dev.txt`, rule set pinned in `ruff.toml` — see
+  [[decisions/toolchain-pinning]].
+- **Gates**: `selfcheck.py` = 7 checks (JSON, agent scan, init-engine, memory
+  index, pytest, **ruff**, agent frontmatter). Lint runs the *same* invocation
+  and the same pinned binary as CI, so local-green and CI-green are the same
+  claim; tests assert the two configs can't drift apart.
+- **Tests**: `tests/` (157) covers scan_agent, init_project, bootstrap,
+  github_util, update-agents (pinning), doctor (drift + hook wiring + skills),
+  catalog, install-agent (naming, target paths, traversal), selfcheck.
 - **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
   curl|bash, PowerShell cradles (iwr|iex, WebClient, -enc), base64-exec,
   eval/exec, rm -rf, TLS-off (incl. flag-first `curl -k`), exfil, hidden chars.
 - **Dogfood**: the repo's own `CLAUDE.md` imports `@AGENTS.md` — same cross-tool
   pattern it ships in templates.
 - **Doctor**: `/ecosystem-brain:doctor` (`doctor.py`) = live-hooks + repo↔~/.claude
-  drift + prereqs. Wired into health-check and the weekly maintenance heartbeat.
+  drift (commands + agents + **skills**) + prereqs. Wired into health-check and
+  the weekly maintenance heartbeat.
 - **First-party squad** (6): security-auditor, convention-keeper, script-smith,
   test-writer, bug-fixer, memory-curator. The SessionStart suggester surfaces them
   every session *with trigger moments* so they actually get delegated to.
@@ -71,6 +77,23 @@ Read this first in a fresh session (after CLAUDE.md). Run
   output is already lean at ~700 chars.)
 
 ## Candidate next steps
+- [x] **Gate repair → v4.3.5** (2026-07-31) — CI lint was red on an unpinned
+  ruff and the local gate couldn't see it; skills were invisible to `doctor` and
+  unloadable when installed; `--name` was a path; scan reports buried MEDIUM
+  findings. All fixed with tests (114 → 157). See [[decisions/toolchain-pinning]].
+- [ ] **P1 audit follow-ups** (opened 2026-07-31, from the same pass):
+  `fetch_url` accepts any URL scheme (`file://` reads a local secret and
+  "installs" it) with no host allowlist or size cap; GitHub Actions pinned to
+  mutable tags (`@v4`) while the repo pins agents to SHAs, and no Dependabot;
+  `scaffold.py --force` runs `shutil.rmtree` on an unvalidated `--name`;
+  `guard-destructive.sh` matches literal spacing only (`rm  -rf /`, `rm -r -f /`
+  pass). Then coverage: `install-agent`, `scaffold`, `search_agents`,
+  `maintenance` sit at 0%.
+- [ ] **De-hardcode `CANON_BASH`** — the authoring path `/d/claude-projects/...`
+  no longer exists (repo lives at `~/ecosystem-brain`); ~40 dead paths in
+  `commands/*.md` work only because `bootstrap` rewrites them. Replace with an
+  explicit `{{ECOSYSTEM_ROOT}}` token + a selfcheck rule that fails on any
+  literal absolute path in a committed file.
 - [x] **Live-install audit → v4.3.2** (2026-07-15) — fixed the hardcoded /d/
   SessionStart hint, added doctor's hook-wiring drift check, unpinned-install
   warning, registry repair (stale global_path, backfilled data-engineer pin).
@@ -111,4 +134,5 @@ Read this first in a fresh session (after CLAUDE.md). Run
   [[decisions/windows-path-translation]] · [[decisions/ollama-accented-path]] ·
   [[decisions/powershell-utf8-bom]] · [[decisions/claude-best-practices]] ·
   [[decisions/agent-pinning]] · [[decisions/betting-tracker-stack]] ·
-  [[decisions/model-routing]]
+  [[decisions/model-routing]] · [[decisions/toolchain-pinning]] ·
+  [[decisions/text-file-write-conventions]]

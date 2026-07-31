@@ -22,6 +22,12 @@ __pycache__/
 .venv/
 *.egg-info/
 
+# Tool caches / coverage artifacts
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Editor
 .vscode/
 .idea/

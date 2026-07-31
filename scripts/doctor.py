@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import bootstrap as bs  # noqa: E402 — reuse REPO_ROOT, CLAUDE_DIR, rewrite_paths, verify_live
+import bootstrap as bs  # reuse REPO_ROOT, CLAUDE_DIR, rewrite_paths, verify_live
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
@@ -34,23 +34,28 @@ CLAUDE_DIR = bs.CLAUDE_DIR
 
 
 def drift_in(
-    repo_dir: Path, live_dir: Path, bash_root: str, label: str
+    repo_dir: Path, live_dir: Path, bash_root: str, label: str, pattern: str = "*.md"
 ) -> list[tuple[str, str]]:
     """(file, reason) pairs where the live copy differs from the repo source.
 
     Compares against the rewritten repo content (the exact bytes bootstrap would
     write), so the intended per-clone path substitution is not mistaken for drift.
+
+    `pattern` mirrors how bootstrap copies each kind: commands and agents are a
+    flat `*.md`, skills are `<name>/SKILL.md` one level down. Paths are compared
+    relative to repo_dir so both layouts map onto the live tree unchanged.
     """
     problems: list[tuple[str, str]] = []
     if not repo_dir.is_dir():
         return problems
-    for f in sorted(repo_dir.glob("*.md")):
-        live = live_dir / f.name
+    for f in sorted(repo_dir.glob(pattern)):
+        rel = f.relative_to(repo_dir)
+        live = live_dir / rel
         expected = bs.rewrite_paths(f.read_text(encoding="utf-8"), bash_root)
         if not live.exists():
-            problems.append((f"{label}/{f.name}", "missing in ~/.claude"))
+            problems.append((f"{label}/{rel.as_posix()}", "missing in ~/.claude"))
         elif live.read_text(encoding="utf-8") != expected:
-            problems.append((f"{label}/{f.name}", "drifted — re-run bootstrap"))
+            problems.append((f"{label}/{rel.as_posix()}", "drifted — re-run bootstrap"))
     return problems
 
 
@@ -88,21 +93,25 @@ def main() -> int:
 
     # 2. sync drift
     print("\n2. Sync (repo -> ~/.claude)")
+    # One entry per thing bootstrap copies. Skills were added to bootstrap in
+    # v4.3.5 and must be listed here too, or an edited SKILL.md that was never
+    # re-bootstrapped stays invisible to the drift check.
     pairs = [
-        (REPO / "commands", CLAUDE_DIR / "commands" / "ecosystem-brain", "commands"),
-        (REPO / "agents", CLAUDE_DIR / "agents", "agents"),
+        (REPO / "commands", CLAUDE_DIR / "commands" / "ecosystem-brain", "commands", "*.md"),
+        (REPO / "agents", CLAUDE_DIR / "agents", "agents", "*.md"),
+        (REPO / "skills", CLAUDE_DIR / "skills", "skills", "*/SKILL.md"),
     ]
     drift = [
         p
-        for repo_dir, live_dir, label in pairs
-        for p in drift_in(repo_dir, live_dir, bash_root, label)
+        for repo_dir, live_dir, label, pattern in pairs
+        for p in drift_in(repo_dir, live_dir, bash_root, label, pattern)
     ]
     if drift:
         for name, why in drift:
             print(f"  [drift] {name} — {why}")
         fails.append("drift")
     else:
-        print("  [ok] commands + agents in sync")
+        print("  [ok] commands + agents + skills in sync")
 
     # 3. prerequisites (advisory — never fails the run)
     bs.check_prereqs()

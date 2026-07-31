@@ -21,11 +21,14 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
 
+      # Toolchain pinned in requirements-dev.txt — an unpinned `--with ruff`
+      # resolves the newest release on every run, and ruff's default rule set
+      # moving once turned this job red with findings no commit introduced.
       - name: Lint (ruff)
-        run: uv run --with ruff --no-project ruff check scripts tests
+        run: uv run --with-requirements requirements-dev.txt --no-project ruff check scripts tests hooks skills
 
       - name: Unit tests (pytest)
-        run: uv run --with pytest --no-project pytest -q tests
+        run: uv run --with-requirements requirements-dev.txt --no-project pytest -q tests
 
       - name: Self-check (JSON, agent scan, init engine, memory index, tests)
         run: uv run --no-project python scripts/selfcheck.py

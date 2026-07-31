@@ -7,7 +7,10 @@ Checks, in order (fails fast with a non-zero exit on any problem):
   3. The init profile engine resolves all build types without error.
   4. The memory vault indexes cleanly.
   5. The pytest suite passes.
-  6. Local agent frontmatter meets the standard (name/description/tools/model).
+  6. Ruff is clean — the same invocation CI runs, so local and CI cannot diverge.
+  7. Local agent frontmatter meets the standard (name/description/tools/model).
+
+Both pytest and ruff come from requirements-dev.txt, the pinned dev toolchain.
 
 Usage:
     uv run --no-project python scripts/selfcheck.py
@@ -23,7 +26,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scan_agent import scan, worst  # noqa: E402
+from scan_agent import scan, worst
 
 REPO = Path(__file__).resolve().parent.parent
 fails: list[str] = []
@@ -93,7 +96,7 @@ def check_profiles() -> None:
     for b in builds:
         stack = "react" if profiles["build_types"][b]["ask_stack"] else None
         cfg = ip.resolve(profiles, b, "product", ["api-keys", "money"], stack)
-        resolved, dropped = ip.classify_agents(cfg["agents"], profiles)
+        _resolved, dropped = ip.classify_agents(cfg["agents"], profiles)
         if dropped:
             fail(f"build '{b}' maps to unknown agents: {dropped}")
         # composing AGENTS.md must not raise
@@ -103,7 +106,7 @@ def check_profiles() -> None:
 
 def check_memory() -> None:
     print("4. Memory vault indexes")
-    r = subprocess.run(
+    r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
         [sys.executable, str(REPO / "skills/memory/memory-index.py"), "--check"],
         capture_output=True,
         text=True,
@@ -112,6 +115,45 @@ def check_memory() -> None:
         fail(f"memory-index failed: {r.stderr.strip()[:80]}")
     else:
         ok("vault indexed")
+
+
+DEV_REQS = REPO / "requirements-dev.txt"
+LINT_PATHS = ("scripts", "tests", "hooks", "skills")
+
+
+def _uv_tool() -> list[str]:
+    """`uv run` prefix that installs the pinned dev toolchain, project-free."""
+    return [
+        "uv",
+        "run",
+        "--with-requirements",
+        str(DEV_REQS),
+        "--no-project",
+    ]
+
+
+def check_lint() -> None:
+    """Run the same ruff invocation CI runs.
+
+    Without this, the local gate stays green while CI goes red — which is exactly
+    how 44 lint findings accumulated unnoticed once ruff's default rule set moved.
+    A gate that a change can pass locally and fail remotely is not a gate.
+    """
+    print("6. Lint (ruff)")
+    if shutil.which("uv") is None:
+        ok("uv not found — ruff skipped")
+        return
+    r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
+        [*_uv_tool(), "ruff", "check", *LINT_PATHS, "--output-format", "concise"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+    )
+    if r.returncode != 0:
+        tail = "\n      ".join((r.stdout + r.stderr).strip().splitlines()[-12:])
+        fail(f"ruff found problems:\n      {tail}")
+    else:
+        ok(f"ruff clean across {', '.join(LINT_PATHS)}")
 
 
 def check_tests() -> None:
@@ -123,9 +165,11 @@ def check_tests() -> None:
     if shutil.which("uv") is None:
         ok("uv not found — pytest skipped")
         return
-    # Nested uv run: pulls pytest into an ephemeral env, ignores any project.
-    r = subprocess.run(
-        ["uv", "run", "--with", "pytest", "--no-project", "pytest", "-q", "tests"],
+    # Nested uv run: pulls the PINNED pytest into an ephemeral env, ignores any
+    # project. Pinned via requirements-dev.txt so this gate and CI can never
+    # disagree about which pytest ran.
+    r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
+        [*_uv_tool(), "pytest", "-q", "tests"],
         capture_output=True,
         text=True,
         cwd=str(REPO),
@@ -165,7 +209,7 @@ def frontmatter_problems(text: str) -> list[str]:
 
 
 def check_frontmatter() -> None:
-    print("6. Local agent frontmatter meets the standard")
+    print("7. Local agent frontmatter meets the standard")
     installed = json.loads((REPO / "registry" / "installed.json").read_text(encoding="utf-8"))
     local = {a["name"] for a in installed.get("agents", []) if a.get("source") == "local"}
     checked = 0
@@ -186,6 +230,7 @@ def main() -> int:
     check_profiles()
     check_memory()
     check_tests()
+    check_lint()
     check_frontmatter()
     print()
     if fails:

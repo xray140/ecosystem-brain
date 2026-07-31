@@ -2,6 +2,61 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.5] — 2026-07-31
+
+Gate repair. An audit of the verification chain found the CI lint step failing,
+the local gate unable to see it, and two checks blind to things they claimed to
+cover. Every fix below ships with a test; the suite went 114 → 157.
+
+- **CI lint was red and nobody could tell.** `uv run --with ruff` resolves the
+  newest ruff on every run; ruff 0.16 widened its default rule set and the job
+  started reporting 44 findings no commit introduced. Fixed at both ends: a
+  pinned `requirements-dev.txt` (ruff + pytest, exact `==` pins) used by CI and
+  `selfcheck` alike, and an explicit `select` list in a new `ruff.toml` so the
+  rule set is a decision, not a default. All 44 findings resolved — `check=False`
+  made explicit at 7 `subprocess.run` sites, naive `date.today()` replaced by an
+  aware local-date derivation, dead `noqa` markers removed, the zero-width
+  character class rewritten as escapes.
+- **`selfcheck` never ran ruff**, which is precisely why the divergence lasted:
+  a change could pass locally and fail remotely. It is now check 6 of 7, running
+  the same invocation and the same pinned ruff as CI, over the same four paths.
+  Tests assert the two cannot drift apart.
+- **`doctor` was blind to skill drift.** 4.3.4 taught `bootstrap` to copy
+  `skills/<name>/SKILL.md`, but the drift check still globbed a flat `*.md`, so
+  an edited skill that was never re-bootstrapped stayed invisible. `drift_in`
+  now takes a glob and compares repo-relative paths, covering both layouts.
+- **Installing a skill produced something nothing could load.** `install-agent`
+  wrote skills flat, to `~/.claude/commands/` — neither the location Claude Code
+  reads nor the one `bootstrap`'s `*/SKILL.md` glob finds. Skills now land at
+  `skills/<name>/SKILL.md` under both the repo and `~/.claude/skills/`, named
+  from their containing directory (every skill file is literally `SKILL.md`, so
+  the old stem-based naming would have called them all "SKILL"). `detect_type`
+  reordered — it checked `.md` before anything skill-shaped, making `"skill"`
+  unreachable for every markdown file, i.e. always.
+- **`--name` was a path.** It reaches the install target *and* the quarantine
+  path, so `--name ../../x` wrote outside both. Validated against an anchored
+  slug at the entry point, with `Path(name).name` as a second guard at the
+  quarantine sink. The slug uses `fullmatch` + `\Z` (`$` also matches before a
+  trailing newline), rejects Windows device names (`nul`, `com1`, … — a skill
+  named `nul` makes `mkdir` succeed and the write inside it fail with an
+  unhandled traceback, and that name can come from upstream), and lowercases
+  rather than rejects on case, since these become paths on a case-insensitive
+  filesystem and upstream repos are inconsistent about it.
+- **New `scripts/layout.py`** — one answer to "where does an item of kind K
+  named N live", imported by both `install-agent` and `update-agents`. They
+  answered it separately and drifted: once install moved skills to
+  `<name>/SKILL.md`, update kept writing them flat, so `/ecosystem-brain:update`
+  on a skill wrote vetted content to a path nothing loads and then advanced the
+  registry pin — reporting the skill current while the loaded copy stayed stale.
+  The HIGH-risk branch still quarantined correctly throughout, so no unsafe
+  content could become active; the failure mode was stale-but-reported-updated.
+  A test now asserts the two resolve identical paths for all three kinds.
+- **Scan reports buried MEDIUM findings.** `format_report` sorted on the
+  severity string, ordering HIGH, LOW, MEDIUM. Severity ranking is now shared
+  with `worst()` and the report reads worst-first.
+- `stderr` reconfigured to UTF-8 in `install-agent` (it carries the same
+  accented paths as stdout); tool caches and coverage artifacts gitignored.
+
 ## [4.3.4] — 2026-07-31
 
 Line-endings and encoding sweep — every text file the ecosystem writes was
