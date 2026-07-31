@@ -63,7 +63,9 @@ def _write_agent(name: str, kind: str, content: str) -> None:
     global_file = GLOBAL_DIRS[kind] / f"{name}.md"
     repo_file.parent.mkdir(parents=True, exist_ok=True)
     global_file.parent.mkdir(parents=True, exist_ok=True)
-    repo_file.write_text(content, encoding="utf-8")
+    # newline="\n": .gitattributes pins *.md to eol=lf — text mode would emit
+    # CRLF on Windows and dirty every installed agent in git status.
+    repo_file.write_text(content, encoding="utf-8", newline="\n")
     shutil.copy2(repo_file, global_file)
 
 
@@ -133,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
         print("[warn] no installed.json found — nothing to update")
         return 0
 
-    data = json.loads(INSTALLED_FILE.read_text())
+    data = json.loads(INSTALLED_FILE.read_text(encoding="utf-8"))
     changed = False
     blocked = 0
     total = sum(
@@ -165,7 +167,9 @@ def main(argv: list[str] | None = None) -> int:
                 blocked += 1
 
     if changed and not args.check:
-        INSTALLED_FILE.write_text(json.dumps(data, indent=2) + "\n")
+        INSTALLED_FILE.write_text(
+            json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n"
+        )
         print("\n[ok] installed.json updated")
     elif args.check:
         print("\n[info] run without --check to apply updates")

@@ -104,7 +104,7 @@ def search_files(query: str, limit: int) -> list[dict]:
 def known_sources() -> list[str]:
     if not REGISTRY.exists():
         return []
-    reg = json.loads(REGISTRY.read_text())
+    reg = json.loads(REGISTRY.read_text(encoding="utf-8"))
     return [s["repo"] for s in reg.get("sources", [])]
 
 

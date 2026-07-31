@@ -49,12 +49,14 @@ TYPE_DIRS: dict[str, tuple[Path, Path]] = {
 
 def load_installed() -> dict:
     if INSTALLED_FILE.exists():
-        return json.loads(INSTALLED_FILE.read_text())
+        return json.loads(INSTALLED_FILE.read_text(encoding="utf-8"))
     return {"_version": 1, "agents": [], "commands": [], "skills": []}
 
 
 def save_installed(data: dict) -> None:
-    INSTALLED_FILE.write_text(json.dumps(data, indent=2) + "\n")
+    INSTALLED_FILE.write_text(
+        json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
 
 
 def detect_type(content: str, filename: str) -> str:
@@ -82,7 +84,9 @@ def install_content(
     repo_path = repo_dir / fname
     global_path = global_dir / fname
 
-    repo_path.write_text(content, encoding="utf-8")
+    # newline="\n": .gitattributes pins *.md to eol=lf — text mode would emit
+    # CRLF on Windows and dirty every installed agent in git status.
+    repo_path.write_text(content, encoding="utf-8", newline="\n")
     shutil.copy2(repo_path, global_path)
 
     # Provenance: ref (branch) + commit (immutable SHA the content was vetted at).
