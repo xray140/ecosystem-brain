@@ -27,5 +27,14 @@ hardcoding the accented username. Registered as Windows Task Scheduler task
 `EcosystemBrain-OllamaServe`, fires at logon.
 
 ## Commands path
-Global `~/.claude/commands/ecosystem-brain/` — use absolute paths.
-`${CLAUDE_PLUGIN_ROOT}` is NOT resolved by Claude Code; it was aspirational.
+Global `~/.claude/commands/ecosystem-brain/` — use absolute paths, written by
+`bootstrap.py`'s `rewrite_paths()` at install time.
+
+**Correction (2026-07-31):** the earlier claim here — that
+`${CLAUDE_PLUGIN_ROOT}` "is NOT resolved by Claude Code; it was aspirational" —
+is out of date. Both `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and
+`${CLAUDE_SKILL_DIR}` (the directory holding a skill's own `SKILL.md`) are
+documented, supported tokens. They expand only for content Claude Code actually
+loads as a plugin/skill — which is *not* how this repo is installed today, so
+`bootstrap.py`'s rewrite remains the working mechanism for `commands/` and
+`agents/`. See [[text-file-write-conventions]] for the sibling portability rule.

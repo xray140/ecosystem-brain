@@ -8,11 +8,12 @@ tags: [project]
 # {{title}}
 
 ## Paths
-- Project: `D:\claude-projects\{{title}}`
+- Project: `<projects-root>\{{title}}`  <!-- projects root = the ecosystem-brain
+  clone's parent, or $ECOSYSTEM_DEST_ROOT if set. Never hardcode a drive here. -->
 
 ## First-time setup
 ```bash
-cd /d/claude-projects/{{title}}
+cd <projects-root>/{{title}}
 uv sync
 pre-commit install
 cp .env.example .env
