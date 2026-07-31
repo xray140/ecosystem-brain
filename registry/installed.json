@@ -93,19 +93,19 @@
       "name": "python-pro",
       "source": "github:VoltAgent/awesome-claude-code-subagents/categories/02-language-specialists/python-pro.md",
       "hash": "06ad241de505c99b3e166cfad17934a2",
-      "installed_at": "2026-06-29",
+      "installed_at": "2026-07-17",
       "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\python-pro.md",
       "ref": "main",
-      "commit": "2f9cf8b9562dcc235cc2296bda6df82d60e800be"
+      "commit": "947b44ca0c58d606b084e9cb1a2389335b49278b"
     },
     {
       "name": "cli-developer",
       "source": "github:VoltAgent/awesome-claude-code-subagents/categories/06-developer-experience/cli-developer.md",
       "hash": "db66bd6cb4ea0dc463b996c5b7dffa84",
-      "installed_at": "2026-06-09",
+      "installed_at": "2026-07-17",
       "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\cli-developer.md",
       "ref": "main",
-      "commit": "2f9cf8b9562dcc235cc2296bda6df82d60e800be"
+      "commit": "947b44ca0c58d606b084e9cb1a2389335b49278b"
     },
     {
       "name": "data-engineer",
