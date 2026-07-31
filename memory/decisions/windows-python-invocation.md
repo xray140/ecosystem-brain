@@ -18,8 +18,8 @@ to avoid searching for a pyproject.toml).
 # In hook scripts
 uv run --no-project python -c 'import json,sys; ...'
 
-# In skill/command instructions
-uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-index.py
+# In skill/command instructions (path relative to the repo root)
+uv run python skills/memory/memory-index.py
 ```
 
 ## Real Python location

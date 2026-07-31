@@ -6,14 +6,15 @@ package `pkgname` to one derived from <name>, and substitutes the token
 throughout. stdlib only.
 
 Usage:
-    python skills/scaffold.py --type python-project --name my-tool
-    python skills/scaffold.py --type python-project --name my-tool \
-        --dest-root /d/claude-projects --templates-root templates [--git] [--force]
+    uv run python scripts/scaffold.py --type python-project --name my-tool
+    uv run python scripts/scaffold.py --type python-project --name my-tool \
+        --dest-root /some/root --templates-root templates [--git] [--force]
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -21,6 +22,12 @@ import sys
 from pathlib import Path
 
 TOKEN = "pkgname"
+
+# Where projects land when --dest-root is omitted. Mirrors init_project.py:
+# the clone's parent, overridable by env. Never a hardcoded absolute path —
+# this repo bootstraps from any location on any machine.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEST_ROOT = Path(os.environ.get("ECOSYSTEM_DEST_ROOT") or REPO_ROOT.parent)
 
 
 def to_package(name: str) -> str:
@@ -55,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--type", required=True, help="template name under --templates-root")
     ap.add_argument("--name", required=True, help="project name (kebab-case)")
     ap.add_argument("--templates-root", default="templates", type=Path)
-    ap.add_argument("--dest-root", default="/d/claude-projects", type=Path)
+    ap.add_argument("--dest-root", default=DEST_ROOT, type=Path)
     ap.add_argument("--git", action="store_true", help="git init + first commit")
     ap.add_argument("--force", action="store_true", help="overwrite if dest exists")
     args = ap.parse_args(argv)

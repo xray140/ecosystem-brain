@@ -31,15 +31,20 @@ semantically. Each note has YAML frontmatter and wiki-style links to related not
 - [[betting-tracker-stack]] — a project's stack decision
 
 ## Usage
+Paths are relative to the repo root — the clone location differs per machine,
+so never hardcode an absolute one here.
+
 ```bash
 # Rebuild the structural manifest (index.json)
-uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-index.py
+uv run python skills/memory/memory-index.py
 
 # Semantic search (requires Ollama running with nomic-embed-text)
-uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-search.py search "QUERY"
+uv run python skills/memory/memory-search.py search "QUERY"
 
 # Offline fallback (hash embedder, no Ollama needed)
-uv run python /d/claude-projects/ecosystem-brain/skills/memory/memory-search.py search "QUERY" --offline
+# --offline is a global flag: it goes BEFORE the subcommand, not after
+uv run python skills/memory/memory-search.py --offline index
+uv run python skills/memory/memory-search.py --offline search "QUERY"
 ```
 
 ## Active hooks (global, ~/.claude/settings.json)
