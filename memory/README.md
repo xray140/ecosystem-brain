@@ -23,6 +23,7 @@ semantically. Each note has YAML frontmatter and wiki-style links to related not
 - [[windows-python-invocation]] — use `uv run python`, not bare `python`
 - [[windows-path-translation]] — `/d/` works as a CLI arg, not inside Python code
 - [[ollama-accented-path]] — OLLAMA_MODELS must be ASCII-safe
+- [[text-file-write-conventions]] — UTF-8 + LF in all `Path.write_text()` calls
 - [[powershell-utf8-bom]] — avoid Out-File `-Encoding utf8` (adds a BOM)
 - [[claude-best-practices]] — conventions grounded in Anthropic's guidance
 - [[agent-pinning]] — pin installed agents to commit SHAs
