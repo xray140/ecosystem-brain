@@ -141,6 +141,34 @@ def copy_tree(
     print(f"  [ok] copied {len(files)} {label} -> {dst}{suffix}")
 
 
+def copy_skills(src: Path, dst: Path, dry: bool, bash_root: str) -> None:
+    """Copy skills/<name>/SKILL.md -> <claude-dir>/skills/<name>/SKILL.md.
+
+    Skills sit one level deeper than commands/agents, so copy_tree's flat
+    `*.md` glob never matched them — which is why the bundled memory and
+    secrets skills were shipped but never loaded by Claude Code.
+
+    Only SKILL.md is copied. It invokes its helper scripts by absolute path
+    (rewritten here to this clone), so the scripts stay in the repo as the
+    single copy and cannot drift from a duplicate under ~/.claude.
+    """
+    if not src.is_dir():
+        print(f"  [skip] no skills dir at {src}")
+        return
+    manifests = sorted(src.glob("*/SKILL.md"))
+    if dry:
+        print(f"  [dry] would copy {len(manifests)} skills -> {dst} (paths rewritten)")
+        return
+    for m in manifests:
+        target = dst / m.parent.name
+        target.mkdir(parents=True, exist_ok=True)
+        content = rewrite_paths(m.read_text(encoding="utf-8"), bash_root)
+        (target / "SKILL.md").write_text(content, encoding="utf-8", newline="\n")
+    print(
+        f"  [ok] copied {len(manifests)} skills -> {dst} (paths rewritten to this clone)"
+    )
+
+
 def seed_env(dry: bool) -> None:
     env, example = REPO_ROOT / ".env", REPO_ROOT / ".env.example"
     if env.exists():
@@ -248,6 +276,7 @@ def main(argv: list[str] | None = None) -> int:
         bash_root,
         rewrite=True,
     )
+    copy_skills(REPO_ROOT / "skills", CLAUDE_DIR / "skills", args.dry_run, bash_root)
     seed_env(args.dry_run)
     check_prereqs()
 

@@ -97,3 +97,63 @@ def test_load_hooks_drops_notes_key():
     # hooks.json carries a `_notes` doc key; load_hooks must not surface it.
     hooks = b.load_hooks("/c/clone/eco")
     assert "_notes" not in hooks
+
+
+# --- copy_skills: nested SKILL.md, rewritten ----------------------------
+def test_copy_skills_copies_nested_manifests_rewritten(tmp_path):
+    # Skills live one level deeper than commands/agents; copy_tree's flat
+    # *.md glob missed them entirely, so they were never loaded.
+    src = tmp_path / "skills"
+    (src / "memory").mkdir(parents=True)
+    (src / "memory" / "SKILL.md").write_text(
+        f"run {b.CANON_BASH}/skills/memory/x.py\n", encoding="utf-8"
+    )
+    (src / "memory" / "helper.py").write_text("# not copied\n", encoding="utf-8")
+    dst = tmp_path / "out"
+
+    b.copy_skills(src, dst, dry=False, bash_root="/c/clone/eco")
+
+    out = dst / "memory" / "SKILL.md"
+    assert out.is_file(), "SKILL.md must land under <dst>/<skill-name>/"
+    assert out.read_text(encoding="utf-8") == "run /c/clone/eco/skills/memory/x.py\n"
+    # Helper scripts stay in the repo — a second copy would drift.
+    assert not (dst / "memory" / "helper.py").exists()
+
+
+def test_copy_skills_writes_lf(tmp_path):
+    src = tmp_path / "skills"
+    (src / "s").mkdir(parents=True)
+    (src / "s" / "SKILL.md").write_text("a\nb\n", encoding="utf-8", newline="\n")
+    dst = tmp_path / "out"
+
+    b.copy_skills(src, dst, dry=False, bash_root="/c/clone/eco")
+
+    assert b"\r\n" not in (dst / "s" / "SKILL.md").read_bytes()
+
+
+def test_copy_skills_dry_run_writes_nothing(tmp_path):
+    src = tmp_path / "skills"
+    (src / "s").mkdir(parents=True)
+    (src / "s" / "SKILL.md").write_text("x\n", encoding="utf-8")
+    dst = tmp_path / "out"
+
+    b.copy_skills(src, dst, dry=True, bash_root="/c/clone/eco")
+
+    assert not dst.exists()
+
+
+def test_copy_skills_missing_dir_is_not_fatal(tmp_path):
+    b.copy_skills(tmp_path / "nope", tmp_path / "out", dry=False, bash_root="/c/x")
+    assert not (tmp_path / "out").exists()
+
+
+def test_shipped_skills_carry_no_unrewritten_canonical_path(tmp_path):
+    # Guards the actual bug: a SKILL.md whose paths bootstrap cannot rewrite.
+    dst = tmp_path / "out"
+    b.copy_skills(b.REPO_ROOT / "skills", dst, dry=False, bash_root="/c/clone/eco")
+    installed = sorted(dst.glob("*/SKILL.md"))
+    assert installed, "expected the repo to ship at least one skill"
+    for f in installed:
+        assert "claude-projects" not in f.read_text(encoding="utf-8"), (
+            f"stale canonical path leaked into {f.name}"
+        )
