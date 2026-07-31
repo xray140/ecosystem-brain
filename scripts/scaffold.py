@@ -47,7 +47,7 @@ def substitute(root: Path, package: str, project: str) -> None:
             # keep the distribution name human-friendly (kebab) on the name line
             new = re.sub(r'(?m)^name = ".*"$', f'name = "{project}"', new, count=1)
         if new != text:
-            path.write_text(new, encoding="utf-8")
+            path.write_text(new, encoding="utf-8", newline="\n")
 
 
 def main(argv: list[str] | None = None) -> int:

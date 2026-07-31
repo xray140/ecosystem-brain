@@ -80,7 +80,7 @@ def compose_agent(
 def register(content: str, name: str) -> int:
     """Write to a temp file and hand to install-agent (scan-gates + registers)."""
     tmp = Path(tempfile.gettempdir()) / f"{name}.md"
-    tmp.write_text(content, encoding="utf-8")
+    tmp.write_text(content, encoding="utf-8", newline="\n")
     try:
         r = subprocess.run(
             [

@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     out = args.out or args.vault / "index.json"
-    out.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+    out.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"[ok] {index['counts']['notes']} notes -> {out}")
     return 0
 

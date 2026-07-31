@@ -238,7 +238,12 @@ def quarantine(name: str, content: str, reason: str, base: Path | None = None) -
         "Review this file manually before trusting or installing it.\n"
         f"{'=' * 60}\n\n"
     )
-    dest.write_text(header + content, encoding="utf-8")
+    # newline="\n" only — preserve whatever line endings survived decoding, do
+    # not re-translate on write (text mode would mangle upstream \r\n into
+    # \r\r\n). No .replace() here: this is a forensic copy of suspect content.
+    # Note the fidelity is partial — the local --file path already went through
+    # universal-newline read_text() upstream, so only fetched content is intact.
+    dest.write_text(header + content, encoding="utf-8", newline="\n")
     return dest
 
 

@@ -98,7 +98,9 @@ def merge_settings(dry: bool, bash_root: str) -> None:
         print(f"  [dry] would write hooks+permissions to {SETTINGS}")
         return
     CLAUDE_DIR.mkdir(parents=True, exist_ok=True)
-    SETTINGS.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
+    SETTINGS.write_text(
+        json.dumps(existing, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
     print(f"  [ok] merged hooks+permissions -> {SETTINGS} (other keys preserved)")
 
 
@@ -132,7 +134,7 @@ def copy_tree(
     for f in files:
         if rewrite:
             content = rewrite_paths(f.read_text(encoding="utf-8"), bash_root)
-            (dst / f.name).write_text(content, encoding="utf-8")
+            (dst / f.name).write_text(content, encoding="utf-8", newline="\n")
         else:
             shutil.copy2(f, dst / f.name)
     suffix = " (paths rewritten to this clone)" if rewrite else ""

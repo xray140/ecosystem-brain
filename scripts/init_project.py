@@ -279,7 +279,7 @@ def append_to_moc(name: str, blurb: str, moc: Path = PROJECTS_MOC) -> bool:
     if not text.endswith("\n"):
         text += "\n"
     moc.parent.mkdir(parents=True, exist_ok=True)
-    moc.write_text(text + moc_line(name, blurb) + "\n", encoding="utf-8")
+    moc.write_text(text + moc_line(name, blurb) + "\n", encoding="utf-8", newline="\n")
     return True
 
 
@@ -362,14 +362,16 @@ def apply(
         return 1
     print("  [ok] scaffolded")
 
-    (dest / "AGENTS.md").write_text(compose_agents_md(name, cfg), encoding="utf-8")
+    (dest / "AGENTS.md").write_text(
+        compose_agents_md(name, cfg), encoding="utf-8", newline="\n"
+    )
     print("  [ok] wrote tailored AGENTS.md")
 
     # Name the project's API keys in .env.example (placeholders only, never values).
     if api_keys:
         envf = dest / ".env.example"
         prior = envf.read_text(encoding="utf-8") if envf.exists() else ""
-        envf.write_text(prior + env_block(api_keys), encoding="utf-8")
+        envf.write_text(prior + env_block(api_keys), encoding="utf-8", newline="\n")
         print(f"  [ok] named {len(api_keys)} API key(s) in .env.example")
 
     installed = 0
@@ -390,7 +392,7 @@ def apply(
     # Memory card (linked into the graph) + register in the projects MOC.
     card = REPO_ROOT / "memory" / "projects" / f"{name}.md"
     card.parent.mkdir(parents=True, exist_ok=True)
-    card.write_text(memory_card(name, cfg, resolved), encoding="utf-8")
+    card.write_text(memory_card(name, cfg, resolved), encoding="utf-8", newline="\n")
     if append_to_moc(name, f"{build} · {card_stack(cfg)}"):
         print("  [ok] registered in projects-moc")
     run(["uv", "run", "python", str(INDEXER)])

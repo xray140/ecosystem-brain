@@ -129,7 +129,9 @@ def cmd_build(args) -> int:
                 }
             )
     catalog = {"repo": repo, "count": len(agents), "agents": agents}
-    CATALOG.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+    CATALOG.write_text(
+        json.dumps(catalog, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
     cats = sorted({a["category"] for a in agents})
     print(
         f"[ok] catalog: {len(agents)} agents across {len(cats)} categories -> {CATALOG}"

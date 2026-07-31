@@ -76,6 +76,7 @@ def main() -> int:
         f"# Ecosystem maintenance — {today}\n\n"
         f"**Verdict:** {verdict}\n\n" + "\n\n".join(sections) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(f"\nreport : {report}")
     print(f"verdict: {verdict}")
