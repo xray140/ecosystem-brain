@@ -63,9 +63,10 @@ def _write_agent(name: str, kind: str, content: str) -> None:
     global_file = GLOBAL_DIRS[kind] / f"{name}.md"
     repo_file.parent.mkdir(parents=True, exist_ok=True)
     global_file.parent.mkdir(parents=True, exist_ok=True)
-    # newline="\n": .gitattributes pins *.md to eol=lf — text mode would emit
-    # CRLF on Windows and dirty every installed agent in git status.
-    repo_file.write_text(content, encoding="utf-8", newline="\n")
+    # .gitattributes pins *.md to eol=lf. Two distinct sources of CRLF to kill:
+    # text mode translating \n on Windows (newline="\n"), and upstream content
+    # already shipping \r\n (the .replace). Either one dirties git status.
+    repo_file.write_text(content.replace("\r\n", "\n"), encoding="utf-8", newline="\n")
     shutil.copy2(repo_file, global_file)
 
 

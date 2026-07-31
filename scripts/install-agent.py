@@ -84,9 +84,10 @@ def install_content(
     repo_path = repo_dir / fname
     global_path = global_dir / fname
 
-    # newline="\n": .gitattributes pins *.md to eol=lf — text mode would emit
-    # CRLF on Windows and dirty every installed agent in git status.
-    repo_path.write_text(content, encoding="utf-8", newline="\n")
+    # .gitattributes pins *.md to eol=lf. Two distinct sources of CRLF to kill:
+    # text mode translating \n on Windows (newline="\n"), and upstream content
+    # already shipping \r\n (the .replace). Either one dirties git status.
+    repo_path.write_text(content.replace("\r\n", "\n"), encoding="utf-8", newline="\n")
     shutil.copy2(repo_path, global_path)
 
     # Provenance: ref (branch) + commit (immutable SHA the content was vetted at).
