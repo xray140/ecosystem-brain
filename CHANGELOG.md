@@ -2,6 +2,38 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.4] — 2026-07-31
+
+Line-endings and encoding sweep — every text file the ecosystem writes was
+being emitted as CRLF on Windows, against the repo's own `.gitattributes`.
+
+- **CRLF at every write site (16 total)**: `Path.write_text()` runs in text
+  mode, so on Windows each `\n` became `\r\n` — contradicting
+  `* text=auto eol=lf`. Fixed with `newline="\n"` across `install-agent`,
+  `update-agents`, `bootstrap`, `catalog`, `init_project`, `maintenance`,
+  `new_agent`, `scaffold`, `scan_agent`, and `memory-index`. Symptom: the
+  three GitHub-sourced agents (cli-developer, data-engineer, python-pro) sat
+  permanently dirty in `git status`, and every scaffolded project came out
+  CRLF (8 files per project, measured).
+- **Upstream CRLF normalized**: `newline="\n"` alone does not strip `\r\n`
+  that fetched content already carries, so `install-agent`/`update-agents`
+  also `.replace("\r\n", "\n")` before writing. `scan_agent`'s quarantine
+  write deliberately does not — a forensic copy should not be re-translated.
+- **`UnicodeEncodeError` on non-ASCII agent metadata**: the JSON I/O on
+  `installed.json` / `registry.json` ran without `encoding=`, falling back to
+  the locale codec (cp1252 on Windows). A single non-ASCII character in an
+  agent's frontmatter aborted `:install`. Reproduced with `✓`, fixed with
+  explicit `encoding="utf-8"` on all reads and writes.
+- The three affected agents are renormalized to LF in both the repo and
+  `~/.claude` (content verified byte-identical to the index by hash).
+- Vault: `sensor-csv-pipeline` recast as `ipe-pipeline` (ISO 50001 IPE
+  tracking for the LSF Verdun plant), `plan-action-energie-environnement`
+  taken in, python-pro and cli-developer re-pinned to `947b44c`.
+
+Known-unfixed, tracked for a later pass: `skills/memory/SKILL.md` still
+prints the dead canonical path `/d/claude-projects/...` in its usage line —
+the same defect 4.3.2 fixed in `suggest-agents.py`, never propagated here.
+
 ## [4.3.3] — 2026-07-15
 
 Model-routing revision for the Sonnet 5 era (released 2026-06-30).

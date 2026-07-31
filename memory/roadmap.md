@@ -1,7 +1,7 @@
 ---
 type: moc
 status: active
-updated: 2026-07-15
+updated: 2026-07-31
 tags: [moc, roadmap, state]
 ---
 # Ecosystem-Brain — state & roadmap
@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.3)
+## Current state (v4.3.4)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
