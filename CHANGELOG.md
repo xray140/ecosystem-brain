@@ -2,6 +2,24 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.11] — 2026-08-02
+
+- **`update --check` cried wolf on every run.** The status→symbol cascade used
+  `!` as its fallback, which swept in two perfectly ordinary outcomes: `local`
+  (a first-party agent with no upstream to query — six of them, every single
+  run) and `synced` (a local agent re-copied to `~/.claude`, i.e. success). The
+  weekly maintenance report therefore carried eight `[!]` markers with nothing
+  wrong, and a column that cries wolf eight times a run stops being read.
+  `local` is now `·` and `synced` is `→`; `!` is reserved for `error:` and
+  `missing-in-repo`.
+  - `synced` was the one nobody had noticed: it only fires after a first-party
+    agent actually changes, so it had never shown up in a report yet.
+  - Extracted to a named `status_symbol()` and covered against **all nine**
+    status strings the code can emit — enumerated from the source rather than
+    from memory. Plus the safety property: an unrecognised status falls back to
+    `!`, so a status added later without updating the table is loud rather than
+    quietly mislabelled as fine.
+
 ## [4.3.10] — 2026-08-01
 
 A Linux bug the Windows test suite could not see, and the documentation drift
