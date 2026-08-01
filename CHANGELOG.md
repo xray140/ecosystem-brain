@@ -2,6 +2,41 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.8] — 2026-08-01
+
+Coverage on the remaining gaps. Suite 312 → 395; coverage 64% → **86%**. No
+production code changed — these are tests for behaviour that already worked and
+now cannot silently stop working.
+
+- **`selfcheck.py` 34% → 85%.** The gate itself was the least-verified thing in
+  the repo, which is precisely the condition that let a red CI go unnoticed for
+  weeks. Each check is now tested for the property that matters: that it goes
+  **red when its subject is broken**. A check that cannot fail is decoration.
+  Also pinned: `main()` runs all 8 checks even after one fails (stopping early
+  would mean N runs to see N problems), and local agents stay exempt from the
+  scanner while third-party ones do not.
+- **`bootstrap.py` 44% → 99%.** This is the code that edits the live
+  `~/.claude`, so the tests cover what a user only discovers once it is already
+  broken: merging hooks preserves their other settings (`model`, `mcpServers`),
+  `--dry-run` writes nothing at all, and an existing `.env` is never overwritten
+  by the example. Plus: no installed file carries an unexpanded token.
+- **`doctor.py` 52% → 98%** — that it *exits non-zero* on what it detects, not
+  just prints it. The heartbeat consumes that exit code.
+- **`catalog.py` 30% → 98%** — chiefly that a batch install reports the
+  scanner's verdict honestly: exit 2 is counted as blocked, never folded into
+  the error bucket or the success count. It is the one command that installs
+  many agents at once, and the summary line is all anyone reads.
+- **`new_agent.py` 49% → 99%** — preview is the default and `--register` routes
+  through the same scanning installer as any third-party agent. A recruiter that
+  could install unscanned content would be a hole through the supply chain it
+  belongs to.
+- **`update-agents.py` 48% → 81%** — that every status which mutates a registry
+  entry is actually persisted. The failure mode otherwise is the pin falling
+  behind the content, which is how an agent reports "current" while stale.
+
+Still uncovered: `init_project.py` at 54% — its `apply()` path scaffolds a real
+project on disk. CI smoke-tests `--plan` on all six build types.
+
 ## [4.3.7] — 2026-08-01
 
 Coverage on the scripts that had none, and the end of the hardcoded authoring
