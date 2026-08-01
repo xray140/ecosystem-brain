@@ -2,6 +2,40 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.6] — 2026-08-01
+
+Supply-chain and blast-radius hardening — the second half of the same audit.
+Suite 174 → 246; coverage 40% → 47%, with `scaffold`, `github_util` and the
+destructive guard going from untested to 85-87%.
+
+- **`fetch_url` accepted any URL scheme**, so `--url file:///…/.env` read a
+  local secret and handed it to the installer as content to install. The fetch
+  sits upstream of every other control — the scanner and the SHA pinning are
+  both irrelevant if the fetch itself can be aimed at the filesystem. Now
+  https-only, against a host allowlist, re-checked on every redirect hop, with
+  a 1 MB cap and a strict UTF-8 decode.
+- **The destructive guard is rewritten in Python** (`guard_destructive.py`,
+  replacing the shell `case`), because substring matching failed in both
+  directions. False negatives: `rm  -rf /`, `rm -r -f /` and
+  `rm --recursive --force /` all passed. False positives: the home patterns
+  were prefixes, so `rm -rf ~/.claude/skills/one-thing` was refused as a
+  catastrophic delete — and a guard that blocks ordinary work gets worked
+  around, which costs more than it protects. It now tokenizes, normalizes the
+  flags, splits on `&&`/`;`/`|`, and compares each *target* against the
+  catastrophic set exactly, never as a prefix. Also catches `git push origin
+  +main` (forced via refspec, no `--force` flag) while allowing
+  `--force-with-lease`. 43 tests, both directions.
+- **`scaffold.py --force` ran `shutil.rmtree` on an unvalidated `--name`**, so
+  `--name .` aimed that delete at the root holding every scaffolded project.
+  `resolve_dest` now applies two independent checks — a slug pattern, and a
+  containment check on the resolved paths.
+- **GitHub Actions pinned to commit SHAs** (was `@v4`/`@v2`/`@v3`). A tag is
+  mutable; whoever controls the action repo can repoint it at new code that
+  then runs here with a `GITHUB_TOKEN`. Same reasoning as `agent-pinning`,
+  which the repo already applied to what it downloads but not to what it runs.
+  `dependabot.yml` added so pinned no longer means stale — the actions and the
+  dev toolchain both get monthly PRs.
+
 ## [4.3.5] — 2026-07-31
 
 Gate repair. An audit of the verification chain found the CI lint step failing,

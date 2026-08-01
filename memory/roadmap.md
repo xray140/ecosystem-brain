@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.5)
+## Current state (v4.3.6)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
@@ -54,8 +54,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **Recruiter**: `/ecosystem-brain:new-agent` (`new_agent.py`) scaffolds a new
   agent to standard (frontmatter, least-privilege tools, model, "use proactively"
   description, numbered workflow), self-scans, and registers via install-agent.
-- **Hooks** (global settings.json): gitleaks gate, destructive guard (root/home
-  only — fixed false positive), ruff-on-write, SessionStart suggester, SessionEnd log.
+- **Hooks** (global settings.json): gitleaks gate, destructive guard
+  (`guard_destructive.py` — tokenizes and normalizes flags, matches targets
+  exactly rather than by prefix, 43 tests both directions), ruff-on-write,
+  SessionStart suggester, SessionEnd log.
 - **Portability**: `bootstrap.py` rewrites hardcoded paths to the clone location;
   works on any PC / any path. `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
 - **Memory**: Obsidian vault (project cards linked into `projects-moc` hub +
@@ -81,14 +83,13 @@ Read this first in a fresh session (after CLAUDE.md). Run
   ruff and the local gate couldn't see it; skills were invisible to `doctor` and
   unloadable when installed; `--name` was a path; scan reports buried MEDIUM
   findings. All fixed with tests (114 → 157). See [[decisions/toolchain-pinning]].
-- [ ] **P1 audit follow-ups** (opened 2026-07-31, from the same pass):
-  `fetch_url` accepts any URL scheme (`file://` reads a local secret and
-  "installs" it) with no host allowlist or size cap; GitHub Actions pinned to
-  mutable tags (`@v4`) while the repo pins agents to SHAs, and no Dependabot;
-  `scaffold.py --force` runs `shutil.rmtree` on an unvalidated `--name`;
-  `guard-destructive.sh` matches literal spacing only (`rm  -rf /`, `rm -r -f /`
-  pass). Then coverage: `install-agent`, `scaffold`, `search_agents`,
-  `maintenance` sit at 0%.
+- [x] **P1 hardening → v4.3.6** (2026-08-01) — `fetch_url` https+allowlist+cap
+  (it was upstream of every other control); destructive guard rewritten in
+  Python after it proved bypassable *and* prone to false positives; `scaffold
+  --force` rmtree guarded; Actions pinned to SHAs + Dependabot. 174 → 246 tests.
+- [ ] **Coverage on the untested scripts** — `search_agents` and `maintenance`
+  are still 0%, `selfcheck` 28%, `install-agent` 32%, `catalog` 30%. Overall
+  47%. `hooks/scripts/suggest-agents.py` is 0% and runs every session.
 - [ ] **De-hardcode `CANON_BASH`** — the authoring path `/d/claude-projects/...`
   no longer exists (repo lives at `~/ecosystem-brain`); ~40 dead paths in
   `commands/*.md` work only because `bootstrap` rewrites them. Replace with an

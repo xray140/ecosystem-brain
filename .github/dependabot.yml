@@ -1,0 +1,22 @@
+# Pinning actions to SHAs (see ci.yml) freezes them until something proposes a
+# bump. Dependabot is that something: it opens a PR with the new SHA and the
+# release notes, so an upgrade is a reviewed decision rather than either silent
+# drift or indefinite staleness.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(ci)"
+
+  # The pinned dev toolchain. Same argument: ruff and pytest are pinned in
+  # requirements-dev.txt precisely so they cannot move on their own, which means
+  # something has to offer the move.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(deps)"

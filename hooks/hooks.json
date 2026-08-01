@@ -6,8 +6,8 @@
         "hooks": [
           { "type": "command", "if": "Bash(git commit*)", "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
           { "type": "command", "if": "Bash(git push*)",   "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/guard-secrets.sh" },
-          { "type": "command", "if": "Bash(git push*)",   "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" },
-          { "type": "command", "if": "Bash(rm *)",        "command": "bash /d/claude-projects/ecosystem-brain/hooks/scripts/guard-destructive.sh" }
+          { "type": "command", "if": "Bash(git push*)",   "command": "uv run --no-project python /d/claude-projects/ecosystem-brain/hooks/scripts/guard_destructive.py" },
+          { "type": "command", "if": "Bash(rm *)",        "command": "uv run --no-project python /d/claude-projects/ecosystem-brain/hooks/scripts/guard_destructive.py" }
         ]
       }
     ],
