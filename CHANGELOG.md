@@ -2,6 +2,31 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.9] — 2026-08-01
+
+The last coverage gap. Suite 395 → 418; coverage 86% → **90%**, every script at
+81% or above. No production code changed.
+
+- **`init_project.py` 54% → 83%.** The uncovered half was `apply()` — the part
+  that scaffolds, installs agents, writes the memory card, and optionally
+  pushes. Every subprocess is stubbed, so nothing scaffolds or publishes for
+  real. What is pinned:
+  - **A red baseline never reaches GitHub.** `--github` publishing broken code
+    is the one outcome in this script that other people can see, and the
+    ordering that prevents it (verify, *then* publish) was previously untested.
+  - `.env.example` gets key *names* only — the test asserts every non-comment
+    line ends in `=`, so a value can never ride along.
+  - A blocked agent is reported and excluded from the ready count without
+    failing the whole init; an install error is distinguished from a block.
+  - A failed scaffold aborts before anything else runs.
+  - `append_to_moc` is idempotent, so re-running init cannot duplicate a
+    project in the graph hub.
+
+One note for the next person writing tests here: the `cfg` dict is built from
+the real profile engine (`resolve()`), not hand-rolled. The first draft of these
+tests hand-rolled it, and it failed immediately on a key the engine actually
+produces — a fixture that duplicates a shape drifts from it.
+
 ## [4.3.8] — 2026-08-01
 
 Coverage on the remaining gaps. Suite 312 → 395; coverage 64% → **86%**. No

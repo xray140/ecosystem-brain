@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.8)
+## Current state (v4.3.9)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
@@ -24,7 +24,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (395
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (418
   tests, ~5s) + `scripts/selfcheck.py` + gitleaks. Toolchain pinned in
   `requirements-dev.txt`, rule set pinned in `ruff.toml` — see
   [[decisions/toolchain-pinning]].
@@ -32,7 +32,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
   runs the *same* invocation and the same pinned binary as CI, so local-green
   and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (395, **86%** coverage) covers scan_agent, init_project,
+- **Tests**: `tests/` (418, **90%** coverage, every script >=81%) covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
@@ -101,10 +101,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
   `update-agents` 48→81%. Overall 64→**86%**, 395 tests. Each gate is now tested
   for going *red* when its subject breaks, not merely for passing on a healthy
   repo. No production code changed.
-- [ ] **`init_project.py` at 54%** — the uncovered half is `apply()`, which
-  scaffolds a real project on disk (git init, npm/uv install, verified baseline).
-  CI smoke-tests `--plan` across all 6 build types; covering `apply()` needs a
-  sandboxed end-to-end fixture.
+- [x] **`init_project.apply()` covered -> v4.3.9** (2026-08-01) — 54->83%, all
+  subprocesses stubbed. Pins the ordering that keeps a red baseline off GitHub,
+  that `.env.example` carries key names and never values, and that a blocked
+  agent does not fail the whole init. Overall 86->**90%**, 418 tests.
 - [x] **Live-install audit → v4.3.2** (2026-07-15) — fixed the hardcoded /d/
   SessionStart hint, added doctor's hook-wiring drift check, unpinned-install
   warning, registry repair (stale global_path, backfilled data-engineer pin).
