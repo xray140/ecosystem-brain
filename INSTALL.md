@@ -85,7 +85,7 @@ It schedules:
 |------|------|------|
 | `EcosystemBrain-OllamaServe` | at logon | starts the Ollama server (semantic memory search) |
 | `EcosystemBrain-CatalogRefresh` | weekly (Sun 9am) | `catalog.py build` — refresh the agent catalog from GitHub |
-| `EcosystemBrain-Maintenance` | weekly (Mon 9am) | health heartbeat: `bootstrap --verify` + `selfcheck` + `update --check`, writes `memory/maintenance/<date>.md` |
+| `EcosystemBrain-Maintenance` | weekly (Mon 9am) | health heartbeat: `doctor` + `selfcheck` + `update --check`, writes `memory/maintenance/<date>.md` |
 
 - Re-running is safe (`-Force`). Overwriting a task first created in an **elevated**
   shell needs an elevated PowerShell; the script reports `[exists]` and moves on otherwise.

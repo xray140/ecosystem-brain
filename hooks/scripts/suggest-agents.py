@@ -11,8 +11,17 @@ Wired in ~/.claude/settings.json under hooks.SessionStart.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
+
+# Drive-letter <-> Git-Bash-mount translation applies on Windows ONLY. Off
+# Windows, `/d/projects/app` is a real posix path, not a mounted drive, and
+# rewriting it to `D:/projects/app` points the hook at nothing — so it detects
+# no project markers and silently suggests nothing. bootstrap.py has carried
+# this guard since 2026-06-06; this copy never got it.
+# See memory/decisions/windows-path-translation.md.
+WINDOWS = os.name == "nt"
 
 # Resolve the repo root from this script's own location (hooks/scripts/ -> repo).
 # Avoids hardcoding /d/ paths, which Python on Windows misreads as D:\d\...
@@ -48,7 +57,7 @@ MARKERS: dict[str, list[str]] = {
 def to_bash_path(p: Path) -> str:
     """Windows C:/foo -> /c/foo (Git Bash mount form). Posix paths pass through."""
     s = p.as_posix()
-    if len(s) >= 2 and s[1] == ":":
+    if WINDOWS and len(s) >= 2 and s[1] == ":":
         s = f"/{s[0].lower()}{s[2:]}"
     return s
 
@@ -58,8 +67,11 @@ def normalize_path(raw: str) -> Path:
 
     Python on Windows misreads /d/foo as D:\\d\\foo, so translate the leading
     /<drive>/ segment back to <DRIVE>:/ . Leaves normal paths untouched.
+
+    Windows-only: off Windows the same string is a genuine posix path and must
+    survive untouched.
     """
-    if len(raw) >= 3 and raw[0] == "/" and raw[2] == "/" and raw[1].isalpha():
+    if WINDOWS and len(raw) >= 3 and raw[0] == "/" and raw[2] == "/" and raw[1].isalpha():
         raw = f"{raw[1].upper()}:/{raw[3:]}"
     return Path(raw)
 

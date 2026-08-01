@@ -2,6 +2,40 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.10] — 2026-08-01
+
+A Linux bug the Windows test suite could not see, and the documentation drift
+left by five releases.
+
+- **The SessionStart suggester mangled real posix paths off Windows.**
+  `normalize_path` translated a leading `/<letter>/` to a drive form
+  unconditionally, so on Linux and macOS a project at `/d/projects/app` — an
+  ordinary posix path — became `D:/projects/app`. The hook then found no marker
+  files, detected no project type, and silently suggested nothing. `bootstrap.py`
+  has carried the `WINDOWS` guard for exactly this since 2026-06-06; the second
+  copy of the function never got it. Same shape as every other defect this audit
+  found: a fix applied to one copy of duplicated logic.
+  - The test that pins it **forces the non-Windows branch** rather than comparing
+    the two copies, because on Windows both translate and therefore agreed —
+    a comparison would have passed against the bug. Verified by reverting the
+    guard: the new tests fail, and pass again once restored.
+- **Docs caught up with the code**:
+  - `README` — added `doctor` and `new-agent` to the command table (the repo
+    ships 15, the table listed 12); corrected `update` from "hash-based" to what
+    it does (re-resolves the tip, re-scans, advances the commit pin); listed the
+    six first-party agents rather than four; added a **Verification** section;
+    dropped the claim that `GITHUB_TOKEN` feeds `.mcp.json`, which has shipped
+    empty since 4.3.3 — `gh auth login` is what the supply chain actually uses.
+  - `INSTALL.md` — the maintenance heartbeat runs `doctor`, not
+    `bootstrap --verify`; verified against `maintenance.CHECKS`.
+  - `docs/TOKENS.md` — stopped recommending the exact three MCP servers this
+    repo removed as dead weight, and says why they were removed.
+  - `memory/README.md` — the destructive guard is `guard_destructive.py` now.
+
+CI was also run step-by-step locally (gitleaks over full history, ruff, pytest,
+selfcheck, both init smoke plans): all five exit 0 with no side effects. The
+ubuntu run itself stays unverified until this branch is pushed.
+
 ## [4.3.9] — 2026-08-01
 
 The last coverage gap. Suite 395 → 418; coverage 86% → **90%**, every script at

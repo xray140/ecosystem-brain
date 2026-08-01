@@ -49,8 +49,10 @@ uv run python skills/memory/memory-search.py --offline search "QUERY"
 
 ## Active hooks (global, ~/.claude/settings.json)
 - `PreToolUse` `if: Bash(git commit*)` → guard-secrets.sh (gitleaks scan)
-- `PreToolUse` `if: Bash(git push*)` → guard-secrets.sh + guard-destructive.sh
-- `PreToolUse` `if: Bash(rm *)` → guard-destructive.sh
+- `PreToolUse` `if: Bash(git push*)` → guard-secrets.sh + guard_destructive.py
+- `PreToolUse` `if: Bash(rm *)` → guard_destructive.py (tokenizes the command and
+  matches targets exactly, so `rm -rf ~/.claude/skills/one` is allowed and
+  `rm -r -f /` is not)
 - `PostToolUse` `if: Write(*.py)` → fmt-python.sh (ruff format + fix)
 - `SessionStart` → suggest-agents.py (recommends relevant installed + catalog agents)
 - `SessionEnd` → log-session.sh (dated session note in memory/sessions/)

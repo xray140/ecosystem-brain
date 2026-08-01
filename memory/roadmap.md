@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.9)
+## Current state (v4.3.10)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
@@ -25,14 +25,16 @@ Read this first in a fresh session (after CLAUDE.md). Run
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
 - **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (418
-  tests, ~5s) + `scripts/selfcheck.py` + gitleaks. Toolchain pinned in
+  tests, ~5s) + `scripts/selfcheck.py` + gitleaks. Every step verified
+  locally step-by-step at v4.3.10 (exit 0, no side effects); the ubuntu run
+  itself is unverified until the branch is pushed. Toolchain pinned in
   `requirements-dev.txt`, rule set pinned in `ruff.toml` — see
   [[decisions/toolchain-pinning]].
 - **Gates**: `selfcheck.py` = 8 checks (JSON, agent scan, init-engine, memory
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
   runs the *same* invocation and the same pinned binary as CI, so local-green
   and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (418, **90%** coverage, every script >=81%) covers scan_agent, init_project,
+- **Tests**: `tests/` (421, **90%** coverage, every script >=81%) covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
@@ -101,6 +103,14 @@ Read this first in a fresh session (after CLAUDE.md). Run
   `update-agents` 48→81%. Overall 64→**86%**, 395 tests. Each gate is now tested
   for going *red* when its subject breaks, not merely for passing on a healthy
   repo. No production code changed.
+- [x] **Linux path bug + doc drift -> v4.3.10** (2026-08-01) — the SessionStart
+  suggester rewrote real posix paths (`/d/projects/app` -> `D:/projects/app`)
+  off Windows, so it detected no project type and silently suggested nothing;
+  `bootstrap` had the guard since 2026-06-06, the second copy never got it.
+  Test forces the non-Windows branch, since on Windows both copies agreed.
+  Docs: README command table (12->15), `update` description, six first-party
+  agents, new Verification section, dead `.mcp.json`/`GITHUB_TOKEN` claim;
+  INSTALL heartbeat contents; TOKENS.md MCP guidance.
 - [x] **`init_project.apply()` covered -> v4.3.9** (2026-08-01) — 54->83%, all
   subprocesses stubbed. Pins the ordering that keeps a red baseline off GitHub,
   that `.env.example` carries key names and never values, and that a blocked

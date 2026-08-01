@@ -37,9 +37,52 @@ def test_ordinary_paths_pass_through():
     assert sa.normalize_path(".") == Path(".")
 
 
+@pytest.mark.skipif(not WINDOWS, reason="drive-letter translation is Windows-only")
 def test_to_bash_path_is_the_inverse_on_windows():
     assert sa.to_bash_path(Path("C:/Users/me")) == "/c/Users/me"
     assert sa.to_bash_path(Path("/home/me")) == "/home/me"
+
+
+@pytest.mark.skipif(WINDOWS, reason="describes the non-Windows branch")
+def test_posix_mount_lookalikes_survive_off_windows():
+    """`/d/projects/app` is a real posix path on Linux and macOS. Rewriting it
+    to `D:/projects/app` points the hook at nothing, so it detects no project
+    markers and silently suggests nothing — the failure is invisible."""
+    assert sa.normalize_path("/d/projects/app") == Path("/d/projects/app")
+    assert sa.normalize_path("/c/src/thing") == Path("/c/src/thing")
+    assert sa.to_bash_path(Path("/d/projects/app")) == "/d/projects/app"
+
+
+MOUNT_LOOKALIKES = ["/d/projects/app", "/c/src/thing", "/home/me/app", "relative/path", "."]
+
+
+def test_non_windows_branch_leaves_mount_lookalikes_alone(monkeypatch):
+    """Forces the non-Windows branch so this runs everywhere, including here.
+
+    Simply comparing the two copies would not have caught the bug: on Windows
+    both translate, so they agreed. The divergence only appeared off Windows,
+    which is the platform CI runs on and this machine is not.
+    """
+    monkeypatch.setattr(sa, "WINDOWS", False)
+    for raw in MOUNT_LOOKALIKES:
+        assert sa.normalize_path(raw) == Path(raw), raw
+    assert sa.to_bash_path(Path("/d/projects/app")) == "/d/projects/app"
+
+
+def test_path_helpers_agree_with_bootstraps_copy(monkeypatch):
+    """These two functions exist in bootstrap.py and here. bootstrap gained the
+    Windows guard on 2026-06-06; this copy did not, for two months. Checked on
+    BOTH branches, since agreement on one proves nothing about the other."""
+    import bootstrap as bs
+
+    assert sa.WINDOWS == bs.WINDOWS, "the two copies must agree on what platform this is"
+    for windows in (True, False):
+        monkeypatch.setattr(sa, "WINDOWS", windows)
+        monkeypatch.setattr(bs, "WINDOWS", windows)
+        for raw in MOUNT_LOOKALIKES:
+            assert sa.normalize_path(raw) == bs._normalize(raw), (windows, raw)
+        for p in (Path("C:/Users/me"), Path("/home/me"), Path("/d/projects/app")):
+            assert sa.to_bash_path(p) == bs.to_bash_path(p), (windows, p)
 
 
 # --- project-type detection ----------------------------------------------
