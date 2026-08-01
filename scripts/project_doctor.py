@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -46,16 +47,39 @@ VAULT_PROJECTS = REPO / "memory" / "projects"
 # guessing the directory from the card name finds the wrong answer (or none).
 PATH_RE = re.compile(r"^- Project:\s*`([^`]+)`", re.M)
 STATUS_RE = re.compile(r"^status:\s*(\S+)", re.M)
+# Optional. The vault is shared across machines but project locations are not:
+# `D:\claude-projects\x` is a correct path — on the PC that has a D: drive.
+HOST_RE = re.compile(r"^host:\s*(\S+)", re.M)
 
 # A project untouched for this long is worth a glance — not a failure.
 STALE_DAYS = 90
 
+HOST = platform.node()
 
-def parse_card(text: str) -> tuple[str, str | None]:
-    """(status, recorded path or None) from a project card."""
-    status = m.group(1) if (m := STATUS_RE.search(text)) else "unknown"
-    path = m.group(1) if (m := PATH_RE.search(text)) else None
-    return status, path
+
+def parse_card(text: str) -> dict:
+    """{status, path, host} from a project card. Missing keys are None."""
+    return {
+        "status": m.group(1) if (m := STATUS_RE.search(text)) else "unknown",
+        "path": m.group(1) if (m := PATH_RE.search(text)) else None,
+        "host": m.group(1) if (m := HOST_RE.search(text)) else None,
+    }
+
+
+def root_is_absent(path: Path) -> bool:
+    """True when the path's whole root is missing — a different machine, or an
+    unmounted drive.
+
+    This is the distinction between "gone" and "not here". `D:\\claude-projects\\x`
+    with no `D:\\` at all is not a deleted project; it is a project on the PC that
+    has that drive. Reporting it as a missing path reads as data loss and sends
+    you looking for something that was never lost.
+
+    On posix the anchor is `/`, which always exists, so this correctly returns
+    False and the ordinary "path does not exist" verdict applies.
+    """
+    anchor = path.anchor
+    return bool(anchor) and not Path(anchor).exists()
 
 
 def load_cards(vault: Path | None = None) -> list[dict]:
@@ -70,8 +94,9 @@ def load_cards(vault: Path | None = None) -> list[dict]:
     vault = vault or VAULT_PROJECTS
     cards = []
     for f in sorted(vault.glob("*.md")):
-        status, path = parse_card(f.read_text(encoding="utf-8"))
-        cards.append({"name": f.stem, "card": f, "status": status, "path": path})
+        cards.append(
+            {"name": f.stem, "card": f, **parse_card(f.read_text(encoding="utf-8"))}
+        )
     return cards
 
 
@@ -157,7 +182,21 @@ def inspect(card: dict, *, want_ci: bool) -> dict:
 
     project = Path(os.path.expandvars(card["path"])).expanduser()
     result["resolved"] = project
+
+    # A card pinned to another machine is not this machine's business.
+    if card.get("host") and card["host"] != HOST:
+        result["elsewhere"] = card["host"]
+        return result
+
     if not project.is_dir():
+        # "Not here" and "gone" are different findings, and only one of them is
+        # alarming. A whole missing root means the drive isn't on this machine.
+        if root_is_absent(project):
+            result["elsewhere"] = f"root {project.anchor} not on {HOST}"
+            result["notes"].append(
+                "cannot be checked from here — add `host:` to the card to pin it"
+            )
+            return result
         result["problems"].append(f"path does not exist: {project}")
         return result
 
@@ -192,12 +231,13 @@ def main(argv: list[str] | None = None) -> int:
 
     cards = load_cards()
     print(f"ecosystem-brain project doctor\n  vault : {VAULT_PROJECTS}")
+    print(f"  host  : {HOST}")
     print(f"  cards : {len(cards)}\n")
     if not cards:
         print("[ok] no registered projects")
         return 0
 
-    failing = 0
+    failing = elsewhere = 0
     for card in cards:
         if card["status"] == "archived":
             print(f"  [--] {card['name']:36s} archived")
@@ -208,10 +248,19 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  [!!] {card['name']:36s} {r['problems'][0]}")
             for extra in r["problems"][1:]:
                 print(f"       {'':36s} {extra}")
+        elif r.get("elsewhere"):
+            elsewhere += 1
+            print(f"  [->] {card['name']:36s} elsewhere: {r['elsewhere']}")
         else:
             summary = "; ".join(r["notes"]) if r["notes"] else "healthy"
             mark = "ok" if not r["notes"] else "??"
             print(f"  [{mark}] {card['name']:36s} {summary}")
+
+    if elsewhere:
+        print(
+            f"\n  {elsewhere} project(s) live on another machine — not checkable from"
+            f" {HOST}.\n  Add `host: <machine>` to those cards to say so explicitly."
+        )
 
     print()
     if failing:

@@ -19,9 +19,16 @@ this machine. The control tower created projects and then went blind.
   changes, `AGENTS.md` present, keys the `.env.example` names but the `.env`
   lacks, and — advisory only — the latest CI conclusion when the project has a
   GitHub remote. No network, no `gh`, or a timeout must never turn this red.
+- **"Elsewhere" is not "gone".** The vault is shared across machines; project
+  locations are not. `D:\claude-projects\x` is a *correct* path — on the PC that
+  has a `D:` drive. When the whole root is absent, the project is not lost, and
+  reporting a missing path would send you hunting for nothing. Such cards report
+  `[->] elsewhere` and do not fail the run; `host: <machine>` in the frontmatter
+  pins it explicitly. A path whose root **does** exist but whose directory does
+  not is still a real problem.
 - **It reports; it does not repair.** Only the user knows whether a project was
-  deleted, moved, or lives on another machine, and the right fix differs. Two
-  one-line escape hatches: update the card's `- Project: ` line, or set
+  deleted, moved, or lives on another machine, and the right fix differs. Three
+  one-line escape hatches: add `host:`, update the `- Project: ` line, or set
   `status: archived` (archived cards are listed and never fail the run, so a
   recorded decision stops nagging while an unexamined one keeps surfacing).
 - Wired into the maintenance heartbeat as **non-gating for now**: until those

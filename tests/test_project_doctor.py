@@ -55,15 +55,15 @@ def test_path_comes_from_the_backticks_not_the_card_name():
     text = CARD.format(
         name="ipe-pipeline", path=r"C:\Users\me\sensor-csv-pipeline", status="active"
     )
-    status, path = pd.parse_card(text)
-    assert status == "active"
-    assert path == r"C:\Users\me\sensor-csv-pipeline"
+    card = pd.parse_card(text)
+    assert card["status"] == "active"
+    assert card["path"] == r"C:\Users\me\sensor-csv-pipeline"
 
 
 def test_trailing_prose_after_the_path_is_not_captured():
     """Real cards annotate the line: '`C:\\x` (pas de D: sur cette machine)'."""
     text = "- Project: `C:/Users/me/thing` (rename pending, see note)\n"
-    assert pd.parse_card(text)[1] == "C:/Users/me/thing"
+    assert pd.parse_card(text)["path"] == "C:/Users/me/thing"
 
 
 def test_card_without_a_path_is_reported_not_crashed(vault, monkeypatch):
@@ -73,9 +73,11 @@ def test_card_without_a_path_is_reported_not_crashed(vault, monkeypatch):
 
 
 # --- the defect it exists to catch ----------------------------------------
-def test_missing_path_is_a_problem(vault, monkeypatch, capsys):
+def test_missing_path_is_a_problem(vault, tmp_path, monkeypatch, capsys):
+    """A path whose ROOT exists but whose directory does not — that is
+    genuinely gone from this machine, unlike a whole missing drive."""
     _no_ci(monkeypatch)
-    _card(vault, "gone", r"D:\claude-projects\gone")
+    _card(vault, "gone", str(tmp_path / "definitely-not-here"))
     assert pd.main(["--no-ci"]) == 1
     out = capsys.readouterr().out
     assert "path does not exist" in out
@@ -105,7 +107,7 @@ def test_archived_card_is_skipped_even_with_a_dead_path(vault, monkeypatch, caps
 def test_repairing_the_path_clears_the_problem(vault, tmp_path, monkeypatch):
     """The other escape hatch: point the card at where the project actually is."""
     _no_ci(monkeypatch)
-    _card(vault, "moved", r"D:\old\place")
+    _card(vault, "moved", str(tmp_path / "old-place"))
     assert pd.main(["--no-ci"]) == 1
     proj = tmp_path / "new-place"
     proj.mkdir()
@@ -201,3 +203,54 @@ def test_non_git_directory_is_noted_not_failed(vault, tmp_path, monkeypatch, cap
 def test_empty_vault_is_fine(vault, capsys):
     assert pd.main(["--no-ci"]) == 0
     assert "no registered projects" in capsys.readouterr().out
+
+
+# --- "elsewhere" is not "gone" --------------------------------------------
+# The user's answer reshaped this: those four projects are on another PC's D:
+# drive, or deleted from it. Neither `archived` (they may be alive) nor a path
+# repair (the path is correct — for that machine) fits. Reporting them as
+# missing reads as data loss and sends you hunting for nothing.
+
+
+def test_absent_root_is_elsewhere_not_a_problem(vault, monkeypatch, capsys):
+    _no_ci(monkeypatch)
+    _card(vault, "other-pc", r"Q:\projects\thing")
+    assert pd.main(["--no-ci"]) == 0, "a whole missing drive is not data loss"
+    out = capsys.readouterr().out
+    assert "elsewhere" in out
+    assert "path does not exist" not in out
+    assert "another machine" in out
+
+
+def test_root_absent_detection(tmp_path):
+    from pathlib import Path
+
+    assert pd.root_is_absent(Path(r"Q:\nope\thing")) is True
+    assert pd.root_is_absent(tmp_path / "missing-child") is False, "root exists"
+
+
+def test_host_pin_skips_the_card(vault, monkeypatch, capsys):
+    """Once you record which machine a project lives on, this one stops asking."""
+    _no_ci(monkeypatch)
+    (vault / "pinned.md").write_text(
+        "---\nstatus: active\nhost: OtherPC\n---\n# pinned\n"
+        "- Project: `C:/wherever/it/is`\n",
+        encoding="utf-8",
+    )
+    assert pd.main(["--no-ci"]) == 0
+    assert "elsewhere: OtherPC" in capsys.readouterr().out
+
+
+def test_host_pin_matching_this_machine_is_checked_normally(vault, tmp_path, monkeypatch):
+    _no_ci(monkeypatch)
+    (vault / "mine.md").write_text(
+        f"---\nstatus: active\nhost: {pd.HOST}\n---\n# mine\n"
+        f"- Project: `{tmp_path / 'absent'}`\n",
+        encoding="utf-8",
+    )
+    assert pd.main(["--no-ci"]) == 1, "pinned to THIS host, so a missing dir is real"
+
+
+def test_parse_card_reads_an_optional_host():
+    assert pd.parse_card("---\nstatus: active\nhost: BigTower\n---\n")["host"] == "BigTower"
+    assert pd.parse_card("---\nstatus: active\n---\n")["host"] is None

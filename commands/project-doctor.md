@@ -19,16 +19,24 @@ For each card in `memory/projects/`, it reports:
 |---|---|
 | `[ok]` | path resolves, nothing to say |
 | `[??]` | resolves, with advisory notes (stale, dirty tree, no `AGENTS.md`, `.env` missing keys its `.env.example` names) |
-| `[!!]` | needs a decision — path gone, or CI red |
+| `[->]` | on another machine — its whole root is absent here, or the card pins a different `host:` |
+| `[!!]` | needs a decision — path gone (its root *does* exist here), or CI red |
 | `[--]` | `status: archived`, skipped |
+
+## "Elsewhere" is not "gone"
+
+The vault is shared across machines; project locations are not. A path like
+`D:\...` is correct — on the PC that has a `D:` drive. When the whole root is
+missing here, the project is not lost, it is simply not on this machine, and
+saying "path does not exist" would send the user hunting for nothing.
 
 ## It reports; it does not repair
 
-When a path is wrong, only the user knows whether the project was deleted,
-moved, or lives on a machine that isn't this one — and the right fix differs in
-each case. Never guess. Show the findings, then help them apply whichever is
-true, one line per card:
+When a path really is wrong, only the user knows whether the project was
+deleted, moved, or lives elsewhere — and the right fix differs. Never guess.
+Show the findings, then help them apply whichever is true, one line per card:
 
+- **on another machine** → add `host: <machine-name>` to the frontmatter
 - **moved** → update the `- Project: ` line in `memory/projects/<name>.md`
 - **done** → set `status: archived` in that card's frontmatter
 
