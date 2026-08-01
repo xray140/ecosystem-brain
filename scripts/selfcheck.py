@@ -7,8 +7,9 @@ Checks, in order (fails fast with a non-zero exit on any problem):
   3. The init profile engine resolves all build types without error.
   4. The memory vault indexes cleanly.
   5. The pytest suite passes.
-  6. Ruff is clean — the same invocation CI runs, so local and CI cannot diverge.
-  7. Local agent frontmatter meets the standard (name/description/tools/model).
+  6. No installable file hardcodes an absolute path (they use {{ECOSYSTEM_ROOT}}).
+  7. Ruff is clean — the same invocation CI runs, so local and CI cannot diverge.
+  8. Local agent frontmatter meets the standard (name/description/tools/model).
 
 Both pytest and ruff come from requirements-dev.txt, the pinned dev toolchain.
 
@@ -132,6 +133,54 @@ def _uv_tool() -> list[str]:
     ]
 
 
+# Files bootstrap installs into ~/.claude. These are the ones where a literal
+# path is load-bearing at runtime, and therefore where one silently rots.
+INSTALLABLE = ("commands/*.md", "agents/*.md", "skills/*/SKILL.md", "hooks/hooks.json")
+
+# A Git Bash drive mount (/d/foo) or a Windows drive path (D:\foo, D:/foo).
+# The lookbehind excludes only a word character, so `foo/d/bar` is not a match.
+# It must NOT exclude a backtick: in markdown these paths live inside inline
+# code spans, so anchoring against `` would blind the check to its main case.
+ABSOLUTE_PATH = re.compile(r"(?<!\w)/[a-z]/[A-Za-z0-9_.-]+|[A-Za-z]:[\\/][A-Za-z0-9_.-]+")
+
+TOKEN = "{{ECOSYSTEM_ROOT}}"  # noqa: S105 — a path placeholder, not a credential
+
+
+def _is_illustration(line: str, match: re.Match[str]) -> bool:
+    """True when the path is documenting the path convention rather than using it.
+
+    `script-smith` has to be able to say that a hardcoded `/d/...` resolves to
+    `D:\\d\\...` — that is the rule it exists to teach. An ellipsis is the
+    difference between naming a shape and naming a location.
+    """
+    return "..." in match.group(0) or line[match.end() :].startswith(("\\...", "/..."))
+
+
+def check_paths() -> None:
+    """No installable file may hardcode an absolute path.
+
+    The rule this enforces the hard way: for years these files named the machine
+    they were authored on, and it worked only because bootstrap rewrote the
+    string on the way out. When the repo moved, 58 references across 16 files
+    pointed at a directory that existed nowhere — invisible, because the rewrite
+    kept repairing them. They refer to the repo as {{ECOSYSTEM_ROOT}} now, and
+    this check is what stops a literal one from creeping back.
+    """
+    print("6. Installable files use {{ECOSYSTEM_ROOT}}, not literal paths")
+    offenders = 0
+    for pattern in INSTALLABLE:
+        for p in sorted(REPO.glob(pattern)):
+            for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+                for m in ABSOLUTE_PATH.finditer(line):
+                    if _is_illustration(line, m):
+                        continue
+                    rel = p.relative_to(REPO).as_posix()
+                    fail(f"{rel}:{i}: hardcoded path {m.group(0)!r} — use {TOKEN}")
+                    offenders += 1
+    if not offenders:
+        print(f"  [ok]   no hardcoded paths in {len(INSTALLABLE)} installable file groups")
+
+
 def check_lint() -> None:
     """Run the same ruff invocation CI runs.
 
@@ -139,7 +188,7 @@ def check_lint() -> None:
     how 44 lint findings accumulated unnoticed once ruff's default rule set moved.
     A gate that a change can pass locally and fail remotely is not a gate.
     """
-    print("6. Lint (ruff)")
+    print("7. Lint (ruff)")
     if shutil.which("uv") is None:
         ok("uv not found — ruff skipped")
         return
@@ -209,7 +258,7 @@ def frontmatter_problems(text: str) -> list[str]:
 
 
 def check_frontmatter() -> None:
-    print("7. Local agent frontmatter meets the standard")
+    print("8. Local agent frontmatter meets the standard")
     installed = json.loads((REPO / "registry" / "installed.json").read_text(encoding="utf-8"))
     local = {a["name"] for a in installed.get("agents", []) if a.get("source") == "local"}
     checked = 0
@@ -230,6 +279,7 @@ def main() -> int:
     check_profiles()
     check_memory()
     check_tests()
+    check_paths()
     check_lint()
     check_frontmatter()
     print()

@@ -11,14 +11,14 @@ GitHub compare URL so you can review the diff. Updates are re-scanned by
 (current pin kept) for manual review.
 
 Steps:
-1. Run check first: `uv run python /d/claude-projects/ecosystem-brain/scripts/update-agents.py --check`
-2. Show what would change, then apply all: `uv run python /d/claude-projects/ecosystem-brain/scripts/update-agents.py --all`
+1. Run check first: `uv run python {{ECOSYSTEM_ROOT}}/scripts/update-agents.py --check`
+2. Show what would change, then apply all: `uv run python {{ECOSYSTEM_ROOT}}/scripts/update-agents.py --all`
 3. Re-sync global dirs:
    ```
-   cp /d/claude-projects/ecosystem-brain/agents/*.md ~/.claude/agents/
-   cp /d/claude-projects/ecosystem-brain/commands/*.md ~/.claude/commands/ecosystem-brain/
+   cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/
+   cp {{ECOSYSTEM_ROOT}}/commands/*.md ~/.claude/commands/ecosystem-brain/
    ```
-4. Commit any changes: `git -C /d/claude-projects/ecosystem-brain add -A && git commit -m "chore: update agents"`
+4. Commit any changes: `git -C {{ECOSYSTEM_ROOT}} add -A && git commit -m "chore: update agents"`
 
 If $ARGUMENTS contains `--check`, only run step 1. If it contains `--name <x>`, pass that to the script.
 If any update was BLOCKED (quarantined), tell the user to review `quarantine/<name>.md` before trusting it.

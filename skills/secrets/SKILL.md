@@ -10,7 +10,7 @@ time; do not edit them by hand.
 
 ## Audit (read-only)
 ```bash
-bash /d/claude-projects/ecosystem-brain/skills/secrets/secrets-doctor.sh
+bash {{ECOSYSTEM_ROOT}}/skills/secrets/secrets-doctor.sh
 ```
 Audits **the current working directory's repo**, which is the intent — run it
 from whichever project you are checking, not from the ecosystem clone.
@@ -21,7 +21,7 @@ Checks: `.gitignore` covers `.env*`/`.identity.local.env`, nothing secret is tra
 Public identity (git author name/email) can be stored in `memory/identity.md`
 frontmatter and applied to git config:
 ```bash
-bash /d/claude-projects/ecosystem-brain/skills/secrets/apply-identity.sh --file /d/claude-projects/ecosystem-brain/memory/identity.md [--local]
+bash {{ECOSYSTEM_ROOT}}/skills/secrets/apply-identity.sh --file {{ECOSYSTEM_ROOT}}/memory/identity.md [--local]
 ```
 `--file` is required here: it defaults to the relative `memory/identity.md`,
 which only resolves when the working directory is the ecosystem clone.

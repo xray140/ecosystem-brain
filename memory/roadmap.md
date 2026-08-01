@@ -1,7 +1,7 @@
 ---
 type: moc
 status: active
-updated: 2026-07-31
+updated: 2026-08-01
 tags: [moc, roadmap, state]
 ---
 # Ecosystem-Brain — state & roadmap
@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.6)
+## Current state (v4.3.7)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
@@ -24,17 +24,20 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (157
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (312
   tests) + `scripts/selfcheck.py` + gitleaks. Toolchain pinned in
   `requirements-dev.txt`, rule set pinned in `ruff.toml` — see
   [[decisions/toolchain-pinning]].
-- **Gates**: `selfcheck.py` = 7 checks (JSON, agent scan, init-engine, memory
-  index, pytest, **ruff**, agent frontmatter). Lint runs the *same* invocation
-  and the same pinned binary as CI, so local-green and CI-green are the same
-  claim; tests assert the two configs can't drift apart.
-- **Tests**: `tests/` (157) covers scan_agent, init_project, bootstrap,
-  github_util, update-agents (pinning), doctor (drift + hook wiring + skills),
-  catalog, install-agent (naming, target paths, traversal), selfcheck.
+- **Gates**: `selfcheck.py` = 8 checks (JSON, agent scan, init-engine, memory
+  index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
+  runs the *same* invocation and the same pinned binary as CI, so local-green
+  and CI-green are the same claim; tests assert the two configs can't drift.
+- **Tests**: `tests/` (312, ~64% coverage) covers scan_agent, init_project,
+  bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
+  (drift + hook wiring + skills), catalog, install-agent (naming, target
+  paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
+  the destructive guard, suggest-agents, search_agents, maintenance, and the
+  {{ECOSYSTEM_ROOT}} substitution.
 - **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
   curl|bash, PowerShell cradles (iwr|iex, WebClient, -enc), base64-exec,
   eval/exec, rm -rf, TLS-off (incl. flag-first `curl -k`), exfil, hidden chars.
@@ -58,8 +61,10 @@ Read this first in a fresh session (after CLAUDE.md). Run
   (`guard_destructive.py` — tokenizes and normalizes flags, matches targets
   exactly rather than by prefix, 43 tests both directions), ruff-on-write,
   SessionStart suggester, SessionEnd log.
-- **Portability**: `bootstrap.py` rewrites hardcoded paths to the clone location;
-  works on any PC / any path. `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
+- **Portability**: committed files refer to the repo as `{{ECOSYSTEM_ROOT}}`;
+  `bootstrap.py` expands it to the clone's location, so any PC / any path
+  works. selfcheck fails on any literal path that creeps back in.
+  `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
 - **Memory**: Obsidian vault (project cards linked into `projects-moc` hub +
   stack decisions — no orphans), Ollama semantic search (nomic-embed-text, GPU).
 - **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
@@ -87,14 +92,12 @@ Read this first in a fresh session (after CLAUDE.md). Run
   (it was upstream of every other control); destructive guard rewritten in
   Python after it proved bypassable *and* prone to false positives; `scaffold
   --force` rmtree guarded; Actions pinned to SHAs + Dependabot. 174 → 246 tests.
-- [ ] **Coverage on the untested scripts** — `search_agents` and `maintenance`
-  are still 0%, `selfcheck` 28%, `install-agent` 32%, `catalog` 30%. Overall
-  47%. `hooks/scripts/suggest-agents.py` is 0% and runs every session.
-- [ ] **De-hardcode `CANON_BASH`** — the authoring path `/d/claude-projects/...`
-  no longer exists (repo lives at `~/ecosystem-brain`); ~40 dead paths in
-  `commands/*.md` work only because `bootstrap` rewrites them. Replace with an
-  explicit `{{ECOSYSTEM_ROOT}}` token + a selfcheck rule that fails on any
-  literal absolute path in a committed file.
+- [x] **Coverage + de-hardcoded paths → v4.3.7** (2026-08-01) — the three 0%
+  scripts covered (`suggest-agents` 94%, `search_agents` 87%, `maintenance` 95%),
+  `install-agent` 32→91%; overall 47→64%. `{{ECOSYSTEM_ROOT}}` replaces the dead
+  authoring path (58 refs / 16 files), enforced by selfcheck check 6.
+- [ ] **Remaining coverage** — `selfcheck` 28%, `catalog` 30%, `bootstrap` 43%,
+  `update-agents` 48%, `new_agent` 49%. Overall 64%.
 - [x] **Live-install audit → v4.3.2** (2026-07-15) — fixed the hardcoded /d/
   SessionStart hint, added doctor's hook-wiring drift check, unpinned-install
   warning, registry repair (stale global_path, backfilled data-engineer pin).

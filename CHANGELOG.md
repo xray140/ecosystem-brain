@@ -2,6 +2,38 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.7] — 2026-08-01
+
+Coverage on the scripts that had none, and the end of the hardcoded authoring
+path. Suite 246 → 312; coverage 47% → 64%.
+
+- **`{{ECOSYSTEM_ROOT}}` replaces the literal authoring path.** Committed files
+  named `/d/claude-projects/ecosystem-brain` — the machine this was written on
+  — and it worked only because `bootstrap.rewrite_paths` substituted the string
+  on the way out. So when the repo moved to `~/ecosystem-brain`, **58 references
+  across 16 files pointed at a directory that existed nowhere**, and nothing
+  noticed, because the rewrite kept repairing them. Files now use a token, which
+  cannot rot: it is never a valid path to begin with. Legacy literals and
+  `${CLAUDE_PLUGIN_ROOT}` are still rewritten, so an older clone migrates on its
+  next bootstrap.
+- **selfcheck fails on any hardcoded path** in an installable file (check 6 of
+  8) — the half the old scheme was missing. It distinguishes a path that names a
+  location from one documenting the path convention (`script-smith` has to be
+  able to say that `/d/...` resolves to `D:\d\...`).
+  - This closed the defect logged as known-unfixed in 4.3.4:
+    `skills/memory/SKILL.md` was still printing the dead path. Verified after
+    re-bootstrap: 16 live files now point at this clone, zero dead paths, zero
+    unexpanded tokens.
+  - `commands/scaffold.md` no longer hardcodes `--dest-root`; `scaffold.py` has
+    defaulted it to the clone's parent since 4.3.4, so the flag was both dead
+    and wrong on any other machine.
+- **Tests for the three scripts that had none**: `suggest-agents.py` 0 → 94%
+  (it runs on *every* session start and was the least-tested code in the repo),
+  `search_agents.py` 0 → 87%, `maintenance.py` 0 → 95%. `install-agent.py`'s
+  `main()` is now covered too, 32% → 91% — including that HIGH-risk content is
+  absent from the repo, from `~/.claude` *and* from the registry, not merely
+  that the exit code was 2.
+
 ## [4.3.6] — 2026-08-01
 
 Supply-chain and blast-radius hardening — the second half of the same audit.
@@ -122,6 +154,8 @@ being emitted as CRLF on Windows, against the repo's own `.gitattributes`.
 Known-unfixed, tracked for a later pass: `skills/memory/SKILL.md` still
 prints the dead canonical path `/d/claude-projects/...` in its usage line —
 the same defect 4.3.2 fixed in `suggest-agents.py`, never propagated here.
+*(Closed in 4.3.7, along with the 57 other occurrences it turned out to have
+company in.)*
 
 ## [4.3.3] — 2026-07-15
 

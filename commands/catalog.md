@@ -9,12 +9,12 @@ SessionStart suggester can recommend uninstalled agents with no network call.
 
 Run the matching command:
 - **build** — refresh the catalog from GitHub:
-  `uv run python /d/claude-projects/ecosystem-brain/scripts/catalog.py build`
+  `uv run python {{ECOSYSTEM_ROOT}}/scripts/catalog.py build`
 - **categories** — list categories + counts:
-  `uv run python /d/claude-projects/ecosystem-brain/scripts/catalog.py categories`
+  `uv run python {{ECOSYSTEM_ROOT}}/scripts/catalog.py categories`
 - **install <category> [--limit N]** — batch-install a category (each agent is
   security-scanned; HIGH-risk ones are blocked):
-  `uv run python /d/claude-projects/ecosystem-brain/scripts/catalog.py install <category> --limit N`
+  `uv run python {{ECOSYSTEM_ROOT}}/scripts/catalog.py install <category> --limit N`
 
 After installing, sync to global and report what landed:
-`cp /d/claude-projects/ecosystem-brain/agents/*.md ~/.claude/agents/`
+`cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/`

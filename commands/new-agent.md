@@ -19,7 +19,7 @@ Keep agents focused and least-privilege (see [[claude-best-practices]]).
 
 ## Step 3 — Preview (no writes)
 ```
-uv run python /d/claude-projects/ecosystem-brain/scripts/new_agent.py \
+uv run python {{ECOSYSTEM_ROOT}}/scripts/new_agent.py \
   --name <name> --description "<purpose>. Use proactively when <trigger>." \
   --role "<one-line role>" --tools <T1,T2,...> \
   --step "<step 1>" --step "<step 2>" --returns "<what it returns>"
@@ -31,7 +31,7 @@ Append `--register` to the same command. It scan-gates (`scan_agent.py`) and
 installs via `install-agent.py` (HIGH-risk content is refused + quarantined).
 Then sync to the global dir:
 ```
-cp /d/claude-projects/ecosystem-brain/agents/<name>.md ~/.claude/agents/
+cp {{ECOSYSTEM_ROOT}}/agents/<name>.md ~/.claude/agents/
 ```
 Report the registered agent and remind the user to flesh out its body if the
 workflow steps are still placeholders.

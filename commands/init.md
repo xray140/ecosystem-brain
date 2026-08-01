@@ -47,7 +47,7 @@ If no project name was provided in `$ARGUMENTS`, also ask for it (short kebab-ca
 ## Step 3 — Show the composed plan (no writes yet)
 Run:
 ```
-uv run python /d/claude-projects/ecosystem-brain/scripts/init_project.py --plan \
+uv run python {{ECOSYSTEM_ROOT}}/scripts/init_project.py --plan \
   --build <b> --rigor <r> --touches <t1,t2> [--stack <s>] --name <name>
 ```
 Show the user the printed summary (template, stack, agent list, AGENTS.md preview).
@@ -61,7 +61,7 @@ Ask **"Apply this configuration?"** (header: Apply): Apply | Adjust agents | Can
 
 ## Step 5 — Apply
 ```
-uv run python /d/claude-projects/ecosystem-brain/scripts/init_project.py --apply \
+uv run python {{ECOSYSTEM_ROOT}}/scripts/init_project.py --apply \
   --build <b> --rigor <r> --touches <t1,t2> [--stack <s>] --name <name> \
   [--api-keys <k1,k2>] [--github]
 ```
@@ -73,7 +73,7 @@ gloss over it.
 
 Then sync newly-installed agents to the global dir:
 ```
-cp /d/claude-projects/ecosystem-brain/agents/*.md ~/.claude/agents/
+cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/
 ```
 Report: the created path, the green-baseline result, the repo URL (if `--github`),
 and any agent that was BLOCKED by the security scan.
