@@ -21,13 +21,37 @@ import subprocess
 import sys
 from pathlib import Path
 
-TOKEN = "pkgname"
+TOKEN = "pkgname"  # noqa: S105 — a template placeholder, not a credential
 
 # Where projects land when --dest-root is omitted. Mirrors init_project.py:
 # the clone's parent, overridable by env. Never a hardcoded absolute path —
 # this repo bootstraps from any location on any machine.
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEST_ROOT = Path(os.environ.get("ECOSYSTEM_DEST_ROOT") or REPO_ROOT.parent)
+
+
+SAFE_PROJECT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
+
+
+def resolve_dest(dest_root: Path, name: str) -> Path:
+    """Where the project goes — validated as a strict child of `dest_root`.
+
+    `--force` deletes this path with `shutil.rmtree`, so the name is not merely
+    cosmetic: `--name .` or `--name ..` would aim that delete at the root that
+    holds every scaffolded project. Two independent checks, because either one
+    alone can be reasoned around: the name must be a plain slug, AND the
+    resolved path must still sit under the resolved root.
+    """
+    if not SAFE_PROJECT_NAME.fullmatch(name.strip()) or ".." in name:
+        raise ValueError(
+            f"unsafe project name {name!r} — expected letters, digits, '.', '-', "
+            "'_' (1-64 chars, starting alphanumeric, no path separators)"
+        )
+    root = dest_root.resolve()
+    dest = (root / name.strip()).resolve()
+    if dest == root or root not in dest.parents:
+        raise ValueError(f"destination {dest} is not inside {root}")
+    return dest
 
 
 def to_package(name: str) -> str:
@@ -72,11 +96,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[error] template not found: {template}", file=sys.stderr)
         return 1
 
-    dest = args.dest_root / args.name
+    try:
+        dest = resolve_dest(args.dest_root, args.name)
+    except ValueError as e:
+        print(f"[error] {e}", file=sys.stderr)
+        return 1
+
     if dest.exists():
         if not args.force:
             print(f"[error] destination exists: {dest} (use --force)", file=sys.stderr)
             return 1
+        # resolve_dest has established that dest is a real child of dest_root,
+        # so this rmtree cannot be aimed at the root itself or anywhere above it.
         shutil.rmtree(dest)
 
     package = to_package(args.name)

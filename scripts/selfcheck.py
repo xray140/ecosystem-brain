@@ -7,7 +7,11 @@ Checks, in order (fails fast with a non-zero exit on any problem):
   3. The init profile engine resolves all build types without error.
   4. The memory vault indexes cleanly.
   5. The pytest suite passes.
-  6. Local agent frontmatter meets the standard (name/description/tools/model).
+  6. No installable file hardcodes an absolute path (they use {{ECOSYSTEM_ROOT}}).
+  7. Ruff is clean — the same invocation CI runs, so local and CI cannot diverge.
+  8. Local agent frontmatter meets the standard (name/description/tools/model).
+
+Both pytest and ruff come from requirements-dev.txt, the pinned dev toolchain.
 
 Usage:
     uv run --no-project python scripts/selfcheck.py
@@ -23,7 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scan_agent import scan, worst  # noqa: E402
+from scan_agent import scan, worst
 
 REPO = Path(__file__).resolve().parent.parent
 fails: list[str] = []
@@ -93,7 +97,7 @@ def check_profiles() -> None:
     for b in builds:
         stack = "react" if profiles["build_types"][b]["ask_stack"] else None
         cfg = ip.resolve(profiles, b, "product", ["api-keys", "money"], stack)
-        resolved, dropped = ip.classify_agents(cfg["agents"], profiles)
+        _resolved, dropped = ip.classify_agents(cfg["agents"], profiles)
         if dropped:
             fail(f"build '{b}' maps to unknown agents: {dropped}")
         # composing AGENTS.md must not raise
@@ -103,7 +107,7 @@ def check_profiles() -> None:
 
 def check_memory() -> None:
     print("4. Memory vault indexes")
-    r = subprocess.run(
+    r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
         [sys.executable, str(REPO / "skills/memory/memory-index.py"), "--check"],
         capture_output=True,
         text=True,
@@ -112,6 +116,93 @@ def check_memory() -> None:
         fail(f"memory-index failed: {r.stderr.strip()[:80]}")
     else:
         ok("vault indexed")
+
+
+DEV_REQS = REPO / "requirements-dev.txt"
+LINT_PATHS = ("scripts", "tests", "hooks", "skills")
+
+
+def _uv_tool() -> list[str]:
+    """`uv run` prefix that installs the pinned dev toolchain, project-free."""
+    return [
+        "uv",
+        "run",
+        "--with-requirements",
+        str(DEV_REQS),
+        "--no-project",
+    ]
+
+
+# Files bootstrap installs into ~/.claude. These are the ones where a literal
+# path is load-bearing at runtime, and therefore where one silently rots.
+INSTALLABLE = ("commands/*.md", "agents/*.md", "skills/*/SKILL.md", "hooks/hooks.json")
+
+# A Git Bash drive mount (/d/foo) or a Windows drive path (D:\foo, D:/foo).
+# The lookbehind excludes only a word character, so `foo/d/bar` is not a match.
+# It must NOT exclude a backtick: in markdown these paths live inside inline
+# code spans, so anchoring against `` would blind the check to its main case.
+ABSOLUTE_PATH = re.compile(r"(?<!\w)/[a-z]/[A-Za-z0-9_.-]+|[A-Za-z]:[\\/][A-Za-z0-9_.-]+")
+
+TOKEN = "{{ECOSYSTEM_ROOT}}"  # noqa: S105 — a path placeholder, not a credential
+
+
+def _is_illustration(line: str, match: re.Match[str]) -> bool:
+    """True when the path is documenting the path convention rather than using it.
+
+    `script-smith` has to be able to say that a hardcoded `/d/...` resolves to
+    `D:\\d\\...` — that is the rule it exists to teach. An ellipsis is the
+    difference between naming a shape and naming a location.
+    """
+    return "..." in match.group(0) or line[match.end() :].startswith(("\\...", "/..."))
+
+
+def check_paths() -> None:
+    """No installable file may hardcode an absolute path.
+
+    The rule this enforces the hard way: for years these files named the machine
+    they were authored on, and it worked only because bootstrap rewrote the
+    string on the way out. When the repo moved, 58 references across 16 files
+    pointed at a directory that existed nowhere — invisible, because the rewrite
+    kept repairing them. They refer to the repo as {{ECOSYSTEM_ROOT}} now, and
+    this check is what stops a literal one from creeping back.
+    """
+    print("6. Installable files use {{ECOSYSTEM_ROOT}}, not literal paths")
+    offenders = 0
+    for pattern in INSTALLABLE:
+        for p in sorted(REPO.glob(pattern)):
+            for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+                for m in ABSOLUTE_PATH.finditer(line):
+                    if _is_illustration(line, m):
+                        continue
+                    rel = p.relative_to(REPO).as_posix()
+                    fail(f"{rel}:{i}: hardcoded path {m.group(0)!r} — use {TOKEN}")
+                    offenders += 1
+    if not offenders:
+        print(f"  [ok]   no hardcoded paths in {len(INSTALLABLE)} installable file groups")
+
+
+def check_lint() -> None:
+    """Run the same ruff invocation CI runs.
+
+    Without this, the local gate stays green while CI goes red — which is exactly
+    how 44 lint findings accumulated unnoticed once ruff's default rule set moved.
+    A gate that a change can pass locally and fail remotely is not a gate.
+    """
+    print("7. Lint (ruff)")
+    if shutil.which("uv") is None:
+        ok("uv not found — ruff skipped")
+        return
+    r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
+        [*_uv_tool(), "ruff", "check", *LINT_PATHS, "--output-format", "concise"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+    )
+    if r.returncode != 0:
+        tail = "\n      ".join((r.stdout + r.stderr).strip().splitlines()[-12:])
+        fail(f"ruff found problems:\n      {tail}")
+    else:
+        ok(f"ruff clean across {', '.join(LINT_PATHS)}")
 
 
 def check_tests() -> None:
@@ -123,9 +214,11 @@ def check_tests() -> None:
     if shutil.which("uv") is None:
         ok("uv not found — pytest skipped")
         return
-    # Nested uv run: pulls pytest into an ephemeral env, ignores any project.
-    r = subprocess.run(
-        ["uv", "run", "--with", "pytest", "--no-project", "pytest", "-q", "tests"],
+    # Nested uv run: pulls the PINNED pytest into an ephemeral env, ignores any
+    # project. Pinned via requirements-dev.txt so this gate and CI can never
+    # disagree about which pytest ran.
+    r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
+        [*_uv_tool(), "pytest", "-q", "tests"],
         capture_output=True,
         text=True,
         cwd=str(REPO),
@@ -165,7 +258,7 @@ def frontmatter_problems(text: str) -> list[str]:
 
 
 def check_frontmatter() -> None:
-    print("6. Local agent frontmatter meets the standard")
+    print("8. Local agent frontmatter meets the standard")
     installed = json.loads((REPO / "registry" / "installed.json").read_text(encoding="utf-8"))
     local = {a["name"] for a in installed.get("agents", []) if a.get("source") == "local"}
     checked = 0
@@ -186,6 +279,8 @@ def main() -> int:
     check_profiles()
     check_memory()
     check_tests()
+    check_paths()
+    check_lint()
     check_frontmatter()
     print()
     if fails:

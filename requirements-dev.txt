@@ -1,0 +1,12 @@
+# Pinned dev toolchain — the single source of truth for CI, selfcheck, and hooks.
+#
+# Why pinned: these scripts are stdlib-only and run through `uv run --no-project`,
+# so an unpinned `--with ruff` resolves the newest release on every run. Ruff's
+# default rule set changed under us once and turned CI red with 44 findings that
+# no commit introduced. The repo pins third-party AGENTS to a commit SHA
+# (see memory/decisions/agent-pinning.md) — its own toolchain gets the same rule.
+#
+# Bump deliberately: change the pin, run `scripts/selfcheck.py`, fix the fallout
+# in the same commit.
+ruff==0.16.1
+pytest==9.1.1

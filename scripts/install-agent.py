@@ -21,30 +21,33 @@ import argparse
 import json
 import shutil
 import sys
-from datetime import datetime, timezone
+import urllib.parse
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Windows consoles default to cp1252, which cannot encode accented paths
 # or unicode markers. Force UTF-8 so output never crashes the run.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+if hasattr(sys.stderr, "reconfigure"):
+    # Errors carry the same accented paths and em-dashes as normal output; a
+    # cp1252 stderr mangles them (or crashes the run) exactly the same way.
+    sys.stderr.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
-# Local modules (same dir): security scanner + shared GitHub helpers.
+# Local modules (same dir): security scanner, GitHub helpers, install layout.
 sys.path.insert(0, str(Path(__file__).parent))
-import github_util as gh  # noqa: E402
-from scan_agent import format_report, quarantine, scan, worst  # noqa: E402
+import github_util as gh
+import layout
+from scan_agent import format_report, quarantine, scan, worst
 
 REPO_ROOT = Path(__file__).parent.parent
 REGISTRY_DIR = REPO_ROOT / "registry"
 INSTALLED_FILE = REGISTRY_DIR / "installed.json"
-GLOBAL_AGENTS = Path.home() / ".claude" / "agents"
-GLOBAL_COMMANDS = Path.home() / ".claude" / "commands" / "ecosystem-brain"
-
-TYPE_DIRS: dict[str, tuple[Path, Path]] = {
-    "agent": (REPO_ROOT / "agents", GLOBAL_AGENTS),
-    "command": (REPO_ROOT / "commands", GLOBAL_COMMANDS),
-    "skill": (REPO_ROOT / "skills", GLOBAL_COMMANDS),
-}
+# Install layout and name validation live in layout.py — update-agents.py reads
+# the same rules, so the two cannot drift into writing to different places.
+TYPE_DIRS = layout.TYPE_DIRS
+safe_name = layout.safe_name
+target_paths = layout.target_paths
 
 
 def load_installed() -> dict:
@@ -59,13 +62,32 @@ def save_installed(data: dict) -> None:
     )
 
 
-def detect_type(content: str, filename: str) -> str:
-    """Guess type from frontmatter or filename."""
+def detect_type(content: str, filename: str, path: str = "") -> str:
+    """Guess type from filename, source path, then frontmatter.
+
+    Filename first: upstream skills are always `SKILL.md`, and that signal is
+    unambiguous. The old order checked `.md` before anything skill-shaped, so
+    "skill" was unreachable for every markdown file — i.e. always.
+    """
+    if filename.lower() == "skill.md" or "/skills/" in f"/{path.strip('/')}/":
+        return "skill"
     if "tools:" in content and "---" in content:
         return "agent"
-    if filename.endswith(".md"):
-        return "command"
-    return "skill"
+    return "command"
+
+
+def default_name(filename: str, path: str = "") -> str:
+    """Name to install under when --name is absent.
+
+    For a skill the filename is always the literal `SKILL.md`, so the stem would
+    name every skill "SKILL". The identity lives in the containing directory —
+    `skills/pdf-tools/SKILL.md` is the skill `pdf-tools`.
+    """
+    if filename.lower() == "skill.md":
+        parts = [p for p in path.replace("\\", "/").split("/") if p]
+        if len(parts) >= 2:
+            return parts[-2]
+    return Path(filename).stem
 
 
 def install_content(
@@ -76,13 +98,10 @@ def install_content(
     ref: str | None = None,
     commit: str | None = None,
 ) -> None:
-    repo_dir, global_dir = TYPE_DIRS[item_type]
-    repo_dir.mkdir(parents=True, exist_ok=True)
-    global_dir.mkdir(parents=True, exist_ok=True)
-
-    fname = f"{name}.md"
-    repo_path = repo_dir / fname
-    global_path = global_dir / fname
+    name = safe_name(name)
+    repo_path, global_path = target_paths(item_type, name)
+    repo_path.parent.mkdir(parents=True, exist_ok=True)
+    global_path.parent.mkdir(parents=True, exist_ok=True)
 
     # .gitattributes pins *.md to eol=lf. Two distinct sources of CRLF to kill:
     # text mode translating \n on Windows (newline="\n"), and upstream content
@@ -95,7 +114,7 @@ def install_content(
     installed = load_installed()
     key = f"{item_type}s"
     entries = installed.setdefault(key, [])
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     for entry in entries:  # update in place if already present
         if entry["name"] == name:
             entry.update({"source": source, "hash": gh.md5(content), "installed_at": today})
@@ -152,7 +171,8 @@ def main(argv: list[str] | None = None) -> int:
     ref = commit = None
     if args.url:
         content = gh.fetch_url(args.url)
-        filename = args.url.rstrip("/").split("/")[-1]
+        src_path = urllib.parse.urlparse(args.url).path
+        filename = src_path.rstrip("/").split("/")[-1]
         source = args.url
     elif args.repo and args.path:
         # Pin: resolve the branch tip to a commit SHA, then fetch the file AT that
@@ -167,18 +187,26 @@ def main(argv: list[str] | None = None) -> int:
                 "mutable branch. Re-run later to pin, or check `gh auth status`."
             )
         content = gh.fetch_url(gh.raw_url(args.repo, args.path, commit or ref))
-        filename = args.path.split("/")[-1]
+        src_path = args.path
+        filename = src_path.split("/")[-1]
         source = f"github:{args.repo}/{args.path}"
     elif args.file:
         content = Path(args.file).read_text(encoding="utf-8")
+        src_path = Path(args.file).as_posix()
         filename = Path(args.file).name
         source = "local"
     else:
         ap.error("provide --url, --repo+--path, or --file")
         return 1
 
-    name = args.name or Path(filename).stem
-    item_type = args.type or detect_type(content, filename)
+    item_type = args.type or detect_type(content, filename, src_path)
+    try:
+        # Validate before anything touches the filesystem — `name` is a path
+        # component for both the install target and the quarantine file.
+        name = safe_name(args.name or default_name(filename, src_path))
+    except ValueError as e:
+        print(f"[error] {e}", file=sys.stderr)
+        return 1
 
     # Security gate — scan untrusted content before activating it.
     findings = scan(content)

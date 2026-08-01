@@ -27,8 +27,10 @@ location, so it works on any machine / any path.
 | `/ecosystem-brain:search <topic> [--files]` | Search GitHub live for agents, by stars |
 | `/ecosystem-brain:install` | Install an agent from GitHub (auto security-scanned) |
 | `/ecosystem-brain:catalog [build\|categories\|install]` | Browse / batch-install from cached catalog |
-| `/ecosystem-brain:update` | Update installed agents (hash-based) |
+| `/ecosystem-brain:update` | Update installed agents — re-resolves the tip, re-scans, advances the commit pin |
 | `/ecosystem-brain:agents` | List installed agents/skills/commands |
+| `/ecosystem-brain:new-agent` | Recruit a first-party agent, scaffolded to standard and self-scanned |
+| `/ecosystem-brain:doctor` | Drift check — are the live hooks/commands/agents/skills in sync with this clone? |
 | `/ecosystem-brain:health-check` | Secrets hygiene + tool versions + active projects |
 | `/ecosystem-brain:security-audit` | Run the security-auditor on staged changes |
 | `/ecosystem-brain:write-tests` / `:fix-bug` | Invoke test-writer / bug-fixer agents |
@@ -45,14 +47,37 @@ SessionStart hook suggests relevant installed + uninstalled agents
 ```
 
 ## What's inside
-- **agents/** — `security-auditor`, `test-writer`, `bug-fixer`, `memory-curator` + installed third-party agents.
+- **agents/** — six first-party: `security-auditor`, `test-writer`, `bug-fixer`,
+  `memory-curator`, `script-smith`, `convention-keeper` — plus installed third-party agents.
 - **commands/** — slash commands (synced to `~/.claude/commands/ecosystem-brain/` by bootstrap).
-- **scripts/** — `bootstrap`, `scaffold`, `install-agent`, `update-agents`, `search_agents`, `catalog`, `scan_agent`.
+  They refer to this repo as `{{ECOSYSTEM_ROOT}}`; bootstrap expands it to the clone's path.
+- **scripts/** — `bootstrap`, `doctor`, `selfcheck`, `init_project`, `scaffold`,
+  `install-agent`, `update-agents`, `search_agents`, `catalog`, `scan_agent`,
+  `layout` (install layout), `new_agent`, `maintenance`.
 - **skills/** — `memory` (index + semantic search), `secrets` (doctor + identity).
 - **hooks/** — gitleaks gate, catastrophic-command block, ruff auto-format, SessionStart agent-suggester, session logging.
+- **tests/** — the suite `selfcheck` and CI both run; see *Verification* below.
 - **registry/** — `registry.json` (curated sources), `installed.json`, `catalog.json` (cached agent catalog).
 - **templates/** — `python-project` + `typescript-project` blueprints (each with `AGENTS.md` + `CLAUDE.md` + `GEMINI.md`).
 - **docs/** — [OBSIDIAN.md](docs/OBSIDIAN.md) (vault usage), [MULTI-LLM.md](docs/MULTI-LLM.md) (Gemini/Codex/Cursor/Copilot/DeepSeek), [TOKENS.md](docs/TOKENS.md) (context discipline).
+
+## Verification
+
+The repo holds itself to the rule it ships: every change is paired with a check
+that returns pass/fail.
+
+```bash
+uv run --no-project python scripts/selfcheck.py   # 8 checks, the same ones CI runs
+uv run --no-project python scripts/doctor.py      # is ~/.claude actually in sync with this clone?
+```
+
+`selfcheck` covers JSON validity, the agent security scan, the init engine, the
+memory index, pytest, hardcoded paths, ruff, and agent frontmatter. Its lint and
+test steps use the *same invocation and the same pinned binaries* as
+`.github/workflows/ci.yml`, so a green run locally and a green run in CI are the
+same claim — tests assert the two configs cannot drift apart. The toolchain is
+pinned in `requirements-dev.txt` and the rule set in `ruff.toml`; see
+[toolchain-pinning](memory/decisions/toolchain-pinning.md) for why both.
 
 ## Prerequisites
 - **Required:** `git`, `node`/`npx`, `uv` (installs Python + ruff)
@@ -62,4 +87,6 @@ SessionStart hook suggests relevant installed + uninstalled agents
 ## Windows-specific notes
 - Use `uv run python` instead of bare `python` (Windows Store stub intercepts).
 - `OLLAMA_MODELS` must point to an ASCII-safe path if your username has accented characters (e.g. `D:\ollama-models\models`).
-- `GITHUB_TOKEN` set as a user environment variable is picked up by `.mcp.json`.
+- GitHub access comes from `gh auth login` (the CLI's own keyring), which is what
+  `install`/`update`/`search` use to resolve commit SHAs. `.mcp.json` ships empty
+  — the servers it once declared were dead weight (v4.3.3).

@@ -17,8 +17,8 @@ when the working directory is the repo root.
 ## Recall (semantic search)
 ```bash
 # build/refresh embeddings (Ollama: nomic-embed-text)
-uv run --no-project python /d/claude-projects/ecosystem-brain/skills/memory/memory-search.py --vault /d/claude-projects/ecosystem-brain/memory index
-uv run --no-project python /d/claude-projects/ecosystem-brain/skills/memory/memory-search.py --vault /d/claude-projects/ecosystem-brain/memory search "QUERY" -k 5
+uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory index
+uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory search "QUERY" -k 5
 ```
 Add `--offline` to use the deterministic hash embedder when Ollama isn't running.
 It is a global flag: it goes **before** the subcommand, not after. The cache is
@@ -27,8 +27,8 @@ It is a global flag: it goes **before** the subcommand, not after. The cache is
 ## Structural manifest
 ```bash
 # writes memory/index.json
-uv run --no-project python /d/claude-projects/ecosystem-brain/skills/memory/memory-index.py --vault /d/claude-projects/ecosystem-brain/memory --out /d/claude-projects/ecosystem-brain/memory/index.json
+uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-index.py --vault {{ECOSYSTEM_ROOT}}/memory --out {{ECOSYSTEM_ROOT}}/memory/index.json
 # summary only
-uv run --no-project python /d/claude-projects/ecosystem-brain/skills/memory/memory-index.py --vault /d/claude-projects/ecosystem-brain/memory --check
+uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-index.py --vault {{ECOSYSTEM_ROOT}}/memory --check
 ```
 Load `index.json` at session start instead of reading the whole vault; pull individual notes on demand. Refresh it after creating or editing notes.

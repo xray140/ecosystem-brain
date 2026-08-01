@@ -70,7 +70,7 @@ class OllamaEmbedder:
     def embed(self, text: str) -> list[float]:
         """Return the embedding for one text via $OLLAMA_HOST/api/embeddings."""
         payload = json.dumps({"model": self.model, "prompt": text}).encode()
-        req = urllib.request.Request(
+        req = urllib.request.Request(  # noqa: S310 (localhost Ollama)
             f"{self.host}/api/embeddings",
             data=payload,
             headers={"Content-Type": "application/json"},
@@ -90,7 +90,7 @@ def cosine(a: list[float], b: list[float]) -> float:
     """Cosine similarity of two equal-length vectors (assumed normalized-ish)."""
     if len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=True))  # lengths checked above
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(y * y for y in b))
     return dot / (na * nb) if na and nb else 0.0

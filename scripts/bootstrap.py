@@ -41,9 +41,19 @@ SETTINGS = CLAUDE_DIR / "settings.json"
 # canonical path to this clone's real path — no second copy to drift out of sync.
 HOOKS_TEMPLATE = REPO_ROOT / "hooks" / "hooks.json"
 
-# The repo path as committed (the "authoring" location). Commands/agents hardcode
-# this; bootstrap rewrites it to THIS clone's real path so a clone at any location
-# works. On the authoring machine these are no-ops.
+# Committed files refer to the repo by this token, never by a real path.
+# bootstrap expands it to THIS clone's location, so a clone anywhere works.
+#
+# It used to be a literal path — the machine it was authored on. That worked
+# only because this rewrite silently repaired it, and it rotted exactly as you
+# would expect: the authoring machine moved, and 58 references across 16 files
+# pointed at a directory that existed nowhere. A token cannot rot, because it is
+# never a valid path to begin with, and selfcheck fails the build if a literal
+# one reappears.
+TOKEN = "{{ECOSYSTEM_ROOT}}"  # noqa: S105 — a path placeholder, not a credential
+
+# Legacy forms, still rewritten so a clone carrying pre-4.3.7 files (or an
+# already-installed ~/.claude copy) keeps working through the transition.
 CANON_BASH = "/d/claude-projects/ecosystem-brain"
 CANON_WIN_FWD = "D:/claude-projects/ecosystem-brain"
 CANON_WIN_BS = r"D:\claude-projects\ecosystem-brain"
@@ -105,14 +115,16 @@ def merge_settings(dry: bool, bash_root: str) -> None:
 
 
 def rewrite_paths(text: str, bash_root: str) -> str:
-    """Rewrite the committed canonical repo path to THIS clone's real path.
+    """Expand {{ECOSYSTEM_ROOT}} to THIS clone's real path.
 
-    Makes commands/agents portable: a clone at any location works after bootstrap.
-    Handles the bash mount form, both Windows forms, and the legacy
-    ${CLAUDE_PLUGIN_ROOT} token. No-op on the authoring machine.
+    Makes commands/agents/skills/hooks portable: a clone at any location works
+    after bootstrap. The legacy literal paths and ${CLAUDE_PLUGIN_ROOT} are
+    still handled so an older clone (or an already-installed ~/.claude copy)
+    migrates cleanly on the next run.
     """
     return (
-        text.replace(CANON_BASH, bash_root)
+        text.replace(TOKEN, bash_root)
+        .replace(CANON_BASH, bash_root)
         .replace(CANON_WIN_FWD, REPO_ROOT.as_posix())
         .replace(CANON_WIN_BS, str(REPO_ROOT))
         .replace("${CLAUDE_PLUGIN_ROOT}", bash_root)

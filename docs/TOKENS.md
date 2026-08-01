@@ -9,8 +9,12 @@ lean. Most apply to any AGENTS.md-aware tool, not just Claude Code.
   short — each line should change behavior or be cut. Bloat makes the model
   *ignore* the real rules. (Grounding: `memory/decisions/claude-best-practices.md`.)
 - **Lean `.mcp.json`.** Every connected MCP server's tool schemas cost context.
-  Keep the repo's `.mcp.json` to what the project needs (filesystem / git / github)
-  and let the harness defer the rest behind ToolSearch instead of preloading them.
+  Declare only servers the project genuinely needs, and let the harness defer the
+  rest behind ToolSearch instead of preloading them. This repo's own `.mcp.json`
+  is **empty**: the three servers it once declared were dead weight — filesystem
+  pointed at a path that no longer existed, and git/github duplicated tools the
+  harness already provides natively (v4.3.3). Duplicating a native tool is the
+  most common way an `.mcp.json` costs context for nothing.
 - **Skills/commands load on demand** — prefer them over stuffing sometimes-needed
   knowledge into the always-on instruction files.
 

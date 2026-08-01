@@ -60,6 +60,51 @@ def test_missing_repo_dir_is_empty(tmp_path):
     assert doctor.drift_in(tmp_path / "nope", tmp_path, "/x", "commands") == []
 
 
+# --- skills: nested <name>/SKILL.md, not a flat *.md -----------------------
+
+
+def _skill(root, name, text):
+    d = root / name
+    d.mkdir(parents=True)
+    _write(d / "SKILL.md", text)
+
+
+def test_skill_in_sync_reports_no_drift(tmp_path):
+    repo, live = tmp_path / "repo", tmp_path / "live"
+    _skill(repo, "memory", "body\n")
+    _skill(live, "memory", "body\n")
+    assert doctor.drift_in(repo, live, "/c/clone/eco", "skills", "*/SKILL.md") == []
+
+
+def test_edited_skill_is_flagged(tmp_path):
+    """The gap this closes: bootstrap started copying skills, but the drift check
+    still globbed a flat *.md, so an edited SKILL.md was invisible to doctor."""
+    repo, live = tmp_path / "repo", tmp_path / "live"
+    _skill(repo, "memory", "new body\n")
+    _skill(live, "memory", "old body\n")
+    problems = doctor.drift_in(repo, live, "/c/clone/eco", "skills", "*/SKILL.md")
+    assert len(problems) == 1
+    assert problems[0][0] == "skills/memory/SKILL.md"
+    assert "drifted" in problems[0][1]
+
+
+def test_never_bootstrapped_skill_is_flagged_missing(tmp_path):
+    repo, live = tmp_path / "repo", tmp_path / "live"
+    _skill(repo, "secrets", "body\n")
+    live.mkdir()
+    problems = doctor.drift_in(repo, live, "/c/clone/eco", "skills", "*/SKILL.md")
+    assert problems == [("skills/secrets/SKILL.md", "missing in ~/.claude")]
+
+
+def test_flat_md_in_skills_dir_is_ignored(tmp_path):
+    """A README beside the skill dirs is not a skill and must not be compared."""
+    repo, live = tmp_path / "repo", tmp_path / "live"
+    repo.mkdir()
+    live.mkdir()
+    _write(repo / "README.md", "not a skill\n")
+    assert doctor.drift_in(repo, live, "/c/clone/eco", "skills", "*/SKILL.md") == []
+
+
 # --- hooks_wiring_drift: live settings hooks vs hooks/hooks.json ------------
 
 

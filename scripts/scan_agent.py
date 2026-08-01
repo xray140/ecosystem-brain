@@ -156,7 +156,7 @@ RULES: list[tuple[str, str, re.Pattern[str], str]] = [
     (
         "HIGH",
         "zero-width-chars",
-        re.compile(r"[​‌‍⁠﻿]"),
+        re.compile("[\u200b\u200c\u200d\u2060\ufeff]"),
         "contains zero-width / invisible characters (hidden text)",
     ),
     (
@@ -212,10 +212,15 @@ def _check_tool_grants(content: str) -> list[dict]:
     return out
 
 
+# Severity ranking. Used both to pick the verdict and to order the report —
+# sorting on the severity *string* puts LOW above MEDIUM alphabetically, which
+# buried mid-severity findings under trivia in every scan report before v4.3.5.
+SEVERITY = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+
+
 def worst(findings: list[dict]) -> str:
-    order = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
     return max(
-        (f["severity"] for f in findings), key=lambda s: order[s], default="CLEAN"
+        (f["severity"] for f in findings), key=lambda s: SEVERITY[s], default="CLEAN"
     )
 
 
@@ -232,7 +237,9 @@ def quarantine(name: str, content: str, reason: str, base: Path | None = None) -
     """
     base = base or QUARANTINE
     base.mkdir(parents=True, exist_ok=True)
-    dest = base / f"{name}.md"
+    # Path(name).name strips any directory part: a hostile `--name ../../x`
+    # cannot write outside the quarantine dir.
+    dest = base / f"{Path(name).name}.md"
     header = (
         f"QUARANTINED - not active. {reason}\n"
         "Review this file manually before trusting or installing it.\n"
@@ -251,7 +258,7 @@ def format_report(findings: list[dict]) -> str:
     if not findings:
         return "  [clean] no risky patterns found"
     lines = []
-    for f in sorted(findings, key=lambda x: x["severity"]):
+    for f in sorted(findings, key=lambda x: -SEVERITY[x["severity"]]):
         lines.append(f"  [{f['severity']:6s}] {f['label']:20s} {f['why']}")
         lines.append(f"           ↳ {f['snippet']}")
     return "\n".join(lines)

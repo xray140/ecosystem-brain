@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -49,11 +49,15 @@ CHECKS: list[tuple[str, list[str], bool]] = [
 
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO))
+    # check=False: a failing check is the signal this heartbeat exists to record,
+    # not an exception to raise.
+    return subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO), check=False)
 
 
 def main() -> int:
-    today = date.today().isoformat()
+    # Local date (the report is filed and read by date), derived from an aware
+    # UTC instant rather than a naive date.today().
+    today = datetime.now(UTC).astimezone().date().isoformat()
     sections: list[str] = []
     failed: list[str] = []
 

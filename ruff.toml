@@ -1,0 +1,45 @@
+# Ruff configuration for ecosystem-brain.
+#
+# `select` is explicit on purpose. Ruff's *default* rule set is not a stable
+# contract — it widened in 0.16 and turned CI red with findings no commit
+# introduced. Pinning the version (requirements-dev.txt) fixes the "when";
+# pinning the rules fixes the "what".
+
+target-version = "py311"
+line-length = 100
+
+# Templates are project blueprints, not this repo's source. They ship their own
+# CI that lints them in the generated project.
+extend-exclude = ["templates", "quarantine"]
+
+[lint]
+select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "I",   # import sorting
+  "UP",  # pyupgrade
+  "B",   # flake8-bugbear
+  "S",   # flake8-bandit — this repo is a security tool; its `# noqa: S310`
+         # / `S324` markers document deliberate, reviewed exceptions
+  "DTZ", # naive datetimes (dates land in the vault and the registry)
+  "PLE", # pylint errors
+  "PLW", # pylint warnings
+  "RUF",
+]
+
+ignore = [
+  "E501",    # line length: advisory here, not a gate
+  "S404",    # importing subprocess is the point of these scripts
+  "S603",    # subprocess call — every call site is a fixed argv, never a shell
+  "S607",    # partial executable path (`git`, `gh`, `uv`) — resolved via PATH
+             # by design, so a clone works on Windows and Linux alike
+  "FURB167", # `re.I` over `re.IGNORECASE`: scan_agent.py is a dense rules table
+             # where the short alias keeps each rule on one line
+]
+
+[lint.per-file-ignores]
+# Tests assert, and deliberately feed the scanner hostile-looking strings.
+"tests/*" = ["S101", "S105", "S106", "PLW"]
+
+[lint.isort]
+known-first-party = ["bootstrap", "github_util", "layout", "scan_agent"]

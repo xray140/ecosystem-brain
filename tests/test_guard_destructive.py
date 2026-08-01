@@ -1,0 +1,112 @@
+"""Tests for the destructive-command guard.
+
+Two failure modes matter equally. A guard that misses `rm -r -f /` gives false
+assurance; a guard that refuses `rm -rf ~/.claude/skills/one-thing` gets worked
+around, and then protects nothing. Both directions are pinned here.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+
+import pytest
+
+HOOKS = Path(__file__).resolve().parent.parent / "hooks" / "scripts"
+spec = importlib.util.spec_from_file_location("guard_destructive", HOOKS / "guard_destructive.py")
+gd = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gd)
+
+
+# --- must block -----------------------------------------------------------
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "rm -rf /",
+        "rm -fr /",
+        "rm  -rf  /",  # collapsed whitespace
+        "rm -r -f /",  # split flags
+        "rm --recursive --force /",  # long flags
+        "rm -rf ~",
+        "rm -rf $HOME",
+        "rm -rf /etc",
+        "rm -rf /usr",
+        "rm -rf /home",
+        "rm -rf /c/Windows",
+        "rm -rf '/'",  # quoted
+        'rm -rf "/etc"',
+        "rm -rf /etc/",  # trailing slash
+        "rm -rf *",
+        "echo hi && rm -rf /",  # chained after something innocuous
+        "cd /tmp; rm -rf /",
+    ],
+)
+def test_catastrophic_deletes_blocked(cmd):
+    assert gd.check(cmd) is not None, f"should block: {cmd}"
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "git push --force origin main",
+        "git push -f origin main",
+        "git push --force origin master",
+        "git push origin +main",  # forced via refspec, no --force flag
+        "git push origin +master:master",
+    ],
+)
+def test_force_push_to_protected_branch_blocked(cmd):
+    assert gd.check(cmd) is not None, f"should block: {cmd}"
+
+
+# --- must NOT block -------------------------------------------------------
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        # The false positive that sent this rewrite: a specific path under home.
+        "rm -rf ~/.claude/skills/pdf-tools",
+        "rm -rf /etc/myapp/cache",
+        "rm -rf /home/me/project/build",
+        "rm -rf ./node_modules",
+        "rm -rf build dist",
+        "rm -rf /tmp/eco-smoke-abc123",
+        "rm -f somefile.txt",  # not recursive
+        "rm somefile.txt",
+        "rm -rf /c/Users/me/project/.venv",
+        "git push origin feature-branch",
+        "git push --force origin my-feature",  # force is fine off protected branches
+        "git push --force-with-lease origin main",  # the safe form
+        "git status",
+        "ls -la /",
+        "grep -r pattern /etc",
+        "",
+    ],
+)
+def test_ordinary_work_allowed(cmd):
+    assert gd.check(cmd) is None, f"should allow: {cmd}"
+
+
+# --- parsing details ------------------------------------------------------
+def test_flags_normalize_across_spellings():
+    assert gd.rm_targets(["rm", "-rf", "/x"]) == ({"r", "f"}, {"/x"})
+    assert gd.rm_targets(["rm", "-r", "-f", "/x"]) == ({"r", "f"}, {"/x"})
+    assert gd.rm_targets(["rm", "--recursive", "--force", "/x"]) == ({"r", "f"}, {"/x"})
+
+
+def test_non_rm_command_yields_no_targets():
+    assert gd.rm_targets(["ls", "-la", "/"]) == (set(), set())
+
+
+def test_statements_splits_on_every_separator():
+    assert len(gd.statements("a && b || c ; d | e")) == 5
+
+
+def test_unbalanced_quotes_do_not_crash():
+    """shlex raises on unbalanced quotes; the fallback split must still parse."""
+    assert gd.check('rm -rf "/unclosed') is None  # /unclosed is not catastrophic
+    assert gd.check('rm -rf "/') is not None  # but the root still is
+
+
+def test_trailing_slash_normalizes_but_root_survives():
+    assert gd._normalize_target("/etc/") == "/etc"
+    assert gd._normalize_target("/") == "/"

@@ -24,30 +24,23 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import github_util as gh  # noqa: E402
-from scan_agent import quarantine, scan, worst  # noqa: E402
+import github_util as gh
+import layout
+from scan_agent import quarantine, scan, worst
 
 REPO_ROOT = Path(__file__).parent.parent
 INSTALLED_FILE = REPO_ROOT / "registry" / "installed.json"
-GLOBAL_AGENTS = Path.home() / ".claude" / "agents"
-GLOBAL_COMMANDS = Path.home() / ".claude" / "commands" / "ecosystem-brain"
 
-GLOBAL_DIRS: dict[str, Path] = {
-    "agents": GLOBAL_AGENTS,
-    "commands": GLOBAL_COMMANDS,
-    "skills": GLOBAL_COMMANDS,
-}
-REPO_DIRS: dict[str, Path] = {
-    "agents": REPO_ROOT / "agents",
-    "commands": REPO_ROOT / "commands",
-    "skills": REPO_ROOT / "skills",
-}
+# Paths come from layout.py, shared with install-agent.py. Keeping a second copy
+# here is what let update keep writing skills flat after install moved them to
+# `skills/<name>/SKILL.md`: the update wrote vetted content to a path nothing
+# loads, then advanced the registry pin — reporting "current" while the loaded
+# skill stayed stale.
 
 
 def sync_local(name: str, kind: str) -> tuple[str, bool]:
     """Re-sync a local agent from repo dir → global dir. Returns (status, changed)."""
-    repo_file = REPO_DIRS[kind] / f"{name}.md"
-    global_file = GLOBAL_DIRS[kind] / f"{name}.md"
+    repo_file, global_file = layout.target_paths(kind, name)
     if not repo_file.exists():
         return "missing-in-repo", False
     content = repo_file.read_text(encoding="utf-8")
@@ -59,8 +52,7 @@ def sync_local(name: str, kind: str) -> tuple[str, bool]:
 
 
 def _write_agent(name: str, kind: str, content: str) -> None:
-    repo_file = REPO_DIRS[kind] / f"{name}.md"
-    global_file = GLOBAL_DIRS[kind] / f"{name}.md"
+    repo_file, global_file = layout.target_paths(kind, name)
     repo_file.parent.mkdir(parents=True, exist_ok=True)
     global_file.parent.mkdir(parents=True, exist_ok=True)
     # .gitattributes pins *.md to eol=lf. Two distinct sources of CRLF to kill:
@@ -86,7 +78,7 @@ def update_item(entry: dict, kind: str, check_only: bool) -> str:
     try:
         latest = gh.resolve_commit(repo, ref)  # branch tip via gh (None if no gh)
         new_content = gh.fetch_url(gh.raw_url(repo, path, latest or ref))
-    except Exception as e:  # noqa: BLE001 — network/parse: report, don't crash the run
+    except Exception as e:  # network/parse: report it, don't crash the whole run
         return f"error: {e}"
     new_hash = gh.md5(new_content)
 

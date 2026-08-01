@@ -170,7 +170,7 @@ def cmd_install(args) -> int:
     )
     ok = blocked = 0
     for a in picks:
-        r = subprocess.run(
+        r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
             [
                 "uv",
                 "run",

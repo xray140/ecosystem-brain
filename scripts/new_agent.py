@@ -29,7 +29,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scan_agent import format_report, scan, worst  # noqa: E402
+from scan_agent import format_report, scan, worst
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
@@ -82,7 +82,7 @@ def register(content: str, name: str) -> int:
     tmp = Path(tempfile.gettempdir()) / f"{name}.md"
     tmp.write_text(content, encoding="utf-8", newline="\n")
     try:
-        r = subprocess.run(
+        r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
             [
                 "uv",
                 "run",

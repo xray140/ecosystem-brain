@@ -6,7 +6,7 @@ Search GitHub for agents/skills matching: $ARGUMENTS
 
 Run:
 ```
-uv run python /d/claude-projects/ecosystem-brain/scripts/search_agents.py $ARGUMENTS
+uv run python {{ECOSYSTEM_ROOT}}/scripts/search_agents.py $ARGUMENTS
 ```
 
 - Without `--files`: returns repos ranked by stars.
@@ -14,6 +14,6 @@ uv run python /d/claude-projects/ecosystem-brain/scripts/search_agents.py $ARGUM
 
 After showing results, if the user picks one, install it (the security scan runs automatically):
 ```
-uv run python /d/claude-projects/ecosystem-brain/scripts/install-agent.py --repo <repo> --path <path>
+uv run python {{ECOSYSTEM_ROOT}}/scripts/install-agent.py --repo <repo> --path <path>
 ```
-Then sync: `cp /d/claude-projects/ecosystem-brain/agents/*.md ~/.claude/agents/`
+Then sync: `cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/`

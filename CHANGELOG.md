@@ -2,6 +2,221 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.10] — 2026-08-01
+
+A Linux bug the Windows test suite could not see, and the documentation drift
+left by five releases.
+
+- **The SessionStart suggester mangled real posix paths off Windows.**
+  `normalize_path` translated a leading `/<letter>/` to a drive form
+  unconditionally, so on Linux and macOS a project at `/d/projects/app` — an
+  ordinary posix path — became `D:/projects/app`. The hook then found no marker
+  files, detected no project type, and silently suggested nothing. `bootstrap.py`
+  has carried the `WINDOWS` guard for exactly this since 2026-06-06; the second
+  copy of the function never got it. Same shape as every other defect this audit
+  found: a fix applied to one copy of duplicated logic.
+  - The test that pins it **forces the non-Windows branch** rather than comparing
+    the two copies, because on Windows both translate and therefore agreed —
+    a comparison would have passed against the bug. Verified by reverting the
+    guard: the new tests fail, and pass again once restored.
+- **Docs caught up with the code**:
+  - `README` — added `doctor` and `new-agent` to the command table (the repo
+    ships 15, the table listed 12); corrected `update` from "hash-based" to what
+    it does (re-resolves the tip, re-scans, advances the commit pin); listed the
+    six first-party agents rather than four; added a **Verification** section;
+    dropped the claim that `GITHUB_TOKEN` feeds `.mcp.json`, which has shipped
+    empty since 4.3.3 — `gh auth login` is what the supply chain actually uses.
+  - `INSTALL.md` — the maintenance heartbeat runs `doctor`, not
+    `bootstrap --verify`; verified against `maintenance.CHECKS`.
+  - `docs/TOKENS.md` — stopped recommending the exact three MCP servers this
+    repo removed as dead weight, and says why they were removed.
+  - `memory/README.md` — the destructive guard is `guard_destructive.py` now.
+
+CI was also run step-by-step locally (gitleaks over full history, ruff, pytest,
+selfcheck, both init smoke plans): all five exit 0 with no side effects. The
+ubuntu run itself stays unverified until this branch is pushed.
+
+## [4.3.9] — 2026-08-01
+
+The last coverage gap. Suite 395 → 418; coverage 86% → **90%**, every script at
+81% or above. No production code changed.
+
+- **`init_project.py` 54% → 83%.** The uncovered half was `apply()` — the part
+  that scaffolds, installs agents, writes the memory card, and optionally
+  pushes. Every subprocess is stubbed, so nothing scaffolds or publishes for
+  real. What is pinned:
+  - **A red baseline never reaches GitHub.** `--github` publishing broken code
+    is the one outcome in this script that other people can see, and the
+    ordering that prevents it (verify, *then* publish) was previously untested.
+  - `.env.example` gets key *names* only — the test asserts every non-comment
+    line ends in `=`, so a value can never ride along.
+  - A blocked agent is reported and excluded from the ready count without
+    failing the whole init; an install error is distinguished from a block.
+  - A failed scaffold aborts before anything else runs.
+  - `append_to_moc` is idempotent, so re-running init cannot duplicate a
+    project in the graph hub.
+
+One note for the next person writing tests here: the `cfg` dict is built from
+the real profile engine (`resolve()`), not hand-rolled. The first draft of these
+tests hand-rolled it, and it failed immediately on a key the engine actually
+produces — a fixture that duplicates a shape drifts from it.
+
+## [4.3.8] — 2026-08-01
+
+Coverage on the remaining gaps. Suite 312 → 395; coverage 64% → **86%**. No
+production code changed — these are tests for behaviour that already worked and
+now cannot silently stop working.
+
+- **`selfcheck.py` 34% → 85%.** The gate itself was the least-verified thing in
+  the repo, which is precisely the condition that let a red CI go unnoticed for
+  weeks. Each check is now tested for the property that matters: that it goes
+  **red when its subject is broken**. A check that cannot fail is decoration.
+  Also pinned: `main()` runs all 8 checks even after one fails (stopping early
+  would mean N runs to see N problems), and local agents stay exempt from the
+  scanner while third-party ones do not.
+- **`bootstrap.py` 44% → 99%.** This is the code that edits the live
+  `~/.claude`, so the tests cover what a user only discovers once it is already
+  broken: merging hooks preserves their other settings (`model`, `mcpServers`),
+  `--dry-run` writes nothing at all, and an existing `.env` is never overwritten
+  by the example. Plus: no installed file carries an unexpanded token.
+- **`doctor.py` 52% → 98%** — that it *exits non-zero* on what it detects, not
+  just prints it. The heartbeat consumes that exit code.
+- **`catalog.py` 30% → 98%** — chiefly that a batch install reports the
+  scanner's verdict honestly: exit 2 is counted as blocked, never folded into
+  the error bucket or the success count. It is the one command that installs
+  many agents at once, and the summary line is all anyone reads.
+- **`new_agent.py` 49% → 99%** — preview is the default and `--register` routes
+  through the same scanning installer as any third-party agent. A recruiter that
+  could install unscanned content would be a hole through the supply chain it
+  belongs to.
+- **`update-agents.py` 48% → 81%** — that every status which mutates a registry
+  entry is actually persisted. The failure mode otherwise is the pin falling
+  behind the content, which is how an agent reports "current" while stale.
+
+Still uncovered: `init_project.py` at 54% — its `apply()` path scaffolds a real
+project on disk. CI smoke-tests `--plan` on all six build types.
+
+## [4.3.7] — 2026-08-01
+
+Coverage on the scripts that had none, and the end of the hardcoded authoring
+path. Suite 246 → 312; coverage 47% → 64%.
+
+- **`{{ECOSYSTEM_ROOT}}` replaces the literal authoring path.** Committed files
+  named `/d/claude-projects/ecosystem-brain` — the machine this was written on
+  — and it worked only because `bootstrap.rewrite_paths` substituted the string
+  on the way out. So when the repo moved to `~/ecosystem-brain`, **58 references
+  across 16 files pointed at a directory that existed nowhere**, and nothing
+  noticed, because the rewrite kept repairing them. Files now use a token, which
+  cannot rot: it is never a valid path to begin with. Legacy literals and
+  `${CLAUDE_PLUGIN_ROOT}` are still rewritten, so an older clone migrates on its
+  next bootstrap.
+- **selfcheck fails on any hardcoded path** in an installable file (check 6 of
+  8) — the half the old scheme was missing. It distinguishes a path that names a
+  location from one documenting the path convention (`script-smith` has to be
+  able to say that `/d/...` resolves to `D:\d\...`).
+  - This closed the defect logged as known-unfixed in 4.3.4:
+    `skills/memory/SKILL.md` was still printing the dead path. Verified after
+    re-bootstrap: 16 live files now point at this clone, zero dead paths, zero
+    unexpanded tokens.
+  - `commands/scaffold.md` no longer hardcodes `--dest-root`; `scaffold.py` has
+    defaulted it to the clone's parent since 4.3.4, so the flag was both dead
+    and wrong on any other machine.
+- **Tests for the three scripts that had none**: `suggest-agents.py` 0 → 94%
+  (it runs on *every* session start and was the least-tested code in the repo),
+  `search_agents.py` 0 → 87%, `maintenance.py` 0 → 95%. `install-agent.py`'s
+  `main()` is now covered too, 32% → 91% — including that HIGH-risk content is
+  absent from the repo, from `~/.claude` *and* from the registry, not merely
+  that the exit code was 2.
+
+## [4.3.6] — 2026-08-01
+
+Supply-chain and blast-radius hardening — the second half of the same audit.
+Suite 174 → 246; coverage 40% → 47%, with `scaffold`, `github_util` and the
+destructive guard going from untested to 85-87%.
+
+- **`fetch_url` accepted any URL scheme**, so `--url file:///…/.env` read a
+  local secret and handed it to the installer as content to install. The fetch
+  sits upstream of every other control — the scanner and the SHA pinning are
+  both irrelevant if the fetch itself can be aimed at the filesystem. Now
+  https-only, against a host allowlist, re-checked on every redirect hop, with
+  a 1 MB cap and a strict UTF-8 decode.
+- **The destructive guard is rewritten in Python** (`guard_destructive.py`,
+  replacing the shell `case`), because substring matching failed in both
+  directions. False negatives: `rm  -rf /`, `rm -r -f /` and
+  `rm --recursive --force /` all passed. False positives: the home patterns
+  were prefixes, so `rm -rf ~/.claude/skills/one-thing` was refused as a
+  catastrophic delete — and a guard that blocks ordinary work gets worked
+  around, which costs more than it protects. It now tokenizes, normalizes the
+  flags, splits on `&&`/`;`/`|`, and compares each *target* against the
+  catastrophic set exactly, never as a prefix. Also catches `git push origin
+  +main` (forced via refspec, no `--force` flag) while allowing
+  `--force-with-lease`. 43 tests, both directions.
+- **`scaffold.py --force` ran `shutil.rmtree` on an unvalidated `--name`**, so
+  `--name .` aimed that delete at the root holding every scaffolded project.
+  `resolve_dest` now applies two independent checks — a slug pattern, and a
+  containment check on the resolved paths.
+- **GitHub Actions pinned to commit SHAs** (was `@v4`/`@v2`/`@v3`). A tag is
+  mutable; whoever controls the action repo can repoint it at new code that
+  then runs here with a `GITHUB_TOKEN`. Same reasoning as `agent-pinning`,
+  which the repo already applied to what it downloads but not to what it runs.
+  `dependabot.yml` added so pinned no longer means stale — the actions and the
+  dev toolchain both get monthly PRs.
+
+## [4.3.5] — 2026-07-31
+
+Gate repair. An audit of the verification chain found the CI lint step failing,
+the local gate unable to see it, and two checks blind to things they claimed to
+cover. Every fix below ships with a test; the suite went 114 → 157.
+
+- **CI lint was red and nobody could tell.** `uv run --with ruff` resolves the
+  newest ruff on every run; ruff 0.16 widened its default rule set and the job
+  started reporting 44 findings no commit introduced. Fixed at both ends: a
+  pinned `requirements-dev.txt` (ruff + pytest, exact `==` pins) used by CI and
+  `selfcheck` alike, and an explicit `select` list in a new `ruff.toml` so the
+  rule set is a decision, not a default. All 44 findings resolved — `check=False`
+  made explicit at 7 `subprocess.run` sites, naive `date.today()` replaced by an
+  aware local-date derivation, dead `noqa` markers removed, the zero-width
+  character class rewritten as escapes.
+- **`selfcheck` never ran ruff**, which is precisely why the divergence lasted:
+  a change could pass locally and fail remotely. It is now check 6 of 7, running
+  the same invocation and the same pinned ruff as CI, over the same four paths.
+  Tests assert the two cannot drift apart.
+- **`doctor` was blind to skill drift.** 4.3.4 taught `bootstrap` to copy
+  `skills/<name>/SKILL.md`, but the drift check still globbed a flat `*.md`, so
+  an edited skill that was never re-bootstrapped stayed invisible. `drift_in`
+  now takes a glob and compares repo-relative paths, covering both layouts.
+- **Installing a skill produced something nothing could load.** `install-agent`
+  wrote skills flat, to `~/.claude/commands/` — neither the location Claude Code
+  reads nor the one `bootstrap`'s `*/SKILL.md` glob finds. Skills now land at
+  `skills/<name>/SKILL.md` under both the repo and `~/.claude/skills/`, named
+  from their containing directory (every skill file is literally `SKILL.md`, so
+  the old stem-based naming would have called them all "SKILL"). `detect_type`
+  reordered — it checked `.md` before anything skill-shaped, making `"skill"`
+  unreachable for every markdown file, i.e. always.
+- **`--name` was a path.** It reaches the install target *and* the quarantine
+  path, so `--name ../../x` wrote outside both. Validated against an anchored
+  slug at the entry point, with `Path(name).name` as a second guard at the
+  quarantine sink. The slug uses `fullmatch` + `\Z` (`$` also matches before a
+  trailing newline), rejects Windows device names (`nul`, `com1`, … — a skill
+  named `nul` makes `mkdir` succeed and the write inside it fail with an
+  unhandled traceback, and that name can come from upstream), and lowercases
+  rather than rejects on case, since these become paths on a case-insensitive
+  filesystem and upstream repos are inconsistent about it.
+- **New `scripts/layout.py`** — one answer to "where does an item of kind K
+  named N live", imported by both `install-agent` and `update-agents`. They
+  answered it separately and drifted: once install moved skills to
+  `<name>/SKILL.md`, update kept writing them flat, so `/ecosystem-brain:update`
+  on a skill wrote vetted content to a path nothing loads and then advanced the
+  registry pin — reporting the skill current while the loaded copy stayed stale.
+  The HIGH-risk branch still quarantined correctly throughout, so no unsafe
+  content could become active; the failure mode was stale-but-reported-updated.
+  A test now asserts the two resolve identical paths for all three kinds.
+- **Scan reports buried MEDIUM findings.** `format_report` sorted on the
+  severity string, ordering HIGH, LOW, MEDIUM. Severity ranking is now shared
+  with `worst()` and the report reads worst-first.
+- `stderr` reconfigured to UTF-8 in `install-agent` (it carries the same
+  accented paths as stdout); tool caches and coverage artifacts gitignored.
+
 ## [4.3.4] — 2026-07-31
 
 Line-endings and encoding sweep — every text file the ecosystem writes was
@@ -33,6 +248,8 @@ being emitted as CRLF on Windows, against the repo's own `.gitattributes`.
 Known-unfixed, tracked for a later pass: `skills/memory/SKILL.md` still
 prints the dead canonical path `/d/claude-projects/...` in its usage line —
 the same defect 4.3.2 fixed in `suggest-agents.py`, never propagated here.
+*(Closed in 4.3.7, along with the 57 other occurrences it turned out to have
+company in.)*
 
 ## [4.3.3] — 2026-07-15
 

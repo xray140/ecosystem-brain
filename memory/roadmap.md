@@ -1,7 +1,7 @@
 ---
 type: moc
 status: active
-updated: 2026-07-31
+updated: 2026-08-01
 tags: [moc, roadmap, state]
 ---
 # Ecosystem-Brain — state & roadmap
@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.4)
+## Current state (v4.3.10)
 - **15 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
   context-sync, memory-gc
@@ -24,19 +24,30 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (109
-  tests) + `scripts/selfcheck.py` (JSON, agent scan, init-engine, memory index,
-  pytest) + gitleaks. Green on GitHub.
-- **Tests**: `tests/` (109) covers scan_agent, init_project, bootstrap,
-  github_util, update-agents (pinning), doctor (drift + hook wiring), catalog.
-  selfcheck runs them via nested `uv run --with pytest`.
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (418
+  tests, ~5s) + `scripts/selfcheck.py` + gitleaks. Every step verified
+  locally step-by-step at v4.3.10 (exit 0, no side effects); the ubuntu run
+  itself is unverified until the branch is pushed. Toolchain pinned in
+  `requirements-dev.txt`, rule set pinned in `ruff.toml` — see
+  [[decisions/toolchain-pinning]].
+- **Gates**: `selfcheck.py` = 8 checks (JSON, agent scan, init-engine, memory
+  index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
+  runs the *same* invocation and the same pinned binary as CI, so local-green
+  and CI-green are the same claim; tests assert the two configs can't drift.
+- **Tests**: `tests/` (421, **90%** coverage, every script >=81%) covers scan_agent, init_project,
+  bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
+  (drift + hook wiring + skills), catalog, install-agent (naming, target
+  paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
+  the destructive guard, suggest-agents, search_agents, maintenance, and the
+  {{ECOSYSTEM_ROOT}} substitution.
 - **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
   curl|bash, PowerShell cradles (iwr|iex, WebClient, -enc), base64-exec,
   eval/exec, rm -rf, TLS-off (incl. flag-first `curl -k`), exfil, hidden chars.
 - **Dogfood**: the repo's own `CLAUDE.md` imports `@AGENTS.md` — same cross-tool
   pattern it ships in templates.
 - **Doctor**: `/ecosystem-brain:doctor` (`doctor.py`) = live-hooks + repo↔~/.claude
-  drift + prereqs. Wired into health-check and the weekly maintenance heartbeat.
+  drift (commands + agents + **skills**) + prereqs. Wired into health-check and
+  the weekly maintenance heartbeat.
 - **First-party squad** (6): security-auditor, convention-keeper, script-smith,
   test-writer, bug-fixer, memory-curator. The SessionStart suggester surfaces them
   every session *with trigger moments* so they actually get delegated to.
@@ -48,10 +59,14 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **Recruiter**: `/ecosystem-brain:new-agent` (`new_agent.py`) scaffolds a new
   agent to standard (frontmatter, least-privilege tools, model, "use proactively"
   description, numbered workflow), self-scans, and registers via install-agent.
-- **Hooks** (global settings.json): gitleaks gate, destructive guard (root/home
-  only — fixed false positive), ruff-on-write, SessionStart suggester, SessionEnd log.
-- **Portability**: `bootstrap.py` rewrites hardcoded paths to the clone location;
-  works on any PC / any path. `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
+- **Hooks** (global settings.json): gitleaks gate, destructive guard
+  (`guard_destructive.py` — tokenizes and normalizes flags, matches targets
+  exactly rather than by prefix, 43 tests both directions), ruff-on-write,
+  SessionStart suggester, SessionEnd log.
+- **Portability**: committed files refer to the repo as `{{ECOSYSTEM_ROOT}}`;
+  `bootstrap.py` expands it to the clone's location, so any PC / any path
+  works. selfcheck fails on any literal path that creeps back in.
+  `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
 - **Memory**: Obsidian vault (project cards linked into `projects-moc` hub +
   stack decisions — no orphans), Ollama semantic search (nomic-embed-text, GPU).
 - **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
@@ -71,6 +86,35 @@ Read this first in a fresh session (after CLAUDE.md). Run
   output is already lean at ~700 chars.)
 
 ## Candidate next steps
+- [x] **Gate repair → v4.3.5** (2026-07-31) — CI lint was red on an unpinned
+  ruff and the local gate couldn't see it; skills were invisible to `doctor` and
+  unloadable when installed; `--name` was a path; scan reports buried MEDIUM
+  findings. All fixed with tests (114 → 157). See [[decisions/toolchain-pinning]].
+- [x] **P1 hardening → v4.3.6** (2026-08-01) — `fetch_url` https+allowlist+cap
+  (it was upstream of every other control); destructive guard rewritten in
+  Python after it proved bypassable *and* prone to false positives; `scaffold
+  --force` rmtree guarded; Actions pinned to SHAs + Dependabot. 174 → 246 tests.
+- [x] **Coverage + de-hardcoded paths → v4.3.7** (2026-08-01) — the three 0%
+  scripts covered (`suggest-agents` 94%, `search_agents` 87%, `maintenance` 95%),
+  `install-agent` 32→91%; overall 47→64%. `{{ECOSYSTEM_ROOT}}` replaces the dead
+  authoring path (58 refs / 16 files), enforced by selfcheck check 6.
+- [x] **Remaining coverage → v4.3.8** (2026-08-01) — `selfcheck` 34→85%,
+  `bootstrap` 44→99%, `doctor` 52→98%, `catalog` 30→98%, `new_agent` 49→99%,
+  `update-agents` 48→81%. Overall 64→**86%**, 395 tests. Each gate is now tested
+  for going *red* when its subject breaks, not merely for passing on a healthy
+  repo. No production code changed.
+- [x] **Linux path bug + doc drift -> v4.3.10** (2026-08-01) — the SessionStart
+  suggester rewrote real posix paths (`/d/projects/app` -> `D:/projects/app`)
+  off Windows, so it detected no project type and silently suggested nothing;
+  `bootstrap` had the guard since 2026-06-06, the second copy never got it.
+  Test forces the non-Windows branch, since on Windows both copies agreed.
+  Docs: README command table (12->15), `update` description, six first-party
+  agents, new Verification section, dead `.mcp.json`/`GITHUB_TOKEN` claim;
+  INSTALL heartbeat contents; TOKENS.md MCP guidance.
+- [x] **`init_project.apply()` covered -> v4.3.9** (2026-08-01) — 54->83%, all
+  subprocesses stubbed. Pins the ordering that keeps a red baseline off GitHub,
+  that `.env.example` carries key names and never values, and that a blocked
+  agent does not fail the whole init. Overall 86->**90%**, 418 tests.
 - [x] **Live-install audit → v4.3.2** (2026-07-15) — fixed the hardcoded /d/
   SessionStart hint, added doctor's hook-wiring drift check, unpinned-install
   warning, registry repair (stale global_path, backfilled data-engineer pin).
@@ -111,4 +155,5 @@ Read this first in a fresh session (after CLAUDE.md). Run
   [[decisions/windows-path-translation]] · [[decisions/ollama-accented-path]] ·
   [[decisions/powershell-utf8-bom]] · [[decisions/claude-best-practices]] ·
   [[decisions/agent-pinning]] · [[decisions/betting-tracker-stack]] ·
-  [[decisions/model-routing]]
+  [[decisions/model-routing]] · [[decisions/toolchain-pinning]] ·
+  [[decisions/text-file-write-conventions]]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import new_agent as na
+
 import scan_agent as sa
 
 

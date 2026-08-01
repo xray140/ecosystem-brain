@@ -3,7 +3,7 @@ description: Health + drift check — are the live hooks, commands, and agents i
 ---
 Run the doctor and report its findings:
 ```
-uv run python /d/claude-projects/ecosystem-brain/scripts/doctor.py
+uv run python {{ECOSYSTEM_ROOT}}/scripts/doctor.py
 ```
 It checks three things:
 1. **Hooks live** — every hook script path in `~/.claude/settings.json` resolves.
@@ -12,5 +12,5 @@ It checks three things:
 3. **Prerequisites** — uv/git/node/gh/gitleaks/ruff/ollama on PATH (advisory).
 
 If it reports drift or broken hooks, the fix is almost always:
-`uv run python /d/claude-projects/ecosystem-brain/scripts/bootstrap.py`
+`uv run python {{ECOSYSTEM_ROOT}}/scripts/bootstrap.py`
 Summarize the verdict; if anything failed, offer to run bootstrap.

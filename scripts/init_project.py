@@ -27,7 +27,7 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -42,6 +42,18 @@ INDEXER = REPO_ROOT / "skills" / "memory" / "memory-index.py"
 PROJECTS_MOC = REPO_ROOT / "memory" / "projects-moc.md"
 # Sibling of the repo by default (e.g. D:\claude-projects); overridable for tests.
 DEST_ROOT = Path(os.environ.get("ECOSYSTEM_DEST_ROOT") or REPO_ROOT.parent)
+
+
+def _today() -> str:
+    """Today's date, local, as an aware computation.
+
+    Vault cards are read by a human in their own timezone, so the local date is
+    the right one — but it is derived from an aware UTC instant rather than a
+    naive `date.today()`, so the value can never depend on an ambient clock the
+    process didn't declare.
+    """
+    return datetime.now(UTC).astimezone().date().isoformat()
+
 
 # Stack -> decision notes a project card should link into (de-orphans the graph).
 STACK_DECISIONS = {
@@ -215,7 +227,7 @@ def memory_card(name: str, cfg: dict, agents: list[dict]) -> str:
     # Links de-orphan the card in the graph: the projects hub + stack decisions.
     links = ["[[projects-moc]]"] + [f"[[{d}]]" for d in STACK_DECISIONS.get(stack, [])]
     return (
-        f"---\ntype: project\nstatus: active\ncreated: {date.today().isoformat()}\n"
+        f"---\ntype: project\nstatus: active\ncreated: {_today()}\n"
         f"stack: [{stack}]\ntags: [project, {stack}]\n---\n"
         f"# {name}\n\nConfigured via /ecosystem-brain:init.\n\n"
         f"## Stack\n{cfg['stack_blurb']}\n"
@@ -293,7 +305,9 @@ def verify_baseline(dest: Path, template: str) -> bool:
         return True
     print("  verifying green baseline ...")
     for cmd in cmds:
-        r = subprocess.run(cmd, cwd=str(dest), capture_output=True, text=True, encoding="utf-8")
+        r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
+            cmd, cwd=str(dest), capture_output=True, text=True, encoding="utf-8"
+        )
         label = " ".join(cmd)
         if r.returncode != 0:
             tail = "\n      ".join((r.stdout + r.stderr).strip().splitlines()[-8:])
@@ -338,7 +352,8 @@ def print_summary(
 
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+    # check=False: every caller reads .returncode and reports it itself.
+    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", check=False)
 
 
 def apply(
