@@ -110,6 +110,31 @@ def update_item(entry: dict, kind: str, check_only: bool) -> str:
     return f"updated ({diff})"
 
 
+def status_symbol(status: str) -> str:
+    """Display symbol for an update_item/sync_local status.
+
+    `!` means "look at this". It used to be the fallback for everything the
+    earlier cascade did not name, which swept in two perfectly ordinary
+    outcomes: `local` (a first-party agent with no upstream to query — six of
+    them, every run) and `synced` (a local agent re-copied to ~/.claude, i.e.
+    success). In a weekly report skimmed for warnings, eight false warnings
+    train you to ignore the column.
+    """
+    if "BLOCKED" in status:
+        return "✗"  # refused: HIGH-risk upstream, quarantined
+    if status.startswith("error:") or status == "missing-in-repo":
+        return "!"  # genuinely needs attention
+    if "up-to-date" in status:
+        return "✓"  # includes "up-to-date (pinned -> sha)"
+    if "update" in status:
+        return "↑"  # updated, or update-available under --check
+    if status == "synced":
+        return "→"  # local agent re-copied to ~/.claude
+    if status == "local":
+        return "·"  # first-party, nothing upstream to check
+    return "!"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -145,13 +170,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.name and entry["name"] != args.name:
                 continue
             status = update_item(entry, kind, args.check)
-            symbol = (
-                "✓" if "up-to-date" in status
-                else "✗" if "BLOCKED" in status
-                else "↑" if "update" in status  # updated or update-available
-                else "!"
-            )
-            print(f"  [{symbol}] {kind[:-1]:10s} {entry['name']:30s}  {status}")
+            print(f"  [{status_symbol(status)}] {kind[:-1]:10s} {entry['name']:30s}  {status}")
             # "updated (...)" applies new content; "pinned ->" advances provenance —
             # both mutate the entry and must be persisted.
             if "updated" in status or "pinned ->" in status:

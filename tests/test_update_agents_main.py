@@ -144,6 +144,41 @@ def test_blocked_updates_are_surfaced_loudly(registry, monkeypatch, capsys):
     assert "review quarantine/" in out
 
 
+# --- status symbols -------------------------------------------------------
+@pytest.mark.parametrize(
+    ("status", "symbol"),
+    [
+        # ordinary outcomes — must NOT read as warnings
+        ("local", "·"),
+        ("up-to-date", "✓"),
+        ("up-to-date (pinned -> abcdef1)", "✓"),
+        ("synced", "→"),
+        ("updated (abc -> def)", "↑"),
+        ("update-available (abc -> def)  https://github.com/u/r/compare/a...b", "↑"),
+        # things that genuinely need attention
+        ("BLOCKED-unsafe (HIGH risk; quarantined -> evil.md, kept current)", "✗"),
+        ("error: network down", "!"),
+        ("missing-in-repo", "!"),
+    ],
+)
+def test_every_status_maps_to_a_symbol(status, symbol):
+    assert ua.status_symbol(status) == symbol
+
+
+def test_an_unrecognised_status_falls_back_to_attention():
+    """A status added later without updating the table should be loud, not
+    quietly mislabelled as fine. `!` is the safe default; `✓` would not be."""
+    assert ua.status_symbol("some-future-status") == "!"
+
+
+def test_ordinary_outcomes_never_use_the_attention_marker():
+    """`local` fires for all six first-party agents on every run, and `synced` is
+    a success. Both used to fall through to `!`, and a column that cries wolf
+    eight times a run stops being read at all."""
+    for status in ("local", "synced", "up-to-date", "up-to-date (pinned -> abc1234)"):
+        assert ua.status_symbol(status) != "!", status
+
+
 def test_status_symbols_distinguish_the_outcomes(registry, monkeypatch, capsys):
     _write(
         registry,
