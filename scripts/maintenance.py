@@ -42,6 +42,11 @@ def py(script: str, *args: str) -> list[str]:
 CHECKS: list[tuple[str, list[str], bool]] = [
     ("config in sync (doctor)", py("doctor.py"), True),
     ("selfcheck", py("selfcheck.py"), True),
+    # Non-gating on purpose, for now: four cards point at a drive that no longer
+    # exists on this machine, and until that is triaged a gating check would
+    # make the heartbeat permanently red — which is how a report stops being
+    # read. Flip to True once the backlog is clear.
+    ("registered projects (project_doctor)", py("project_doctor.py"), False),
     # --check is informational (updates available is not a failure); network
     # hiccups shouldn't flip the heartbeat red, so don't gate on its exit code.
     ("agent updates (update --check)", py("update-agents.py", "--check"), False),
@@ -60,19 +65,33 @@ def main() -> int:
     today = datetime.now(UTC).astimezone().date().isoformat()
     sections: list[str] = []
     failed: list[str] = []
+    warned: list[str] = []
 
     print(f"ecosystem maintenance — {today}\n")
     for label, cmd, gating in CHECKS:
         r = run(cmd)
-        bad = gating and r.returncode != 0
-        status = "FAIL" if bad else "ok"
-        if bad:
+        # Three states, not two. A non-gating check that failed is NOT "ok":
+        # labelling it so is how the project doctor's four dead paths got filed
+        # under a section titled "— ok", where nobody skimming would open it.
+        # Advisory means "does not turn the run red", not "did not happen".
+        if r.returncode == 0:
+            status = "ok"
+        elif gating:
+            status = "FAIL"
             failed.append(label)
+        else:
+            status = "warn"
+            warned.append(label)
         print(f"  [{status:4s}] {label}")
         body = (r.stdout + r.stderr).strip() or "(no output)"
         sections.append(f"## {label} — {status}\n\n```\n{body}\n```")
 
-    verdict = "all clear" if not failed else f"NEEDS ATTENTION: {', '.join(failed)}"
+    if failed:
+        verdict = f"NEEDS ATTENTION: {', '.join(failed)}"
+    elif warned:
+        verdict = f"all gates green, advisory warnings: {', '.join(warned)}"
+    else:
+        verdict = "all clear"
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     report = REPORT_DIR / f"{today}.md"
     report.write_text(

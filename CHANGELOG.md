@@ -2,6 +2,48 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.12] — 2026-08-02
+
+**`project_doctor.py` — the ecosystem finally looks at what it built.**
+
+`doctor.py` answers "is my install wired up correctly". Nothing answered "are
+the projects I registered still there". The vault's project cards were written
+once at init and **never read back by anything** — the only file that mentions
+`memory/projects/` is `commands/scaffold.md`, the one that writes them.
+
+They had drifted accordingly: four of seven cards still said `status: active`
+while pointing at `D:\claude-projects\…`, a drive path that does not exist on
+this machine. The control tower created projects and then went blind.
+
+- Per card: does the recorded path resolve, last-commit age, uncommitted
+  changes, `AGENTS.md` present, keys the `.env.example` names but the `.env`
+  lacks, and — advisory only — the latest CI conclusion when the project has a
+  GitHub remote. No network, no `gh`, or a timeout must never turn this red.
+- **It reports; it does not repair.** Only the user knows whether a project was
+  deleted, moved, or lives on another machine, and the right fix differs. Two
+  one-line escape hatches: update the card's `- Project: ` line, or set
+  `status: archived` (archived cards are listed and never fail the run, so a
+  recorded decision stops nagging while an unexamined one keeps surfacing).
+- Wired into the maintenance heartbeat as **non-gating for now**: until those
+  four cards are triaged, a gating check would leave the weekly report
+  permanently red, which is how a report stops being read. Flip once clear.
+- New `/ecosystem-brain:project-doctor`.
+
+**The heartbeat was mislabelling failed advisory checks as `ok`.** Its status
+was two-state (`FAIL` if gating-and-failed, else `ok`), so the project doctor's
+four dead paths were filed under a section titled `— ok`, where nobody skimming
+the headings would open it. Now three-state — `ok` / `warn` / `FAIL` — and the
+verdict line distinguishes "all clear" from "all gates green, advisory
+warnings". *Advisory* means "does not turn the run red", not "did not happen".
+This is the same defect as the `[!]` fallback fixed in 4.3.11, reintroduced two
+hours later by the change that added the first advisory check able to fail
+meaningfully.
+
+Also: `load_cards()` resolves the vault at call time. A default argument of
+`vault: Path = VAULT_PROJECTS` binds at import, so tests pointed at a temp vault
+silently audited the real one. (`init_project.append_to_moc` still has that
+shape; it takes an explicit `moc=` instead.)
+
 ## [4.3.11] — 2026-08-02
 
 - **`update --check` cried wolf on every run.** The status→symbol cascade used
