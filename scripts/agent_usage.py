@@ -48,23 +48,40 @@ SUBAGENT_RE = re.compile(r'"subagent_type"\s*:\s*"([^"]+)"')
 
 def scan_transcripts(root: Path | None = None) -> tuple[dict[str, int], dict[str, str]]:
     """(invocations per agent, last-seen date per agent) across all transcripts."""
+    return scan_transcripts_windowed(root)[:2]
+
+
+def scan_transcripts_windowed(
+    root: Path | None = None,
+) -> tuple[dict[str, int], dict[str, str], str | None]:
+    """As above, plus the DATE OF THE OLDEST transcript.
+
+    Without that date, "never invoked" reads as "never since it was installed",
+    when it can only ever mean "never in the transcripts still on disk". Here
+    those span 26 days while the oldest agent was installed 60 days ago — a
+    34-day blind spot the report has to admit to, or it overstates its evidence
+    and invites deleting something that is used.
+    """
     root = root or TRANSCRIPTS
     counts: collections.Counter[str] = collections.Counter()
     last_seen: dict[str, str] = {}
+    oldest: str | None = None
     if not root.is_dir():
-        return {}, {}
+        return {}, {}, None
     for f in root.rglob("*.jsonl"):
         try:
             text = f.read_text(encoding="utf-8", errors="replace")
             when = datetime.fromtimestamp(f.stat().st_mtime, UTC).date().isoformat()
         except OSError:
             continue
+        if oldest is None or when < oldest:
+            oldest = when
         for m in SUBAGENT_RE.finditer(text):
             name = m.group(1)
             counts[name] += 1
             if when > last_seen.get(name, ""):
                 last_seen[name] = when
-    return dict(counts), last_seen
+    return dict(counts), last_seen, oldest
 
 
 def load_installed(path: Path | None = None) -> list[dict]:
@@ -111,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     if not agents:
         print("[ok] no installed agents")
         return 0
-    counts, last_seen = scan_transcripts()
+    counts, last_seen, oldest = scan_transcripts_windowed()
     n_files = sum(1 for _ in TRANSCRIPTS.rglob("*.jsonl")) if TRANSCRIPTS.is_dir() else 0
     r = report(agents, counts, last_seen)
 
@@ -120,7 +137,21 @@ def main(argv: list[str] | None = None) -> int:
             print(row["name"])
         return 0
 
-    print(f"agent usage — {len(agents)} installed, {n_files} local transcript(s) scanned\n")
+    print(f"agent usage — {len(agents)} installed, {n_files} local transcript(s) scanned")
+    if oldest:
+        print(f"  evidence window: {oldest} -> today")
+        blind = [
+            a["name"]
+            for a in agents
+            if a.get("source") != "local" and (a.get("installed_at") or "9999") < oldest
+        ]
+        if blind:
+            print(
+                f"  [!] {len(blind)} agent(s) were installed BEFORE the oldest transcript,"
+                f"\n      so 'never invoked' cannot speak for their first weeks: "
+                + ", ".join(blind)
+            )
+    print()
     if r["first_party"]:
         print("  first-party squad (kept regardless — the hook advertises these):")
         _print_rows(r["first_party"])

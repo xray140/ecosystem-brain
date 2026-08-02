@@ -2,6 +2,26 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.18] — 2026-08-02
+
+**`agent_usage` was overstating its own evidence.**
+
+It reported "35 local transcripts scanned" and, per agent, "never invoked here"
+— which reads as *never since it was installed*. It can only ever mean *never in
+the transcripts still on disk*, and measuring that gap turned out to matter:
+transcripts here span **26 days** (2026-07-08 →) while six third-party agents
+were installed as far back as **2026-06-04**. A 34-day blind spot the report
+said nothing about.
+
+That is the same defect this session kept finding, in the tool built to find it:
+a number presented without the thing that qualifies it. Left alone it invites
+deleting an agent that was used, on evidence that could not have seen the use.
+
+The report now prints its evidence window and names the agents installed before
+it starts. Local first-party agents are excluded from that warning — they are
+versioned in this repo rather than fetched, so the window argument does not
+apply to them.
+
 ## [4.3.17] — 2026-08-02
 
 Vault curation and the rule the audit earned. No behaviour change.
