@@ -2,6 +2,25 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.20] — 2026-08-03
+
+The README, checked against reality rather than re-read. Fifteen versions
+shipped in a day and its command table had gone stale again: `project-doctor`
+and `agent-usage` were missing, and `health-check` was still described as
+"secrets hygiene + tool versions + active projects" when it now composes six
+checks.
+
+The scripts list gained the four doctors, named by *what each one judges* —
+`doctor` the install, `project_doctor` the projects it built, `task_doctor`
+whether the scheduled tasks actually complete, `agent_usage` which agents are
+ever invoked — plus `verify_templates` and the shared `github_util` helper.
+
+Checked by comparing the README's claims against the filesystem rather than by
+reading it. Two of the three probes were wrong on the first pass — one regex
+demanded a backtick the table does not have, another missed the `:fix-bug`
+shorthand and reported a gap that was not there — which is the argument for
+checking the artefact twice, made at my own expense.
+
 ## [4.3.19] — 2026-08-02
 
 **`/ecosystem-brain:health-check` had become the least informed thing here.**
