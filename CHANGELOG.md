@@ -2,6 +2,44 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.14] — 2026-08-02
+
+**The weekly heartbeat had never completed a single scheduled run.**
+
+Registered 2026-07-15, `State: Ready` ever since, and failing every week:
+`SCHED_S_TASK_TERMINATED` for the catalog refresh, `STATUS_CONTROL_C_EXIT` for
+the heartbeat. The catalog went **40 days** without a refresh. The only three
+maintenance reports on disk were all produced by hand. Nothing noticed, because
+everything that ever looked at those tasks looked at their **state** — and Ready
+is not the same as working.
+
+Two independent causes, both fixed and both verified by triggering the tasks and
+reading the artefact rather than the exit code:
+
+- `New-ScheduledTaskSettingsSet` defaults **both** battery guards to true, so on
+  a laptop the task refused to start on battery and was killed if the machine
+  switched to it mid-run. The registrar now passes `-AllowStartIfOnBatteries
+  -DontStopIfGoingOnBatteries`.
+- The `.bat` wrappers ran off their end with no `exit /b`, so Task Scheduler
+  reported the console teardown instead of the script's real exit code. Fixing
+  the battery guards alone left the heartbeat still reporting `0xC000013A`;
+  adding an explicit `exit /b %ERRORLEVEL%` is what actually flipped it to 0.
+- Both wrappers now tee to `memory/maintenance/*.log`. A scheduled task that
+  dies used to leave nothing behind but an exit code — which is precisely why
+  this went unexplained for weeks.
+
+**`scripts/task_doctor.py`, gating in the heartbeat.** It judges each task on
+its last *result* and the *age* of that result, never on its state, so a task
+that is Ready-but-dead is loud. A stale success counts as a failure too: a
+weekly task whose last green run is a month old is not running either.
+
+- Windows-only by nature; elsewhere it reports "not applicable" and passes.
+- Its first version returned "no tasks registered" **on a machine with three
+  registered and two failing**: `ConvertTo-Json -AsArray` does not exist in
+  Windows PowerShell 5.1, so the query failed and the empty result read as
+  "nothing to check". Both that and 5.1's bare-object-for-one-row shape are now
+  handled, and pinned by tests.
+
 ## [4.3.13] — 2026-08-02
 
 The three remaining gaps from the capability audit. Suite 458 → 504.

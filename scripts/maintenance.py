@@ -47,6 +47,11 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     # make the heartbeat permanently red — which is how a report stops being
     # read. Flip to True once the backlog is clear.
     ("registered projects (project_doctor)", py("project_doctor.py"), False),
+    # Gating: this one catches the heartbeat's own scheduler failing. It ran
+    # here every week from 2026-07-15 without once completing, and nothing
+    # noticed — because everything that looked at those tasks looked at their
+    # State ("Ready") rather than their last result.
+    ("scheduled tasks (task_doctor)", py("task_doctor.py"), True),
     # Advisory: it reports which installed agents never get invoked. Nothing here
     # is broken when the list is long — it is a prompt to prune, not a fault.
     ("agent usage", py("agent_usage.py"), False),

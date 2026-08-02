@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.13)
+## Current state (v4.3.14)
 - **17 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, **project-doctor**, **agent-usage**,
   security-audit, write-tests, fix-bug, context-sync, memory-gc
@@ -25,8 +25,8 @@ Read this first in a fresh session (after CLAUDE.md). Run
   compare URL, re-scans, quarantines HIGH, advances pin) -> **rollback**
   (`--rollback <name>` re-fetches at the previous SHA, re-scans, swaps pins;
   itself undoable). Shared helpers in `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (504
-  tests, ~5s) + `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (525
+  tests, ~6s) + `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each
   blueprint for real and runs its baseline) + gitleaks. **Green on the ubuntu
   runner** since 2026-08-01 (it had been red on every push for weeks on an
   unpinned ruff — 57 findings no commit introduced). Toolchain pinned in
@@ -36,7 +36,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
   runs the *same* invocation and the same pinned binary as CI, so local-green
   and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (504, **90%** coverage, every script >=81%) covers scan_agent, init_project,
+- **Tests**: `tests/` (525, **90%** coverage, every script >=81%) covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
@@ -80,8 +80,14 @@ Read this first in a fresh session (after CLAUDE.md). Run
   stack decisions — no orphans), Ollama semantic search (nomic-embed-text, GPU).
 - **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
   maintenance heartbeat (`maintenance.py`: doctor + selfcheck + project-doctor +
-  agent-usage + update --check → `memory/maintenance/<date>.md`). One-shot registrar:
-  `scripts/register-scheduled-tasks.ps1` (idempotent, path-derived).
+  task-doctor + agent-usage + update --check → `memory/maintenance/<date>.md`).
+  Registrar `scripts/register-scheduled-tasks.ps1` (idempotent, path-derived)
+  disables both battery guards — PowerShell defaults them ON, which killed
+  every weekly run from 2026-07-15 to 2026-08-02. The `.bat` wrappers `exit /b`
+  the child's real code and tee to `memory/maintenance/*.log`.
+- **Task doctor**: `task_doctor.py` judges each scheduled task on its last
+  RESULT and that result's age, never on `State` — a task sits at Ready
+  forever while every run dies. Gating in the heartbeat; Windows-only.
 - **Templates**: python-project + typescript-project, each with AGENTS.md
   (cross-tool) + CLAUDE.md + GEMINI.md (both `@AGENTS.md` importers) + per-language
   CI. `_common` = .vscode + GEMINI.md.
@@ -152,6 +158,13 @@ Read this first in a fresh session (after CLAUDE.md). Run
   is local-only, so confirm against the other PC before removing anything.
   Four first-party agents also show zero: that is a delegation habit to change,
   not a cleanup.
+- [x] **The scheduler that never ran -> v4.3.14** (2026-08-02) — the weekly
+  heartbeat and catalog refresh had failed EVERY scheduled run since being
+  registered, at `State: Ready` the whole time; catalog 40 days stale, every
+  maintenance report on disk written by hand. Two causes: PowerShell's battery
+  guards default ON, and the `.bat` wrappers had no `exit /b` so the console
+  teardown was reported instead of the real code. `task_doctor.py` now gates on
+  last-result + staleness so this cannot be silently true again.
 - [ ] **profile_machine.py** (proposed 2026-07-15, parked) — per-machine vault
   note (OS, tools, apps, drives/shares, project dirs) generated at bootstrap and
   injected at SessionStart, so any PC is known from the first second.

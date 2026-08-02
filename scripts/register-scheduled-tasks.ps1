@@ -28,8 +28,16 @@ if ($Unregister) {
 
 Write-Host "registering ecosystem-brain scheduled tasks"
 Write-Host "  repo: $repo`n"
+# AllowStartIfOnBatteries / DontStopIfGoingOnBatteries are NOT the defaults:
+# New-ScheduledTaskSettingsSet sets both battery guards to $true, so on a laptop
+# every weekly run either refused to start or was killed mid-flight. That is
+# exactly what happened here — the heartbeat and the catalog refresh were
+# registered on 2026-07-15 and never once completed a scheduled run
+# (SCHED_S_TASK_TERMINATED / STATUS_CONTROL_C_EXIT), while the tasks showed
+# "Ready" the whole time. Ready is not the same as working.
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) `
-    -MultipleInstances IgnoreNew -StartWhenAvailable
+    -MultipleInstances IgnoreNew -StartWhenAvailable `
+    -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 foreach ($t in $tasks) {
     $exe = Join-Path $scripts $t.Bat
     if (-not (Test-Path $exe)) { Write-Host "  [skip] $($t.Name) - missing $($t.Bat)"; continue }
