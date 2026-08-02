@@ -2,6 +2,33 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.24] — 2026-08-03
+
+**One of today's tests tested nothing, and a mutation run found it.**
+
+`decisions/verification-integrity` says a check that cannot fail is decoration.
+That applies to the tests written *for* those checks: a green suite proves
+nothing unless it would go red for the defect it guards. ~130 tests were added
+today and that had been verified for two of them.
+
+`scripts/mutate_checks.py` reintroduces, one at a time, the exact defect each of
+this session's tools exists to prevent — `elsewhere` collapsing back into
+`gone`, judging a scheduled task on `State` instead of its last result, letting
+first-party agents become removal candidates, skipping the scan on a rollback,
+accepting a traversing name, ignoring a red template baseline — and asserts the
+relevant tests fail.
+
+Nine of ten were caught. The tenth:
+`test_long_text_is_truncated_before_sending` subclassed `OllamaEmbedder` and
+**re-implemented the truncation inside the test**, so it passed regardless of
+what the source did. It now intercepts the payload the real `embed()` builds,
+with a companion asserting a short note is sent whole. Both die when the
+truncation is removed.
+
+The harness is deliberately **not** in CI: it rewrites source files, and a
+killed run would leave a mutation behind. Run it after adding or changing a
+check.
+
 ## [4.3.23] — 2026-08-03
 
 **The vault-hygiene agent did not check the thing that rotted.**
