@@ -47,6 +47,9 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     # make the heartbeat permanently red — which is how a report stops being
     # read. Flip to True once the backlog is clear.
     ("registered projects (project_doctor)", py("project_doctor.py"), False),
+    # Advisory: it reports which installed agents never get invoked. Nothing here
+    # is broken when the list is long — it is a prompt to prune, not a fault.
+    ("agent usage", py("agent_usage.py"), False),
     # --check is informational (updates available is not a failure); network
     # hiccups shouldn't flip the heartbeat red, so don't gate on its exit code.
     ("agent updates (update --check)", py("update-agents.py", "--check"), False),

@@ -44,3 +44,11 @@ jobs:
             --build web --rigor production --touches api-keys,money --stack react --name ci-web
           uv run --no-project python scripts/init_project.py --plan \
             --build mcp-server --rigor product --touches none --name ci-mcp
+
+      # The step above proves the init *engine* works; it writes nothing, so the
+      # templates themselves were never exercised. This scaffolds each one for
+      # real into a temp dir and runs its own build+test — the "verified green
+      # baseline" rule the ecosystem applies to projects it creates, applied to
+      # the blueprints those projects are made from.
+      - name: Templates still scaffold into a green project
+        run: uv run --no-project python scripts/verify_templates.py
