@@ -17,4 +17,4 @@ Run the matching command:
   `uv run python {{ECOSYSTEM_ROOT}}/scripts/catalog.py install <category> --limit N`
 
 After installing, sync to global and report what landed:
-`cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/`
+`uv run python {{ECOSYSTEM_ROOT}}/scripts/bootstrap.py`  (not `cp` — see below)

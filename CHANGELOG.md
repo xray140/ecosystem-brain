@@ -2,6 +2,32 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.22] — 2026-08-03
+
+**Six commands documented an instruction that would break the install.**
+
+`install`, `catalog`, `search`, `init`, `update` and `new-agent` all told the
+reader to sync by copying repo files over `~/.claude`:
+
+    cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/
+
+Following that overwrites every working command with a version containing the
+**literal** `{{ECOSYSTEM_ROOT}}` token — `bootstrap` is what expands it — and
+cannot copy skills at all, since `skills/<name>/SKILL.md` does not match a flat
+`*.md` glob. 14 of 17 commands and one agent carry the token.
+
+It was also redundant: `install-agent.py` already writes both the repo copy and
+the `~/.claude` one. So the instruction had no upside and a large downside.
+
+All six now point at `scripts/bootstrap.py`, which is the only thing that
+performs the rewrite. `selfcheck` check 6 gained the rule, so it cannot return:
+no installable file may contain a `cp … ~/.claude` instruction. Tests cover that
+it fires, that the bootstrap wording does not trip it, and that prose explaining
+why *not* to copy is left alone.
+
+`commands/agents.md` also learned to report `agent_usage`'s evidence window
+alongside any "never invoked" count.
+
 ## [4.3.21] — 2026-08-03
 
 Four more documents caught up with what the code does. A systematic sweep this

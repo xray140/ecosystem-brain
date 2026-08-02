@@ -28,10 +28,11 @@ Show the composed agent + self-scan. Refine wording if needed.
 
 ## Step 4 — Register (after confirmation)
 Append `--register` to the same command. It scan-gates (`scan_agent.py`) and
-installs via `install-agent.py` (HIGH-risk content is refused + quarantined).
-Then sync to the global dir:
-```
-cp {{ECOSYSTEM_ROOT}}/agents/<name>.md ~/.claude/agents/
-```
+installs via `install-agent.py` (HIGH-risk content is refused + quarantined),
+which writes both the repo copy and the `~/.claude` one — no sync step needed.
+
+If `~/.claude` is genuinely out of step, the fix is `scripts/bootstrap.py`, never
+a `cp`: committed files carry the `{{ECOSYSTEM_ROOT}}` token that bootstrap
+expands, so a raw copy installs the literal token.
 Report the registered agent and remind the user to flesh out its body if the
 workflow steps are still placeholders.

@@ -156,18 +156,33 @@ def _is_illustration(line: str, match: re.Match[str]) -> bool:
     return "..." in match.group(0) or line[match.end() :].startswith(("\\...", "/..."))
 
 
-def check_paths() -> None:
-    """No installable file may hardcode an absolute path.
+# An instruction to copy repo files straight into ~/.claude. Six commands
+# carried one. Following it overwrites every working command with a version
+# containing the literal {{ECOSYSTEM_ROOT}} token — bootstrap is what expands
+# that — and cannot copy skills at all, since skills/<name>/SKILL.md does not
+# match a flat *.md glob. The fix is always bootstrap.py.
+RAW_COPY = re.compile(r"\bcp\s+[^\n`]*\.claude", re.I)
 
-    The rule this enforces the hard way: for years these files named the machine
-    they were authored on, and it worked only because bootstrap rewrote the
-    string on the way out. When the repo moved, 58 references across 16 files
-    pointed at a directory that existed nowhere — invisible, because the rewrite
-    kept repairing them. They refer to the repo as {{ECOSYSTEM_ROOT}} now, and
-    this check is what stops a literal one from creeping back.
+
+def check_paths() -> None:
+    """No installable file may hardcode a path, or tell you to cp over ~/.claude.
+
+    Both rules are the same lesson. These files name the repo as
+    {{ECOSYSTEM_ROOT}} and bootstrap expands it on the way out; anything that
+    bypasses that rewrite — a literal path baked in, or a raw copy that skips
+    it — installs something that cannot work. The literal-path half went
+    unnoticed for months because bootstrap kept repairing it; the cp half sat in
+    six commands, documented, waiting to be followed.
     """
-    print("6. Installable files use {{ECOSYSTEM_ROOT}}, not literal paths")
+    print("6. Installable files use {{ECOSYSTEM_ROOT}}, and never cp over ~/.claude")
     offenders = 0
+    for pattern in INSTALLABLE:
+        for p in sorted(REPO.glob(pattern)):
+            for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+                if RAW_COPY.search(line):
+                    rel = p.relative_to(REPO).as_posix()
+                    fail(f"{rel}:{i}: copies into ~/.claude — use bootstrap.py")
+                    offenders += 1
     for pattern in INSTALLABLE:
         for p in sorted(REPO.glob(pattern)):
             for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):

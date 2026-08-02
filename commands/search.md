@@ -16,4 +16,4 @@ After showing results, if the user picks one, install it (the security scan runs
 ```
 uv run python {{ECOSYSTEM_ROOT}}/scripts/install-agent.py --repo <repo> --path <path>
 ```
-Then sync: `cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/`
+Then re-sync `~/.claude` with `uv run python {{ECOSYSTEM_ROOT}}/scripts/bootstrap.py` (never `cp` the repo files over it: they carry the `{{ECOSYSTEM_ROOT}}` token that bootstrap expands, and a flat glob cannot copy skills).
