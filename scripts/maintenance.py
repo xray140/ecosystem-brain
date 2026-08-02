@@ -56,11 +56,10 @@ def search(subcommand: str) -> list[str]:
 CHECKS: list[tuple[str, list[str], bool]] = [
     ("config in sync (doctor)", py("doctor.py"), True),
     ("selfcheck", py("selfcheck.py"), True),
-    # Non-gating on purpose, for now: four cards point at a drive that no longer
-    # exists on this machine, and until that is triaged a gating check would
-    # make the heartbeat permanently red — which is how a report stops being
-    # read. Flip to True once the backlog is clear.
-    ("registered projects (project_doctor)", py("project_doctor.py"), False),
+    # Gating since 2026-08-03. It was advisory while four cards pointed at a
+    # drive that is not on this machine — a permanently red report stops being
+    # read. Those are archived now, so a failure here means something new.
+    ("registered projects (project_doctor)", py("project_doctor.py"), True),
     # Gating: this one catches the heartbeat's own scheduler failing. It ran
     # here every week from 2026-07-15 without once completing, and nothing
     # noticed — because everything that looked at those tasks looked at their
@@ -70,6 +69,9 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     # it before, so it sat at 24-of-28 notes on the offline hash fallback while
     # the README advertised Ollama embeddings. Degraded search returns plausible
     # results, which is exactly why it went unnoticed for weeks.
+    # Keeps the machine note current — drives get mounted, tools get installed.
+    # Never gating: a profile is a convenience, not a health signal.
+    ("machine profile", py("profile_machine.py"), False),
     ("memory index refresh", search("index"), False),
     ("memory index status", search("status"), True),
     # Advisory: it reports which installed agents never get invoked. Nothing here

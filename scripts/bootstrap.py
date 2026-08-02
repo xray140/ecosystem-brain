@@ -196,6 +196,29 @@ def seed_env(dry: bool) -> None:
     print("  [ok] seeded .env from .env.example (fill in real values)")
 
 
+def write_machine_note(dry: bool) -> None:
+    """Record which machine this is, as a vault note.
+
+    The vault is shared across machines but nearly everything in it is
+    machine-specific — a project card's drive letter, an agent's usage counts,
+    the scheduled tasks. Writing this at install time means a fresh clone knows
+    where it is from the first session rather than inferring it later.
+
+    Never fatal: a profile is a convenience, and failing to write one must not
+    fail an install.
+    """
+    if dry:
+        print("  [dry] would write the machine note")
+        return
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import profile_machine
+
+        profile_machine.main([])
+    except Exception as e:  # a profile is never worth failing an install over
+        print(f"  [skip] machine note: {e}")
+
+
 def check_prereqs() -> None:
     print("\nprerequisites:")
     for tool in ("uv", "git", "node", "gh", "gitleaks", "ruff", "ollama"):
@@ -290,6 +313,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     copy_skills(REPO_ROOT / "skills", CLAUDE_DIR / "skills", args.dry_run, bash_root)
     seed_env(args.dry_run)
+    write_machine_note(args.dry_run)
     check_prereqs()
 
     print(
