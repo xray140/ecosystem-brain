@@ -41,6 +41,9 @@ uv run python skills/memory/memory-index.py
 # Semantic search (requires Ollama running with nomic-embed-text)
 uv run python skills/memory/memory-search.py search "QUERY"
 
+# Is the index real and complete? (coverage + which embedder is actually cached)
+uv run python skills/memory/memory-search.py status
+
 # Offline fallback (hash embedder, no Ollama needed)
 # --offline is a global flag: it goes BEFORE the subcommand, not after
 uv run python skills/memory/memory-search.py --offline index

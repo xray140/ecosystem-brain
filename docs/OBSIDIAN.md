@@ -58,7 +58,10 @@ and to the stack decisions it relies on. To see it cleanly:
 - Claude writes notes here (decisions, project cards) as markdown with frontmatter.
 - The SessionEnd hook appends a dated session note automatically.
 - `memory-index.py` rebuilds `index.json` (the manifest Claude loads first).
-- `memory-search.py` embeds notes (Ollama) for semantic recall.
+- `memory-search.py` embeds notes (Ollama `nomic-embed-text`, 768d) for semantic
+  recall. `status` reports whether the index really covers the vault with that
+  embedder — it silently fell back to the offline hash one for weeks, and a
+  degraded search still returns plausible-looking notes.
 
 You edit in Obsidian; Claude reads/writes the same files. No special sync — it's
 just markdown on disk. Run `/ecosystem-brain:memory-gc` to prune + re-index.
