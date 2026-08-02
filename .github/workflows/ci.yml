@@ -64,6 +64,11 @@ jobs:
           ECOSYSTEM_VAULT: ${{ runner.temp }}/eco-vault
         run: |
           mkdir -p "$ECOSYSTEM_DEST_ROOT" "$ECOSYSTEM_VAULT"
+          # A fresh runner has no git identity, and `scaffold --git` makes an
+          # initial commit. Setting one here exercises the full path; the
+          # missing-identity path is covered by tests instead.
+          git config --global user.name  "ecosystem-brain ci"
+          git config --global user.email "ci@example.invalid"
           uv run --no-project python scripts/init_project.py --apply \
             --build cli --rigor prototype --touches none --name ci-apply --skip-agents
           test -f "$ECOSYSTEM_VAULT/projects/ci-apply.md"

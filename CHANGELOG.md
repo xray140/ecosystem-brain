@@ -27,6 +27,14 @@ which is exactly how the Windows crash fixed in 4.3.13 — bare `npm` raising
 Verified by running it: scaffold, tailored AGENTS.md, card and MOC into the
 sandbox, green baseline (`uv sync`, `pytest -q`), and `git status` clean.
 
+**The new CI step found a real bug on its first run**, which is the point of it.
+`scaffold.py --git` used `check=True` on its initial commit, so a machine with
+no configured git identity got a raw `CalledProcessError` traceback reported as
+"scaffold failed" — when the project had in fact been created correctly and was
+perfectly usable. Every fresh runner and every developer who has never run
+`git config user.name` hits this. `git_init()` now reports failure instead of
+raising, and the scaffold succeeds with a warning naming the one-line fix.
+
 Two notes on what this exercise did *not* establish. A `--build web` run
 exceeded a 10-minute ceiling, but no component reproduced slowly in isolation
 (`npm install` 38s, `npm test` 12s, one agent install 3.1s) — the likely cause is

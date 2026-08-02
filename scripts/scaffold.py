@@ -81,6 +81,29 @@ def substitute(root: Path, package: str, project: str) -> None:
             path.write_text(new, encoding="utf-8", newline="\n")
 
 
+def git_init(dest: Path, name: str) -> bool:
+    """git init + add + first commit. False if any step failed.
+
+    Never raises: a missing git, or an unset user identity, must not take the
+    scaffold down with it.
+    """
+    steps = (
+        ["git", "init", "-q"],
+        ["git", "add", "."],
+        ["git", "commit", "-q", "-m", f"feat: scaffold {name}"],
+    )
+    for cmd in steps:
+        try:
+            r = subprocess.run(  # noqa: PLW1510 — returncode is inspected here
+                cmd, cwd=dest, capture_output=True, text=True, errors="replace"
+            )
+        except OSError:
+            return False
+        if r.returncode != 0:
+            return False
+    return True
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--type", required=True, help="template name under --templates-root")
@@ -126,12 +149,18 @@ def main(argv: list[str] | None = None) -> int:
 
     is_ts = (dest / "package.json").exists()
 
-    if args.git:
-        subprocess.run(["git", "init", "-q"], cwd=dest, check=True)
-        subprocess.run(["git", "add", "."], cwd=dest, check=True)
-        subprocess.run(
-            ["git", "commit", "-q", "-m", f"feat: scaffold {args.name}"],
-            cwd=dest, check=True,
+    if args.git and not git_init(dest, args.name):
+        # The project itself is scaffolded and usable; only the initial commit
+        # failed. Killing the whole run over that — with a raw traceback, which
+        # is what `check=True` produced — turns a one-line git-config fix into
+        # an apparent scaffolding failure. Any machine that has never run
+        # `git config user.name` hits this, including every fresh CI runner.
+        print(
+            "  [warn] scaffolded, but the initial git commit failed.\n"
+            "         Most often an unset identity:\n"
+            '           git config --global user.name "You"\n'
+            '           git config --global user.email "you@example.com"\n'
+            f"         Then, in {dest}:  git add -A && git commit -m 'feat: scaffold'"
         )
 
     print(f"[ok] {args.type} -> {dest}  (package: {package})")
