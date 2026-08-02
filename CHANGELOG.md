@@ -2,6 +2,26 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.25] — 2026-08-03
+
+The mutation harness now covers the gates that **predate** this session — 10
+mutations to 17.
+
+Today's tools were mutation-tested as they were written. The older ones never
+had been, and they are the ones where a silent hole matters most: the security
+scanner, the install gate, the quarantine on a poisoned upstream, drift
+detection, the `{{ECOSYSTEM_ROOT}}` expansion, the destructive guard, the agent
+frontmatter lint.
+
+Each is now broken in the way that would matter — *nothing ever scores HIGH
+again*, *let HIGH-risk content install anyway*, *stop quarantining a poisoned
+upstream*, *stop noticing an edited live copy*, *stop expanding the token*,
+*stop requiring `-r` so nothing is catastrophic* — and the relevant tests must
+fail.
+
+**17 of 17 caught.** The older gates were already honest; this is the first time
+that has been demonstrated rather than assumed.
+
 ## [4.3.24] — 2026-08-03
 
 **One of today's tests tested nothing, and a mutation run found it.**

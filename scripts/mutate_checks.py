@@ -97,6 +97,58 @@ MUTATIONS = [
         "                if False:",
         "tests/test_selfcheck_checks.py",
     ),
+    # --- gates that predate this session -----------------------------------
+    # Never mutation-tested before. These are the oldest and the most
+    # security-critical, which is the worst combination to leave unverified.
+    (
+        "scan_agent: nothing ever scores HIGH again",
+        "scripts/scan_agent.py",
+        '        (f["severity"] for f in findings), key=lambda s: SEVERITY[s], default="CLEAN"',
+        '        ("CLEAN" for f in findings), key=lambda s: 0, default="CLEAN"',
+        "tests/test_scan_agent.py",
+    ),
+    (
+        "install-agent: let HIGH-risk content install anyway",
+        "scripts/install-agent.py",
+        '    if level == "HIGH" and not args.force:',
+        "    if False:",
+        "tests/test_install_agent_main.py",
+    ),
+    (
+        "update-agents: stop quarantining a poisoned upstream",
+        "scripts/update-agents.py",
+        '    if worst(scan(new_content)) == "HIGH":',
+        "    if False:",
+        "tests/test_update_agents.py",
+    ),
+    (
+        "doctor: stop noticing an edited live copy",
+        "scripts/doctor.py",
+        '        elif live.read_text(encoding="utf-8") != expected:',
+        "        elif False:",
+        "tests/test_doctor.py",
+    ),
+    (
+        "bootstrap: stop expanding the {{ECOSYSTEM_ROOT}} token",
+        "scripts/bootstrap.py",
+        "        text.replace(TOKEN, bash_root)",
+        "        text",
+        "tests/test_selfcheck_paths.py",
+    ),
+    (
+        "guard_destructive: stop requiring -r, so nothing is catastrophic",
+        "hooks/scripts/guard_destructive.py",
+        '    if "r" not in flags:  # non-recursive rm cannot wipe a tree',
+        "    if True:",
+        "tests/test_guard_destructive.py",
+    ),
+    (
+        "selfcheck: accept any model in agent frontmatter",
+        "scripts/selfcheck.py",
+        '    if m and m.group(1) not in KNOWN_MODELS and not m.group(1).startswith("claude-"):',
+        "    if False:",
+        "tests/test_selfcheck.py",
+    ),
 ]
 
 PYTEST = [
