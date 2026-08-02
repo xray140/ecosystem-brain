@@ -38,6 +38,20 @@ def py(script: str, *args: str) -> list[str]:
     ]
 
 
+def search(subcommand: str) -> list[str]:
+    """The memory-search CLI, pinned to this repo's vault."""
+    return [
+        "uv",
+        "run",
+        "--no-project",
+        "python",
+        str(REPO / "skills" / "memory" / "memory-search.py"),
+        "--vault",
+        str(REPO / "memory"),
+        subcommand,
+    ]
+
+
 # (label, command, treat-nonzero-as-failure)
 CHECKS: list[tuple[str, list[str], bool]] = [
     ("config in sync (doctor)", py("doctor.py"), True),
@@ -52,6 +66,12 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     # noticed — because everything that looked at those tasks looked at their
     # State ("Ready") rather than their last result.
     ("scheduled tasks (task_doctor)", py("task_doctor.py"), True),
+    # Keep the semantic index current, then assert it really is. Nothing rebuilt
+    # it before, so it sat at 24-of-28 notes on the offline hash fallback while
+    # the README advertised Ollama embeddings. Degraded search returns plausible
+    # results, which is exactly why it went unnoticed for weeks.
+    ("memory index refresh", search("index"), False),
+    ("memory index status", search("status"), True),
     # Advisory: it reports which installed agents never get invoked. Nothing here
     # is broken when the list is long — it is a prompt to prune, not a fault.
     ("agent usage", py("agent_usage.py"), False),

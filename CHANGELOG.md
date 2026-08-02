@@ -2,6 +2,46 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.15] — 2026-08-02
+
+**Semantic search had never run on real embeddings.**
+
+The README and the roadmap both advertise "Ollama semantic search
+(nomic-embed-text, GPU)". What was actually in `memory/.search-index.db`:
+**24 of 28 notes, every one embedded with the offline hash fallback** — a
+bag-of-words stand-in meant for machines without Ollama. Ollama was running the
+whole time and the model was pulled.
+
+It went unnoticed for the reason degraded search always does: it returns
+*plausible* results. You get notes back, they look related, and nothing says the
+ranking came from word overlap rather than meaning.
+
+Three compounding causes, all fixed:
+
+- **No truncation.** `nomic-embed-text` answers HTTP 500 past roughly 2k tokens
+  instead of truncating. Measured here: 4k chars fine, 20k fails — and
+  `roadmap.md` (14k), the largest and most-read note in the vault, failed. Input
+  is now capped at 6000 chars. Embedding a note's head is also the right
+  semantics: frontmatter, title and opening paragraphs carry its topic.
+- **One bad note aborted everything.** The 500 propagated as an unhandled
+  traceback, so the build died and left the previous index untouched — which is
+  how a hand-built offline cache survived for weeks. Failures are now per-note:
+  the note is skipped, named, and reported as not searchable.
+- **Nothing ever rebuilt it.** `memory-index.py` (what selfcheck and the
+  heartbeat run) builds `index.json`, a frontmatter manifest — it has nothing to
+  do with embeddings. `memory-search.py index` was only ever a manual command.
+
+**`memory-search.py status`**, gating in the heartbeat, asserts what the index
+actually contains: full vault coverage, the intended embedder, and a single
+embedder (cosine scores from two models are not comparable, so a mixed index
+ranks nonsense). The heartbeat also refreshes the index each run, so it cannot
+rot again.
+
+Verified end to end: 28/28 notes on `nomic-embed-text` at 768 dimensions, and a
+query sharing no keywords with its target — *"why do we freeze dependency
+versions instead of taking the newest"* — now ranks `decisions/toolchain-pinning`
+first. That is a match a bag of words cannot make.
+
 ## [4.3.14] — 2026-08-02
 
 **The weekly heartbeat had never completed a single scheduled run.**

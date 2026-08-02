@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.14)
+## Current state (v4.3.15)
 - **17 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, **project-doctor**, **agent-usage**,
   security-audit, write-tests, fix-bug, context-sync, memory-gc
@@ -25,7 +25,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   compare URL, re-scans, quarantines HIGH, advances pin) -> **rollback**
   (`--rollback <name>` re-fetches at the previous SHA, re-scans, swaps pins;
   itself undoable). Shared helpers in `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (525
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (537
   tests, ~6s) + `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each
   blueprint for real and runs its baseline) + gitleaks. **Green on the ubuntu
   runner** since 2026-08-01 (it had been red on every push for weeks on an
@@ -36,7 +36,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
   runs the *same* invocation and the same pinned binary as CI, so local-green
   and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (525, **90%** coverage, every script >=81%) covers scan_agent, init_project,
+- **Tests**: `tests/` (537, **90%** coverage, every script >=81%) covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
@@ -77,10 +77,16 @@ Read this first in a fresh session (after CLAUDE.md). Run
   works. selfcheck fails on any literal path that creeps back in.
   `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
 - **Memory**: Obsidian vault (project cards linked into `projects-moc` hub +
-  stack decisions — no orphans), Ollama semantic search (nomic-embed-text, GPU).
+  stack decisions — no orphans). Semantic search really is on Ollama
+  `nomic-embed-text` (768d) since 2026-08-02 — before that the index held
+  24/28 notes on the offline hash fallback, because a 500 on the vault's
+  largest note aborted every build and nothing rebuilt it. Input is capped at
+  6000 chars, per-note failures are survivable, and `memory-search.py status`
+  gates coverage + embedder in the heartbeat.
 - **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
   maintenance heartbeat (`maintenance.py`: doctor + selfcheck + project-doctor +
-  task-doctor + agent-usage + update --check → `memory/maintenance/<date>.md`).
+  task-doctor + memory index refresh/status + agent-usage + update --check →
+  `memory/maintenance/<date>.md`).
   Registrar `scripts/register-scheduled-tasks.ps1` (idempotent, path-derived)
   disables both battery guards — PowerShell defaults them ON, which killed
   every weekly run from 2026-07-15 to 2026-08-02. The `.bat` wrappers `exit /b`
@@ -165,6 +171,11 @@ Read this first in a fresh session (after CLAUDE.md). Run
   guards default ON, and the `.bat` wrappers had no `exit /b` so the console
   teardown was reported instead of the real code. `task_doctor.py` now gates on
   last-result + staleness so this cannot be silently true again.
+- [x] **Semantic search was never semantic -> v4.3.15** (2026-08-02) — the
+  index held 24/28 notes on the offline hash fallback while the README
+  advertised Ollama. No truncation (nomic-embed-text 500s past ~2k tokens, and
+  roadmap.md is 14k), one bad note aborted the build, and nothing rebuilt it.
+  Now 28/28 at 768d, with a gating status check.
 - [ ] **profile_machine.py** (proposed 2026-07-15, parked) — per-machine vault
   note (OS, tools, apps, drives/shares, project dirs) generated at bootstrap and
   injected at SessionStart, so any PC is known from the first second.

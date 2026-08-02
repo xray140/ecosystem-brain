@@ -57,6 +57,16 @@ class HashEmbedder:
         return _normalize(vec)
 
 
+# nomic-embed-text tops out around 2048 tokens; past that Ollama answers 500
+# rather than truncating for you. Measured on this vault: 4k chars fine, 20k
+# fails, and `roadmap.md` (14k) failed — the single most important note in the
+# vault, which took the whole index build down with it.
+#
+# The head of a note is also the right thing to embed: frontmatter, title and
+# opening paragraphs carry its topic, which is what recall matches on.
+MAX_EMBED_CHARS = 6000
+
+
 class OllamaEmbedder:
     """Calls a local Ollama server for embeddings (one note per request)."""
 
@@ -69,7 +79,9 @@ class OllamaEmbedder:
 
     def embed(self, text: str) -> list[float]:
         """Return the embedding for one text via $OLLAMA_HOST/api/embeddings."""
-        payload = json.dumps({"model": self.model, "prompt": text}).encode()
+        payload = json.dumps(
+            {"model": self.model, "prompt": text[:MAX_EMBED_CHARS]}
+        ).encode()
         req = urllib.request.Request(  # noqa: S310 (localhost Ollama)
             f"{self.host}/api/embeddings",
             data=payload,
@@ -163,19 +175,34 @@ def cmd_index(args) -> int:
         for row in con.execute("SELECT path, mtime FROM vec WHERE model=?", (emb.model,))
     }
     done = skipped = 0
+    failed: list[str] = []
     for path in sorted(vault.rglob("*.md")):
         rel = path.relative_to(vault).as_posix()
         mtime = path.stat().st_mtime
         if cached.get(rel) == mtime:
             skipped += 1
             continue
-        vec = emb.embed(note_text(path))
+        try:
+            vec = emb.embed(note_text(path))
+        except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
+            # One unembeddable note must not abort the whole build. It used to:
+            # a single 500 left the index untouched and stale, so the vault kept
+            # answering from an old offline-hash cache that nobody knew was there.
+            print(f"[warn] {rel}: {exc}", file=sys.stderr)
+            failed.append(rel)
+            continue
         con.execute(
             "INSERT OR REPLACE INTO vec(path, mtime, model, dim, data) VALUES (?,?,?,?,?)",
             (rel, mtime, emb.model, len(vec), pack(vec)),
         )
         done += 1
     con.commit()
+    if failed:
+        print(
+            f"[warn] {len(failed)} note(s) could not be embedded and are NOT searchable: "
+            + ", ".join(failed),
+            file=sys.stderr,
+        )
     con.close()
     print(f"[ok] embedded {done}, unchanged {skipped} (model: {emb.model}) -> {args.db}")
     return 0
@@ -203,6 +230,48 @@ def cmd_search(args) -> int:
     return 0
 
 
+def cmd_status(args) -> int:
+    """Is the search index covering the vault, and with the intended embedder?
+
+    Both had rotted here without a sound. The index held 24 of 28 notes, all
+    embedded with the offline hash fallback, while the README advertised Ollama
+    semantic search — nothing rebuilt it, so it kept answering from a cache
+    built once, by hand, in offline mode. Degraded search returns *plausible*
+    results, which is precisely why nobody noticed.
+    """
+    con = connect(args.db)
+    rows = list(con.execute("SELECT model, dim, COUNT(*) FROM vec GROUP BY model, dim"))
+    con.close()
+    notes = len(list(args.vault.rglob("*.md"))) if args.vault.is_dir() else 0
+    print(f"memory search index — vault has {notes} note(s)")
+    if not rows:
+        print("  [!!] index is empty — run: memory-search.py index")
+        return 1
+
+    problems = 0
+    for model, dim, count in rows:
+        offline = model.startswith("hash-")
+        tag = "offline hash fallback" if offline else f"{model} ({dim}d)"
+        missing = notes - count
+        detail = f"{count} note(s), {tag}"
+        if offline and not args.offline:
+            detail += "  <- expected real embeddings"
+            problems += 1
+        if missing > 0:
+            detail += f", {missing} not indexed"
+            problems += 1
+        print(f"  [{'ok' if not problems else '!!'}] {detail}")
+    if len(rows) > 1:
+        print("  [!!] more than one embedder in the index — cosine scores are not comparable")
+        problems += 1
+
+    if problems:
+        print("\n[!] search is degraded. Rebuild: memory-search.py index --rebuild")
+        return 1
+    print("\n[ok] index covers the vault with the intended embedder")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--vault", default=Path("memory"), type=Path)
@@ -216,10 +285,11 @@ def main(argv: list[str] | None = None) -> int:
     ps = sub.add_parser("search", help="query the vault")
     ps.add_argument("query")
     ps.add_argument("-k", "--top", type=int, default=5)
+    sub.add_parser("status", help="is the index fresh and using the intended embedder?")
     args = ap.parse_args(argv)
     if args.db is None:
         args.db = args.vault / ".search-index.db"
-    return cmd_index(args) if args.cmd == "index" else cmd_search(args)
+    return {"index": cmd_index, "search": cmd_search, "status": cmd_status}[args.cmd](args)
 
 
 if __name__ == "__main__":
