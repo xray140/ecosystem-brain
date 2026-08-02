@@ -31,7 +31,9 @@ location, so it works on any machine / any path.
 | `/ecosystem-brain:agents` | List installed agents/skills/commands |
 | `/ecosystem-brain:new-agent` | Recruit a first-party agent, scaffolded to standard and self-scanned |
 | `/ecosystem-brain:doctor` | Drift check — are the live hooks/commands/agents/skills in sync with this clone? |
-| `/ecosystem-brain:health-check` | Secrets hygiene + tool versions + active projects |
+| `/ecosystem-brain:project-doctor` | Do the registered projects still exist, and are they healthy? |
+| `/ecosystem-brain:agent-usage` | Which installed agents ever get invoked — and which never have |
+| `/ecosystem-brain:health-check` | Everything above at once: secrets, wiring, projects, tasks, memory, agents |
 | `/ecosystem-brain:security-audit` | Run the security-auditor on staged changes |
 | `/ecosystem-brain:write-tests` / `:fix-bug` | Invoke test-writer / bug-fixer agents |
 | `/ecosystem-brain:context-sync` | Brief current session on ecosystem conventions |
@@ -51,9 +53,13 @@ SessionStart hook suggests relevant installed + uninstalled agents
   `memory-curator`, `script-smith`, `convention-keeper` — plus installed third-party agents.
 - **commands/** — slash commands (synced to `~/.claude/commands/ecosystem-brain/` by bootstrap).
   They refer to this repo as `{{ECOSYSTEM_ROOT}}`; bootstrap expands it to the clone's path.
-- **scripts/** — `bootstrap`, `doctor`, `selfcheck`, `init_project`, `scaffold`,
+- **scripts/** — `bootstrap`, `selfcheck`, `init_project`, `scaffold`,
   `install-agent`, `update-agents`, `search_agents`, `catalog`, `scan_agent`,
-  `layout` (install layout), `new_agent`, `maintenance`.
+  `new_agent`, `maintenance`, `verify_templates`, plus the shared helpers
+  `layout` (where an installed item lives) and `github_util` (fetch + SHA pinning).
+  Four doctors, split by what they judge: `doctor` (the install), `project_doctor`
+  (the projects it built), `task_doctor` (whether the scheduled tasks actually
+  complete), `agent_usage` (which agents are ever invoked).
 - **skills/** — `memory` (index + semantic search), `secrets` (doctor + identity).
 - **hooks/** — gitleaks gate, catastrophic-command block, ruff auto-format, SessionStart agent-suggester, session logging.
 - **tests/** — the suite `selfcheck` and CI both run; see *Verification* below.
