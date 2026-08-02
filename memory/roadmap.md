@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.15)
+## Current state (v4.3.16)
 - **17 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, **project-doctor**, **agent-usage**,
   security-audit, write-tests, fix-bug, context-sync, memory-gc
@@ -25,7 +25,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   compare URL, re-scans, quarantines HIGH, advances pin) -> **rollback**
   (`--rollback <name>` re-fetches at the previous SHA, re-scans, swaps pins;
   itself undoable). Shared helpers in `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (537
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (545
   tests, ~6s) + `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each
   blueprint for real and runs its baseline) + gitleaks. **Green on the ubuntu
   runner** since 2026-08-01 (it had been red on every push for weeks on an
@@ -36,7 +36,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
   runs the *same* invocation and the same pinned binary as CI, so local-green
   and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (537, **90%** coverage, every script >=81%) covers scan_agent, init_project,
+- **Tests**: `tests/` (545, **90%** coverage, every script >=81%) covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
@@ -176,6 +176,11 @@ Read this first in a fresh session (after CLAUDE.md). Run
   advertised Ollama. No truncation (nomic-embed-text 500s past ~2k tokens, and
   roadmap.md is 14k), one bad note aborted the build, and nothing rebuilt it.
   Now 28/28 at 768d, with a gating status check.
+- [x] **init --apply made testable -> v4.3.16** (2026-08-02) — it wrote a card,
+  a MOC line and a registry mutation into THIS repo regardless of
+  ECOSYSTEM_DEST_ROOT, so running the flagship command once dirtied the repo and
+  it was never in CI. ECOSYSTEM_VAULT + --skip-agents fix that; CI now runs it
+  end to end and asserts `git diff --exit-code`.
 - [ ] **profile_machine.py** (proposed 2026-07-15, parked) — per-machine vault
   note (OS, tools, apps, drives/shares, project dirs) generated at bootstrap and
   injected at SessionStart, so any PC is known from the first second.

@@ -52,3 +52,20 @@ jobs:
       # the blueprints those projects are made from.
       - name: Templates still scaffold into a green project
         run: uv run --no-project python scripts/verify_templates.py
+
+      # The flagship command, end to end for the first time. It used to write a
+      # memory card, a MOC line and a registry mutation into the repo no matter
+      # what, so running it once dirtied the checkout and it was never in CI —
+      # which is how a Windows crash in its own baseline step survived unnoticed.
+      # ECOSYSTEM_VAULT + --skip-agents make it leave nothing behind.
+      - name: Init --apply, end to end (sandboxed vault, no agent installs)
+        env:
+          ECOSYSTEM_DEST_ROOT: ${{ runner.temp }}/eco-projects
+          ECOSYSTEM_VAULT: ${{ runner.temp }}/eco-vault
+        run: |
+          mkdir -p "$ECOSYSTEM_DEST_ROOT" "$ECOSYSTEM_VAULT"
+          uv run --no-project python scripts/init_project.py --apply \
+            --build cli --rigor prototype --touches none --name ci-apply --skip-agents
+          test -f "$ECOSYSTEM_VAULT/projects/ci-apply.md"
+          test -f "$ECOSYSTEM_DEST_ROOT/ci-apply/AGENTS.md"
+          git diff --exit-code   # the repo must be untouched

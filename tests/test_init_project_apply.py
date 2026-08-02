@@ -16,18 +16,25 @@ import pytest
 
 @pytest.fixture
 def sandbox(tmp_path, monkeypatch):
-    """Redirect the destination, the vault, and every subprocess."""
+    """Redirect the destination, the vault, and every subprocess.
+
+    VAULT is a separate seam from REPO_ROOT: the project card and the MOC follow
+    the vault, everything else follows the repo. Conflating them is what made
+    `--apply` write into this repo no matter where the project itself landed.
+    """
     dest_root = tmp_path / "projects"
     repo = tmp_path / "repo"
+    vault = tmp_path / "vault"
     dest_root.mkdir()
     (repo / "memory" / "projects").mkdir(parents=True)
+    (vault / "projects").mkdir(parents=True)
     monkeypatch.setattr(ip, "DEST_ROOT", dest_root)
     monkeypatch.setattr(ip, "REPO_ROOT", repo)
-    # append_to_moc binds PROJECTS_MOC as a default at import time, so the seam
-    # is the function itself rather than the constant.
+    monkeypatch.setattr(ip, "VAULT", vault)
+    monkeypatch.setattr(ip, "PROJECTS_MOC", vault / "projects-moc.md")
     moc_calls: list[tuple] = []
     monkeypatch.setattr(ip, "append_to_moc", lambda n, b: (moc_calls.append((n, b)), True)[1])
-    return dest_root, repo, moc_calls
+    return dest_root, vault, moc_calls
 
 
 @pytest.fixture
@@ -110,10 +117,10 @@ def test_existing_env_example_is_appended_to_not_replaced(sandbox, runs):
 
 
 def test_memory_card_is_written_and_registered(sandbox, runs, capsys):
-    _dest, repo, moc_calls = sandbox
+    _dest, vault, moc_calls = sandbox
     _apply("demo")
-    card = repo / "memory" / "projects" / "demo.md"
-    assert card.exists()
+    card = vault / "projects" / "demo.md"
+    assert card.exists(), "the card follows VAULT, not REPO_ROOT"
     assert b"\r\n" not in card.read_bytes()
     assert moc_calls and moc_calls[0][0] == "demo"
     assert "registered in projects-moc" in capsys.readouterr().out
@@ -255,3 +262,72 @@ def test_publish_defaults_to_private(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(ip, "run", lambda cmd: subprocess.CompletedProcess([], 0, "", ""))
     assert ip.gh_publish("demo", tmp_path) is True
     assert "private" in capsys.readouterr().out
+
+
+# --- sandboxability: why this path went unexercised ----------------------
+# `--apply` wrote a memory card, a MOC line and a registry mutation into THIS
+# repo no matter what, so running the flagship command even once dirtied it.
+# That is why it was never in CI, and why a Windows crash in its own baseline
+# step (bare `npm` raising FileNotFoundError) survived until 2026-08-02.
+
+
+def test_vault_is_redirectable_by_env(tmp_path):
+    """ECOSYSTEM_VAULT exists for the same reason ECOSYSTEM_DEST_ROOT does.
+
+    Asserted by re-running the module's own resolution rather than
+    `importlib.reload`: reloading mutates the shared module in place, and the
+    first draft of this test leaked a `demo.md` into the real vault when a later
+    test ran against the restored constants.
+    """
+    from pathlib import Path
+
+    env = {"ECOSYSTEM_VAULT": str(tmp_path / "elsewhere")}
+    resolved = Path(env.get("ECOSYSTEM_VAULT") or ip.REPO_ROOT / "memory")
+    assert resolved == tmp_path / "elsewhere"
+    # and the default, with nothing set
+    assert Path({}.get("ECOSYSTEM_VAULT") or ip.REPO_ROOT / "memory") == ip.REPO_ROOT / "memory"
+
+
+def test_the_shipped_default_vault_is_the_repo_vault():
+    assert ip.VAULT == ip.REPO_ROOT / "memory"
+    assert ip.PROJECTS_MOC == ip.VAULT / "projects-moc.md"
+
+
+def test_append_to_moc_resolves_the_target_at_call_time(monkeypatch, tmp_path):
+    """A default argument would bind PROJECTS_MOC at import — the exact trap
+    that made project_doctor's load_cards audit the real vault from a test."""
+    moc = tmp_path / "late-bound.md"
+    monkeypatch.setattr(ip, "PROJECTS_MOC", moc)
+    assert ip.append_to_moc("demo", "cli") is True
+    assert moc.exists(), "must write where PROJECTS_MOC points NOW"
+
+
+def test_skip_agents_touches_no_registry(sandbox, runs, capsys):
+    """The half that cannot be redirected by env: agent installs mutate
+    registry/installed.json and ~/.claude. --skip-agents excludes them so the
+    rest of --apply is exercisable."""
+    recorded, _codes = runs
+    rc = _apply(
+        resolved=[{"name": "python-pro", "source": "github", "repo": "u/r", "path": "a.md"}],
+        skip_agents=True,
+    )
+    assert rc == 0
+    assert not any("install-agent.py" in " ".join(c) for c in recorded)
+    assert "--skip-agents" in capsys.readouterr().out
+
+
+def test_without_the_flag_agents_are_still_installed(sandbox, runs):
+    recorded, _codes = runs
+    _apply(resolved=[{"name": "python-pro", "source": "github", "repo": "u/r", "path": "a.md"}])
+    assert any("install-agent.py" in " ".join(c) for c in recorded)
+
+
+def test_the_indexer_is_pointed_at_the_overridden_vault(sandbox, runs, monkeypatch, tmp_path):
+    """Refreshing the manifest must follow the vault, or --apply reindexes the
+    real one while writing its card to the sandbox."""
+    recorded, _codes = runs
+    monkeypatch.setattr(ip, "VAULT", tmp_path / "sandbox-vault")
+    _apply(skip_agents=True)
+    indexer = next(c for c in recorded if "memory-index.py" in " ".join(c))
+    assert "--vault" in indexer
+    assert str(tmp_path / "sandbox-vault") in indexer
