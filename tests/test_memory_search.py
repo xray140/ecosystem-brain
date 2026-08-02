@@ -16,6 +16,7 @@ unnoticed, and why `status` has to assert the embedder, not just that rows exist
 from __future__ import annotations
 
 import importlib.util
+import json
 import sqlite3
 import urllib.error
 from pathlib import Path
@@ -55,18 +56,60 @@ def note(vault, name, body="body text"):
 
 
 # --- truncation: the root cause of the 500 --------------------------------
-def test_long_text_is_truncated_before_sending():
+def test_long_text_is_truncated_before_sending(monkeypatch):
     """Ollama answers 500 rather than truncating for you, and that 500 took the
-    whole index build down."""
+    whole index build down.
+
+    This intercepts the payload the REAL embed() builds. An earlier version
+    subclassed OllamaEmbedder and re-implemented the truncation inside the test,
+    so it passed no matter what the source did — a mutation run caught it, which
+    is the whole argument for mutating your own checks.
+    """
     sent = {}
 
-    class Probe(ms.OllamaEmbedder):
-        def embed(self, text):
-            sent["len"] = len(text[: ms.MAX_EMBED_CHARS])
-            return [1.0]
+    class FakeResponse:
+        def read(self):
+            return json.dumps({"embedding": [1.0, 0.0]}).encode()
 
-    Probe("m", "http://x").embed("x" * 100_000)
-    assert sent["len"] == ms.MAX_EMBED_CHARS
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def capture(req, timeout=None):
+        sent["payload"] = json.loads(req.data.decode())
+        return FakeResponse()
+
+    monkeypatch.setattr(ms.urllib.request, "urlopen", capture)
+    ms.OllamaEmbedder("m", "http://x").embed("x" * 100_000)
+    assert len(sent["payload"]["prompt"]) == ms.MAX_EMBED_CHARS
+
+
+def test_short_text_is_sent_whole(monkeypatch):
+    """Truncation must not clip an ordinary note."""
+    sent = {}
+
+    class FakeResponse:
+        def read(self):
+            return json.dumps({"embedding": [1.0, 0.0]}).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    monkeypatch.setattr(
+        ms.urllib.request,
+        "urlopen",
+        lambda req, timeout=None: (
+            sent.update(payload=json.loads(req.data.decode())),
+            FakeResponse(),
+        )[1],
+    )
+    ms.OllamaEmbedder("m", "http://x").embed("a short note")
+    assert sent["payload"]["prompt"] == "a short note"
 
 
 def test_the_cap_is_below_what_actually_failed():
