@@ -11,10 +11,13 @@ weekly report trains you to skip — the failure the v4.3.11 symbol fix was abou
 
 from __future__ import annotations
 
+import os
 import subprocess
 
 import project_doctor as pd
 import pytest
+
+WINDOWS = os.name == "nt"
 
 CARD = """---
 type: project
@@ -212,6 +215,7 @@ def test_empty_vault_is_fine(vault, capsys):
 # missing reads as data loss and sends you hunting for nothing.
 
 
+@pytest.mark.skipif(not WINDOWS, reason="keys on a drive anchor; posix has only /")
 def test_absent_root_is_elsewhere_not_a_problem(vault, monkeypatch, capsys):
     _no_ci(monkeypatch)
     _card(vault, "other-pc", r"Q:\projects\thing")
@@ -222,11 +226,34 @@ def test_absent_root_is_elsewhere_not_a_problem(vault, monkeypatch, capsys):
     assert "another machine" in out
 
 
-def test_root_absent_detection(tmp_path):
+@pytest.mark.skipif(not WINDOWS, reason="drive anchors are a Windows concept")
+def test_absent_drive_is_detected_on_windows(tmp_path):
     from pathlib import Path
 
     assert pd.root_is_absent(Path(r"Q:\nope\thing")) is True
     assert pd.root_is_absent(tmp_path / "missing-child") is False, "root exists"
+
+
+@pytest.mark.skipif(WINDOWS, reason="describes the posix branch")
+def test_posix_has_no_absent_root(tmp_path):
+    """`/` always exists, so every posix path has a present root and a missing
+    directory is genuinely missing. `host:` is the only "elsewhere" signal
+    there — which the function's docstring states, and this pins."""
+    from pathlib import Path
+
+    assert pd.root_is_absent(Path("/nonexistent/somewhere/thing")) is False
+    assert pd.root_is_absent(tmp_path / "missing-child") is False
+
+
+def test_host_pin_is_the_portable_elsewhere_signal(vault, monkeypatch, capsys):
+    """Works on every platform, unlike the drive-anchor heuristic."""
+    _no_ci(monkeypatch)
+    (vault / "far-away.md").write_text(
+        "---\nstatus: active\nhost: TheOtherPC\n---\n# far\n- Project: `/wherever`\n",
+        encoding="utf-8",
+    )
+    assert pd.main(["--no-ci"]) == 0
+    assert "elsewhere: TheOtherPC" in capsys.readouterr().out
 
 
 def test_host_pin_skips_the_card(vault, monkeypatch, capsys):
