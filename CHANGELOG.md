@@ -2,6 +2,26 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.19] — 2026-08-02
+
+**`/ecosystem-brain:health-check` had become the least informed thing here.**
+
+Five diagnostic tools were added this session and the command that claims to be
+*the* health report knew about none of them. Worse, its "Projects" step listed
+them from `memory/index.json` — the frontmatter manifest — which reports what a
+card *claims*, not whether the project is still there. It would have reported
+all four cards pointing at an absent drive as `active`, cheerfully.
+
+It now composes the checks that exist: `secrets-doctor`, `doctor`,
+`project_doctor`, `task_doctor`, `memory-search status`, `agent_usage`, plus
+tools and MCP. Each entry says *why* the tool is the right source — in three
+cases because reading the file directly gave the wrong answer, which is how the
+old step 5 was written.
+
+`commands/doctor.md` gains a "siblings" section drawing the line the split
+depends on: `doctor` checks the **install**, the others check what the ecosystem
+**produced**. A green `doctor` says the wiring is right and nothing more.
+
 ## [4.3.18] — 2026-08-02
 
 **`agent_usage` was overstating its own evidence.**
