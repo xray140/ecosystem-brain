@@ -19,10 +19,17 @@ when the working directory is the repo root.
 # build/refresh embeddings (Ollama: nomic-embed-text)
 uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory index
 uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory search "QUERY" -k 5
+uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory status
 ```
 Add `--offline` to use the deterministic hash embedder when Ollama isn't running.
 It is a global flag: it goes **before** the subcommand, not after. The cache is
 `<vault>/.search-index.db` (gitignored).
+
+`status` is worth running before you trust a result. The offline embedder is a
+bag of words, and a search backed by it still returns related-*looking* notes —
+which is how this vault spent weeks answering from a hash index nobody knew was
+there. `status` reports coverage and which embedder is actually in the cache.
+The weekly heartbeat refreshes the index and gates on that status.
 
 ## Structural manifest
 ```bash

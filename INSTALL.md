@@ -85,7 +85,13 @@ It schedules:
 |------|------|------|
 | `EcosystemBrain-OllamaServe` | at logon | starts the Ollama server (semantic memory search) |
 | `EcosystemBrain-CatalogRefresh` | weekly (Sun 9am) | `catalog.py build` — refresh the agent catalog from GitHub |
-| `EcosystemBrain-Maintenance` | weekly (Mon 9am) | health heartbeat: `doctor` + `selfcheck` + `update --check`, writes `memory/maintenance/<date>.md` |
+| `EcosystemBrain-Maintenance` | weekly (Mon 9am) | health heartbeat: 8 checks — `doctor`, `selfcheck`, `project_doctor`, `task_doctor`, memory index refresh + status, `agent_usage`, `update --check`. Writes `memory/maintenance/<date>.md` and `last-run.log` |
+
+- The registrar disables both battery guards. PowerShell defaults them **on**,
+  which means a laptop task refuses to start on battery and is killed if the
+  machine switches to it — every weekly run here died that way from 2026-07-15
+  to 08-02 while the tasks showed `State: Ready`. `task_doctor` now checks each
+  task's last *result*, so that cannot go unnoticed again.
 
 - Re-running is safe (`-Force`). Overwriting a task first created in an **elevated**
   shell needs an elevated PowerShell; the script reports `[exists]` and moves on otherwise.

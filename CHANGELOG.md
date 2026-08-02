@@ -2,6 +2,23 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.21] — 2026-08-03
+
+Four more documents caught up with what the code does. A systematic sweep this
+time — every doc that describes something changed today, checked against the
+code rather than re-read.
+
+- `INSTALL.md` described the weekly heartbeat as three checks (`doctor`,
+  `selfcheck`, `update --check`). It runs **eight**. It also now records why the
+  registrar disables PowerShell's battery guards, since that is the setting that
+  killed every scheduled run for three weeks.
+- `skills/memory/SKILL.md` and `memory/README.md` gained `memory-search status`,
+  with the reason to reach for it: the offline embedder is a bag of words and a
+  search backed by it still returns related-*looking* notes, which is how this
+  vault spent weeks answering from a hash index nobody knew was there.
+- `docs/OBSIDIAN.md` said "embeds notes (Ollama)". It now names the model and
+  dimensionality, and points at the check that proves the claim.
+
 ## [4.3.20] — 2026-08-03
 
 The README, checked against reality rather than re-read. Fifteen versions
