@@ -1,10 +1,14 @@
 ---
 type: project
-status: active
+status: archived
 created: 2026-06-04
 stack: [python, uv, ruff, pytest]
 tags: [project, python]
 ---
+
+> **Archived 2026-08-03.** The project lives on another PC's `D:` drive, or was
+> deleted from it — unknowable from this machine. The `- Project:` path below is
+> left as recorded so the card still knows where to look if that drive returns.
 # my-first-tool
 
 Scaffolded from `python-project` template on 2026-06-04.

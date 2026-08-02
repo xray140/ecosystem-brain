@@ -2,6 +2,40 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.4.0] — 2026-08-03
+
+The three open decisions, taken. Minor bump: this closes the last items on the
+roadmap rather than fixing anything.
+
+**Pruned two agents.** `python-pro` and `cli-developer` were installed
+2026-07-17, *after* the oldest surviving transcript (2026-07-08), and never
+invoked since — the only two of eight whose evidence window is complete. The
+other six predate the window and keep their blind spot, so they stay. Both are
+reinstallable from their pinned SHA `947b44c`; the roster is 14 → 12.
+
+**Archived four project cards.** `betting-tracker`,
+`betting-stats-analysis`, `my-first-tool` and `viral-videos-sm` describe
+projects on another PC's `D:` drive. `status: archived` records that decision
+without deleting history, and the `- Project:` path is left as recorded so a
+card still knows where to look if that drive returns. `project_doctor` is now
+**gating** in the heartbeat — the reason it was advisory is gone.
+
+**`scripts/profile_machine.py`** — proposed 2026-07-15 and parked. What made it
+worth building is what this session kept running into: the vault is shared
+across machines while almost everything in it is machine-specific. A card's
+drive letter, an agent's usage count, which scheduled tasks exist — every one of
+those readings needs to know which machine is asking, and nothing recorded it.
+
+It writes `memory/machines/<host>.md`: hostname, OS, **which drive roots exist**,
+where this clone is, which prerequisites resolve. Deliberately a note rather than
+a config — read by a human or an agent reasoning about a discrepancy, never
+branched on by code. Written at bootstrap so a fresh clone knows where it is from
+the first session, refreshed weekly, and never fatal: a profile is a convenience,
+and failing to write one must not fail an install.
+
+On this machine it records `drives present: C:` — which is precisely the fact
+that turns "four cards point nowhere" into "four cards describe another PC".
+
 ## [4.3.25] — 2026-08-03
 
 The mutation harness now covers the gates that **predate** this session — 10
