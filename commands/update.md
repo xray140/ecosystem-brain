@@ -1,6 +1,6 @@
 ---
 description: Check for and apply updates to all installed agents, skills, and commands.
-argument-hint: [--all | --check | --name <name>]
+argument-hint: [--all | --check | --name <name> | --rollback <name>]
 ---
 Update all installed ecosystem agents/skills/commands. Arguments: $ARGUMENTS
 
@@ -22,3 +22,19 @@ Steps:
 
 If $ARGUMENTS contains `--check`, only run step 1. If it contains `--name <x>`, pass that to the script.
 If any update was BLOCKED (quarantined), tell the user to review `quarantine/<name>.md` before trusting it.
+
+## Undoing an update
+
+An update that makes an agent worse is reversible — the previous SHA is recorded
+when the pin advances:
+
+```
+uv run python {{ECOSYSTEM_ROOT}}/scripts/update-agents.py --rollback <name>
+```
+
+It re-fetches the old content **at that SHA**, re-scans it (no path into an
+active agent file skips the scanner, not even the way back), rewrites the file,
+and swaps the pins — so the rollback is itself undoable by running it again.
+
+Only for GitHub-sourced agents. A first-party one is versioned in this repo:
+roll it back with `git`.

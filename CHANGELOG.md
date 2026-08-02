@@ -2,6 +2,49 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.13] — 2026-08-02
+
+The three remaining gaps from the capability audit. Suite 458 → 504.
+
+**`update-agents --rollback <name>`.** Pinning exists so you control *when* an
+agent moves; without the previous SHA there was no way to move back, and an
+update that degraded an agent left only GitHub archaeology. The registry now
+records `previous_commit` when a pin advances, and rollback re-fetches the old
+content **at that SHA**, re-scans it, rewrites the file and swaps the pins — so
+the rollback is itself undoable. The way back is gated too: the content passed
+the scanner once, but no path into an active agent file skips it, not even this
+one. A `↓` symbol distinguishes it in the report.
+
+**`scripts/verify_templates.py`, wired into CI.** CI smoke-tested the init
+*engine* with `--plan`, which writes nothing — so the engine was covered and the
+templates were not. A dependency could break and nobody would learn of it until
+the next person scaffolded a project and found it red on arrival. Each template
+is now scaffolded for real into a temp dir and its own build+test run there: the
+"verified green baseline" rule the ecosystem applies to projects it creates,
+applied to the blueprints those projects are made from.
+
+- Doing this surfaced a **pre-existing bug**: `verify_baseline` ran
+  `subprocess.run(["npm", …])`, and on Windows `npm` is `npm.CMD` — a bare name
+  raises `FileNotFoundError`. So `/ecosystem-brain:init` on a typescript project
+  crashed with a traceback at the green-baseline step instead of reporting a
+  failed check. Both call sites now share `resolve_exe()`, and an unlaunchable
+  tool is a red baseline rather than a crash. Both templates verified green for
+  the first time.
+
+**`scripts/agent_usage.py` + `/ecosystem-brain:agent-usage`.** Every installed
+agent costs SessionStart context, and nothing measured whether any were ever
+used, so the roster only ever grew. Claude Code records each delegation as a
+`subagent_type` in its session transcripts, which makes it answerable from data
+already on disk. Current reading: **12 of 14 agents have never been invoked**
+here; only `security-auditor` (7×) and `memory-curator` (1×) have.
+
+- It reports and ranks; it never removes. Transcripts are local and rotatable,
+  so "never invoked" means "not in what is on this machine" — an agent used
+  daily on another PC reads as unused here. The output says so.
+- First-party agents are listed separately and are never removal candidates.
+  They are the squad the hook advertises on purpose: a zero there means *start
+  delegating to it*, not *delete it*.
+
 ## [4.3.12] — 2026-08-02
 
 **`project_doctor.py` — the ecosystem finally looks at what it built.**

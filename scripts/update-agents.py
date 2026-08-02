@@ -104,10 +104,52 @@ def update_item(entry: dict, kind: str, check_only: bool) -> str:
         return f"BLOCKED-unsafe (HIGH risk; quarantined -> {q.name}, kept current)"
 
     _write_agent(name, kind, new_content)
+    # Record where we came from BEFORE advancing. Pinning exists so you control
+    # when an agent moves; without the previous SHA there is no way to move back,
+    # and an update that degrades an agent leaves only GitHub archaeology.
+    if pinned and pinned != latest:
+        entry["previous_commit"] = pinned
+        entry["previous_hash"] = entry.get("hash")
     entry["hash"] = new_hash
     if latest:
         entry["commit"], entry["ref"] = latest, ref
     return f"updated ({diff})"
+
+
+def rollback_item(entry: dict, kind: str) -> str:
+    """Restore an agent to the SHA it was pinned at before the last update.
+
+    The content is re-scanned on the way back in. It passed the gate once, but
+    re-scanning costs nothing and means no path into an active agent file skips
+    the scanner — including this one.
+    """
+    name = entry["name"]
+    # Source first: "no previous pin" is technically true of a local agent too,
+    # but it is the less useful of the two things to say.
+    parsed = gh.parse_source(entry.get("source", "local"))
+    if not parsed:
+        return "local agent — roll back with git, not this"
+    previous = entry.get("previous_commit")
+    if not previous:
+        return "no previous pin recorded — nothing to roll back to"
+    repo, path = parsed
+    current = entry.get("commit")
+    try:
+        content = gh.fetch_url(gh.raw_url(repo, path, previous))
+    except Exception as e:  # network/parse: report it, don't crash the run
+        return f"error: {e}"
+
+    if worst(scan(content)) == "HIGH":
+        q = quarantine(name, content, f"rollback blocked: HIGH risk at {gh.short(previous)}")
+        return f"BLOCKED-unsafe (HIGH risk at the old pin; quarantined -> {q.name})"
+
+    _write_agent(name, kind, content)
+    entry["hash"] = gh.md5(content)
+    entry["commit"] = previous
+    # Swap rather than clear, so rolling back is itself undoable.
+    entry["previous_commit"] = current
+    entry["previous_hash"] = None
+    return f"rolled back ({gh.short(current)} -> {gh.short(previous)})"
 
 
 def status_symbol(status: str) -> str:
@@ -126,6 +168,8 @@ def status_symbol(status: str) -> str:
         return "!"  # genuinely needs attention
     if "up-to-date" in status:
         return "✓"  # includes "up-to-date (pinned -> sha)"
+    if status.startswith("rolled back"):
+        return "↓"  # restored to the previous pin
     if "update" in status:
         return "↑"  # updated, or update-available under --check
     if status == "synced":
@@ -133,6 +177,28 @@ def status_symbol(status: str) -> str:
     if status == "local":
         return "·"  # first-party, nothing upstream to check
     return "!"
+
+
+def _save(data: dict) -> None:
+    INSTALLED_FILE.write_text(
+        json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+
+
+def _do_rollback(data: dict, name: str) -> int:
+    for kind in ("agents", "commands", "skills"):
+        for entry in data.get(kind, []):
+            if entry["name"] != name:
+                continue
+            status = rollback_item(entry, kind)
+            print(f"  [{status_symbol(status)}] {kind[:-1]:10s} {name:30s}  {status}")
+            if status.startswith("rolled back"):
+                _save(data)
+                print("\n[ok] installed.json updated")
+                return 0
+            return 1
+    print(f"[error] no installed item named '{name}'")
+    return 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -147,6 +213,11 @@ def main(argv: list[str] | None = None) -> int:
         "--all", action="store_true",
         help="Update every installed item (the default; explicit for clarity)",
     )
+    ap.add_argument(
+        "--rollback",
+        metavar="NAME",
+        help="restore NAME to the SHA it was pinned at before the last update",
+    )
     args = ap.parse_args(argv)
 
     if not INSTALLED_FILE.exists():
@@ -154,6 +225,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     data = json.loads(INSTALLED_FILE.read_text(encoding="utf-8"))
+
+    if args.rollback:
+        return _do_rollback(data, args.rollback)
     changed = False
     blocked = 0
     total = sum(
@@ -179,9 +253,7 @@ def main(argv: list[str] | None = None) -> int:
                 blocked += 1
 
     if changed and not args.check:
-        INSTALLED_FILE.write_text(
-            json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n"
-        )
+        _save(data)
         print("\n[ok] installed.json updated")
     elif args.check:
         print("\n[info] run without --check to apply updates")

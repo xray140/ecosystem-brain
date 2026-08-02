@@ -295,6 +295,21 @@ def append_to_moc(name: str, blurb: str, moc: Path = PROJECTS_MOC) -> bool:
     return True
 
 
+def resolve_exe(cmd: list[str]) -> list[str]:
+    """argv with argv[0] resolved to a real executable path.
+
+    On Windows `npm` is `npm.CMD`. `subprocess.run` without a shell will not find
+    it by bare name and raises FileNotFoundError — so the typescript template's
+    baseline crashed the whole `init --apply` with a traceback instead of
+    reporting a failed check. `shutil.which` does find it, so resolve up front.
+
+    Returns cmd unchanged when the tool is absent, letting the caller's own
+    error path report a missing tool rather than raising here.
+    """
+    exe = shutil.which(cmd[0])
+    return [exe, *cmd[1:]] if exe else cmd
+
+
 def verify_baseline(dest: Path, template: str) -> bool:
     """Run the template's build + test commands in `dest`. The verification loop
     the ecosystem preaches: prove the scaffold is green before handing it over.
@@ -305,10 +320,16 @@ def verify_baseline(dest: Path, template: str) -> bool:
         return True
     print("  verifying green baseline ...")
     for cmd in cmds:
-        r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
-            cmd, cwd=str(dest), capture_output=True, text=True, encoding="utf-8"
-        )
         label = " ".join(cmd)
+        try:
+            r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
+                resolve_exe(cmd), cwd=str(dest), capture_output=True, text=True,
+                encoding="utf-8", errors="replace",
+            )
+        except OSError as e:
+            # A missing or unlaunchable tool is a red baseline, not a crash.
+            print(f"  [FAIL] {label}\n      cannot run: {e}")
+            return False
         if r.returncode != 0:
             tail = "\n      ".join((r.stdout + r.stderr).strip().splitlines()[-8:])
             print(f"  [FAIL] {label}\n      {tail}")
