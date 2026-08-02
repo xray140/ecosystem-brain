@@ -1,7 +1,7 @@
 ---
 type: moc
 status: active
-updated: 2026-08-01
+updated: 2026-08-02
 tags: [moc, roadmap, state]
 ---
 # Ecosystem-Brain — state & roadmap
@@ -9,10 +9,10 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.10)
-- **15 commands** (global): init, scaffold, search, install, catalog, update,
-  agents, new-agent, health-check, doctor, security-audit, write-tests, fix-bug,
-  context-sync, memory-gc
+## Current state (v4.3.12)
+- **16 commands** (global): init, scaffold, search, install, catalog, update,
+  agents, new-agent, health-check, doctor, **project-doctor**, security-audit,
+  write-tests, fix-bug, context-sync, memory-gc
 - **Project init**: `/ecosystem-brain:init` — sharp 3-4 question interview →
   tailored AGENTS.md + scanned/pinned agents + named API keys in .env.example +
   a **verified green baseline** (build+test must pass) + memory card linked into
@@ -24,17 +24,17 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin). Shared helpers in
   `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (418
-  tests, ~5s) + `scripts/selfcheck.py` + gitleaks. Every step verified
-  locally step-by-step at v4.3.10 (exit 0, no side effects); the ubuntu run
-  itself is unverified until the branch is pushed. Toolchain pinned in
-  `requirements-dev.txt`, rule set pinned in `ruff.toml` — see
-  [[decisions/toolchain-pinning]].
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (450
+  tests, ~5s) + `scripts/selfcheck.py` + gitleaks. **Green on the ubuntu
+  runner** since 2026-08-01 (it had been red on every push for weeks on an
+  unpinned ruff — 57 findings no commit introduced). Toolchain pinned in
+  `requirements-dev.txt`, rule set in `ruff.toml`, Actions pinned to commit
+  SHAs with Dependabot — see [[decisions/toolchain-pinning]].
 - **Gates**: `selfcheck.py` = 8 checks (JSON, agent scan, init-engine, memory
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
   runs the *same* invocation and the same pinned binary as CI, so local-green
   and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (421, **90%** coverage, every script >=81%) covers scan_agent, init_project,
+- **Tests**: `tests/` (450, **90%** coverage, every script >=81%) covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
@@ -46,8 +46,15 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **Dogfood**: the repo's own `CLAUDE.md` imports `@AGENTS.md` — same cross-tool
   pattern it ships in templates.
 - **Doctor**: `/ecosystem-brain:doctor` (`doctor.py`) = live-hooks + repo↔~/.claude
-  drift (commands + agents + **skills**) + prereqs. Wired into health-check and
-  the weekly maintenance heartbeat.
+  drift (commands + agents + **skills**) + prereqs.
+- **Project doctor**: `/ecosystem-brain:project-doctor` (`project_doctor.py`) —
+  the feedback loop on what the ecosystem *built*: does each registered card's
+  path still resolve, commit age, dirty tree, AGENTS.md, .env vs .env.example,
+  CI conclusion (advisory). Reports, never repairs: fix the card's
+  `- Project: ` line, or set `status: archived`. Non-gating in the heartbeat
+  until the current backlog is triaged.
+- Both are wired into health-check and the weekly maintenance heartbeat, whose
+  status is three-state: `ok` / `warn` (advisory check failed) / `FAIL`.
 - **First-party squad** (6): security-auditor, convention-keeper, script-smith,
   test-writer, bug-fixer, memory-curator. The SessionStart suggester surfaces them
   every session *with trigger moments* so they actually get delegated to.
@@ -70,8 +77,8 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **Memory**: Obsidian vault (project cards linked into `projects-moc` hub +
   stack decisions — no orphans), Ollama semantic search (nomic-embed-text, GPU).
 - **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
-  maintenance heartbeat (`maintenance.py`: doctor + selfcheck + update --check →
-  `memory/maintenance/<date>.md`). One-shot registrar:
+  maintenance heartbeat (`maintenance.py`: doctor + selfcheck + project-doctor +
+  update --check → `memory/maintenance/<date>.md`). One-shot registrar:
   `scripts/register-scheduled-tasks.ps1` (idempotent, path-derived).
 - **Templates**: python-project + typescript-project, each with AGENTS.md
   (cross-tool) + CLAUDE.md + GEMINI.md (both `@AGENTS.md` importers) + per-language
@@ -124,6 +131,15 @@ Read this first in a fresh session (after CLAUDE.md). Run
   machine; first maintenance run verified end-to-end (report all-green).
 - [x] **.mcp.json emptied** (2026-07-15) — filesystem server pointed at a dead
   path; git/github duplicated native tools.
+- [ ] **Triage the 4 dead project cards** (opened 2026-08-02) — betting-tracker,
+  betting-stats-analysis, my-first-tool, viral-videos-sm all point at
+  `D:\claude-projects\…`, which does not exist on this machine. Deleted, on
+  another machine, or an unmounted drive? Each needs either a corrected
+  `- Project: ` line or `status: archived`. Flip project_doctor to gating in
+  `maintenance.CHECKS` once done.
+- [x] **Project feedback loop → v4.3.12** (2026-08-02) — nothing had ever read
+  `memory/projects/*.md` back; four cards had rotted unnoticed. Also fixed the
+  heartbeat labelling a failed advisory check as `ok`.
 - [ ] **profile_machine.py** (proposed 2026-07-15, parked) — per-machine vault
   note (OS, tools, apps, drives/shares, project dirs) generated at bootstrap and
   injected at SessionStart, so any PC is known from the first second.
