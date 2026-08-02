@@ -2,6 +2,25 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.17] — 2026-08-02
+
+Vault curation and the rule the audit earned. No behaviour change.
+
+- **`decisions/verification-integrity.md`** — the audit found the *same defect
+  eight times* in different clothes, and the pattern was recorded nowhere. It is
+  now: a gate nobody reads is not a gate, in three failure modes (not run; run
+  but unread; run and reported dishonestly), with the eight instances as
+  evidence and the tell that makes them survive — **degraded output is plausible
+  output**, so verification has to mean *check the artefact*, not *it exited 0*.
+- **`AGENTS.md`** gains that as a rule rather than leaving it in prose. The
+  repo's own principle: when a rule keeps getting forgotten, promote it into a
+  rules file.
+- **`memory/roadmap.md` 216 → 144 lines.** It had accumulated 21 completed
+  entries and become a changelog. Release history belongs in `CHANGELOG.md`; a
+  note whose job is to orient a fresh session should carry the *open* questions.
+  The three open items are preserved verbatim; everything closed is now one
+  paragraph pointing at the changelog.
+
 ## [4.3.16] — 2026-08-02
 
 **`init --apply` could not be run once without dirtying this repo — so it never

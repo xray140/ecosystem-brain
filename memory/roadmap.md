@@ -25,7 +25,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   compare URL, re-scans, quarantines HIGH, advances pin) -> **rollback**
   (`--rollback <name>` re-fetches at the previous SHA, re-scans, swaps pins;
   itself undoable). Shared helpers in `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (545
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (549
   tests, ~6s) + `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each
   blueprint for real and runs its baseline) + gitleaks. **Green on the ubuntu
   runner** since 2026-08-01 (it had been red on every push for weeks on an
@@ -36,7 +36,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
   runs the *same* invocation and the same pinned binary as CI, so local-green
   and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (545, **90%** coverage, every script >=81%) covers scan_agent, init_project,
+- **Tests**: `tests/` (549, **90%** coverage, every script >=81%) covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
@@ -106,111 +106,39 @@ Read this first in a fresh session (after CLAUDE.md). Run
   subagents for high-volume reads, `/clear` between tasks. (SessionStart suggester
   output is already lean at ~700 chars.)
 
-## Candidate next steps
-- [x] **Gate repair → v4.3.5** (2026-07-31) — CI lint was red on an unpinned
-  ruff and the local gate couldn't see it; skills were invisible to `doctor` and
-  unloadable when installed; `--name` was a path; scan reports buried MEDIUM
-  findings. All fixed with tests (114 → 157). See [[decisions/toolchain-pinning]].
-- [x] **P1 hardening → v4.3.6** (2026-08-01) — `fetch_url` https+allowlist+cap
-  (it was upstream of every other control); destructive guard rewritten in
-  Python after it proved bypassable *and* prone to false positives; `scaffold
-  --force` rmtree guarded; Actions pinned to SHAs + Dependabot. 174 → 246 tests.
-- [x] **Coverage + de-hardcoded paths → v4.3.7** (2026-08-01) — the three 0%
-  scripts covered (`suggest-agents` 94%, `search_agents` 87%, `maintenance` 95%),
-  `install-agent` 32→91%; overall 47→64%. `{{ECOSYSTEM_ROOT}}` replaces the dead
-  authoring path (58 refs / 16 files), enforced by selfcheck check 6.
-- [x] **Remaining coverage → v4.3.8** (2026-08-01) — `selfcheck` 34→85%,
-  `bootstrap` 44→99%, `doctor` 52→98%, `catalog` 30→98%, `new_agent` 49→99%,
-  `update-agents` 48→81%. Overall 64→**86%**, 395 tests. Each gate is now tested
-  for going *red* when its subject breaks, not merely for passing on a healthy
-  repo. No production code changed.
-- [x] **Linux path bug + doc drift -> v4.3.10** (2026-08-01) — the SessionStart
-  suggester rewrote real posix paths (`/d/projects/app` -> `D:/projects/app`)
-  off Windows, so it detected no project type and silently suggested nothing;
-  `bootstrap` had the guard since 2026-06-06, the second copy never got it.
-  Test forces the non-Windows branch, since on Windows both copies agreed.
-  Docs: README command table (12->15), `update` description, six first-party
-  agents, new Verification section, dead `.mcp.json`/`GITHUB_TOKEN` claim;
-  INSTALL heartbeat contents; TOKENS.md MCP guidance.
-- [x] **`init_project.apply()` covered -> v4.3.9** (2026-08-01) — 54->83%, all
-  subprocesses stubbed. Pins the ordering that keeps a red baseline off GitHub,
-  that `.env.example` carries key names and never values, and that a blocked
-  agent does not fail the whole init. Overall 86->**90%**, 418 tests.
-- [x] **Live-install audit → v4.3.2** (2026-07-15) — fixed the hardcoded /d/
-  SessionStart hint, added doctor's hook-wiring drift check, unpinned-install
-  warning, registry repair (stale global_path, backfilled data-engineer pin).
-- [x] **Model routing rev. for Sonnet 5 → v4.3.3** (2026-07-15) — sonnet tier
-  for spec-driven code-gen; aliases-only portability rule made explicit.
-- [x] **Heartbeat live** (2026-07-15) — all 3 scheduled tasks registered on this
-  machine; first maintenance run verified end-to-end (report all-green).
-- [x] **.mcp.json emptied** (2026-07-15) — filesystem server pointed at a dead
-  path; git/github duplicated native tools.
+## Shipped
+
+Release history lives in `CHANGELOG.md` — this note orients a fresh session, so
+it keeps the open questions rather than the closed ones.
+
+**2026-07-31 → 08-02, v4.3.5 → v4.3.16.** One audit, one defect found eight
+times: information existed and nothing read it back. CI had been red on every
+push for weeks; the local gate never ran the linter that was failing; 58
+committed paths pointed at a drive that no longer existed; the weekly scheduled
+tasks had *never once* completed a run while reporting `Ready`; "semantic"
+search ran on a bag-of-words fallback; nothing had ever re-read the project
+cards. Tests 114 → 549, coverage 40% → 90%, selfcheck 6 → 8 checks, and every
+artefact the ecosystem produces now has a reader.
+
+The rule that came out of it: [[decisions/verification-integrity]].
+
+Earlier milestones (project init engine, agent SHA pinning, model routing,
+cross-tool AGENTS.md, the memory vault) are in `CHANGELOG.md` under v4.0–v4.3.4.
+
+## Open questions
+
 - [ ] **Triage the 4 dead project cards** (opened 2026-08-02) — betting-tracker,
   betting-stats-analysis, my-first-tool, viral-videos-sm all point at
   `D:\claude-projects\…`, which does not exist on this machine. Deleted, on
   another machine, or an unmounted drive? Each needs either a corrected
   `- Project: ` line or `status: archived`. Flip project_doctor to gating in
   `maintenance.CHECKS` once done.
-- [x] **Project feedback loop → v4.3.12** (2026-08-02) — nothing had ever read
-  `memory/projects/*.md` back; four cards had rotted unnoticed. Also fixed the
-  heartbeat labelling a failed advisory check as `ok`.
-- [x] **Capability gaps 2/3/4 -> v4.3.13** (2026-08-02) — agent rollback
-  (`previous_commit` + `--rollback`, re-scanned on the way back); templates
-  verified for real in CI (which surfaced a pre-existing Windows crash: bare
-  `npm` raises FileNotFoundError, so init on a typescript project died at the
-  baseline step); agent-usage from session transcripts — 12 of 14 agents have
-  never been invoked here.
+
 - [ ] **Prune the 8 unused third-party agents** (opened 2026-08-02) — evidence
   is local-only, so confirm against the other PC before removing anything.
   Four first-party agents also show zero: that is a delegation habit to change,
   not a cleanup.
-- [x] **The scheduler that never ran -> v4.3.14** (2026-08-02) — the weekly
-  heartbeat and catalog refresh had failed EVERY scheduled run since being
-  registered, at `State: Ready` the whole time; catalog 40 days stale, every
-  maintenance report on disk written by hand. Two causes: PowerShell's battery
-  guards default ON, and the `.bat` wrappers had no `exit /b` so the console
-  teardown was reported instead of the real code. `task_doctor.py` now gates on
-  last-result + staleness so this cannot be silently true again.
-- [x] **Semantic search was never semantic -> v4.3.15** (2026-08-02) — the
-  index held 24/28 notes on the offline hash fallback while the README
-  advertised Ollama. No truncation (nomic-embed-text 500s past ~2k tokens, and
-  roadmap.md is 14k), one bad note aborted the build, and nothing rebuilt it.
-  Now 28/28 at 768d, with a gating status check.
-- [x] **init --apply made testable -> v4.3.16** (2026-08-02) — it wrote a card,
-  a MOC line and a registry mutation into THIS repo regardless of
-  ECOSYSTEM_DEST_ROOT, so running the flagship command once dirtied the repo and
-  it was never in CI. ECOSYSTEM_VAULT + --skip-agents fix that; CI now runs it
-  end to end and asserts `git diff --exit-code`.
+
 - [ ] **profile_machine.py** (proposed 2026-07-15, parked) — per-machine vault
   note (OS, tools, apps, drives/shares, project dirs) generated at bootstrap and
   injected at SessionStart, so any PC is known from the first second.
-- [x] **Official Claude best practices** (2026-06-05) — aligned CLAUDE.md,
-  template AGENTS.md, and the 4 first-party agents with Anthropic's published
-  guidance: added Verification discipline, nuanced plan-mode, focused/isolated/
-  least-privilege subagent framing, explicit `model:` grants. Grounding +
-  source links in [[decisions/claude-best-practices]].
-- [x] **Author original first-party agents** (2026-06-06) — added `script-smith`
-  (writes scripts honoring the Windows/uv/path conventions) and `convention-keeper`
-  (read-only auditor for CLAUDE.md/AGENTS.md/agents/scripts vs official + ecosystem
-  best practices). Both scanned CLEAN and registered local. Now 6 first-party agents.
-- [x] **`update --all` + `quarantine/`** (2026-06-06) — explicit --all flag; a
-  HIGH-risk install or upstream update is stashed in `quarantine/` for review.
-- [x] **Supply-chain hardening** (2026-06-06) — agents pinned to commit SHAs +
-  provenance; update shows oldsha→newsha + compare URL. See [[decisions/agent-pinning]].
-- [x] **Linux/Mac path handling in bootstrap** (2026-06-06) — drive-letter <->
-  Git-Bash-mount translation (`to_bash_path`, `_normalize`) now guarded by a
-  `WINDOWS` flag, so `/d/foo` is left as a real posix path off Windows. The
-  canonical-path rewrite already worked cross-platform. Platform-aware tests
-  cover both branches.
-- [x] **Tests for the python scripts** (2026-06-05) — `tests/` with 43 pytest
-  tests across scan_agent / init_project / bootstrap; wired into selfcheck
-  (`check_tests`) + a dedicated CI step. Covers the security gate, init engine,
-  and the portability path-rewrite.
-
-## Key decisions (see decisions/)
-- [[decisions/hook-format]] · [[decisions/windows-python-invocation]] ·
-  [[decisions/windows-path-translation]] · [[decisions/ollama-accented-path]] ·
-  [[decisions/powershell-utf8-bom]] · [[decisions/claude-best-practices]] ·
-  [[decisions/agent-pinning]] · [[decisions/betting-tracker-stack]] ·
-  [[decisions/model-routing]] · [[decisions/toolchain-pinning]] ·
-  [[decisions/text-file-write-conventions]]

@@ -19,7 +19,7 @@ You are the control tower for the claude-unified-ecosystem. Output-oriented; pro
 
 **Planning.** Explore → plan → implement. Reach for plan mode when a change is multi-file, the approach is uncertain, or the code is unfamiliar — but if you can describe the diff in one sentence, just make it.
 
-**Verification.** Pair every change with a check that returns pass/fail (tests, build, `scripts/selfcheck.py`) and show the command + its output — never report success you haven't observed.
+**Verification.** Pair every change with a check that returns pass/fail (tests, build, `scripts/selfcheck.py`) and show the command + its output — never report success you haven't observed. **Check the artefact, not the exit code**: degraded output is plausible output, so a green run proves less than the file it was supposed to write. A gate nobody reads is not a gate — see [[decisions/verification-integrity]].
 
 **Context discipline.** Context is the scarce resource: keep instruction files and `.mcp.json` lean, push high-volume reads to subagents, and `/clear` between unrelated tasks. See `docs/TOKENS.md`.
 
