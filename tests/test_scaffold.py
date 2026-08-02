@@ -88,3 +88,56 @@ def test_to_package_normalizes():
     assert scaffold.to_package("my-tool") == "my_tool"
     assert scaffold.to_package("My Tool 2") == "my_tool_2"
     assert scaffold.to_package("2fast") == "pkg_2fast"
+
+
+# --- git init must never take the scaffold down --------------------------
+# CI caught this on the first run of the new end-to-end step: a runner with no
+# git identity got `CalledProcessError` and a raw traceback, reported as
+# "scaffold failed", when the project had in fact been created correctly.
+
+
+def test_missing_git_identity_does_not_fail_the_scaffold(tmp_path, monkeypatch, capsys):
+    import subprocess as sp
+
+    def fake(cmd, **kw):
+        if cmd[:2] == ["git", "commit"]:
+            return sp.CompletedProcess(cmd, 128, "", "empty ident name not allowed")
+        return sp.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(scaffold.subprocess, "run", fake)
+    templates = Path(__file__).resolve().parent.parent / "templates"
+    rc = scaffold.main(
+        ["--type", "python-project", "--name", "no-ident",
+         "--dest-root", str(tmp_path), "--templates-root", str(templates), "--git"]
+    )
+    assert rc == 0, "the project exists and is usable; only the commit failed"
+    assert (tmp_path / "no-ident" / "pyproject.toml").exists()
+    out = capsys.readouterr().out
+    assert "[warn]" in out
+    assert "git config --global user.name" in out, "say how to fix it"
+
+
+def test_git_init_reports_failure_without_raising(tmp_path, monkeypatch):
+    import subprocess as sp
+
+    monkeypatch.setattr(
+        scaffold.subprocess, "run", lambda cmd, **kw: sp.CompletedProcess(cmd, 1, "", "boom")
+    )
+    assert scaffold.git_init(tmp_path, "x") is False
+
+
+def test_git_init_survives_git_being_absent(tmp_path, monkeypatch):
+    def boom(*a, **k):
+        raise FileNotFoundError(2, "no git")
+
+    monkeypatch.setattr(scaffold.subprocess, "run", boom)
+    assert scaffold.git_init(tmp_path, "x") is False
+
+
+def test_git_init_reports_success(tmp_path, monkeypatch):
+    import subprocess as sp
+
+    monkeypatch.setattr(
+        scaffold.subprocess, "run", lambda cmd, **kw: sp.CompletedProcess(cmd, 0, "", "")
+    )
+    assert scaffold.git_init(tmp_path, "x") is True

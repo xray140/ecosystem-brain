@@ -2,6 +2,47 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.16] — 2026-08-02
+
+**`init --apply` could not be run once without dirtying this repo — so it never
+was, and it is now in CI.**
+
+The flagship command writes a project card, a MOC line, a manifest refresh and a
+registry mutation. Only the *destination* honoured an override
+(`ECOSYSTEM_DEST_ROOT`); everything else went into the ecosystem's own vault and
+registry unconditionally. A command you cannot run is a command you cannot test,
+which is exactly how the Windows crash fixed in 4.3.13 — bare `npm` raising
+`FileNotFoundError` inside its own green-baseline step — survived unnoticed.
+
+- **`ECOSYSTEM_VAULT`** redirects the card, the MOC and the manifest refresh, for
+  the same reason `ECOSYSTEM_DEST_ROOT` exists.
+- **`--skip-agents`** excludes the half that cannot be redirected by env: agent
+  installs mutate `registry/installed.json` and `~/.claude`.
+- CI now runs `--apply` end to end and asserts `git diff --exit-code` — the
+  checkout must be untouched afterwards.
+- `append_to_moc` resolves its target at call time. A default argument binds the
+  constant at import, the same trap that made `project_doctor.load_cards` audit
+  the real vault from a test pointed at a temp one.
+
+Verified by running it: scaffold, tailored AGENTS.md, card and MOC into the
+sandbox, green baseline (`uv sync`, `pytest -q`), and `git status` clean.
+
+**The new CI step found a real bug on its first run**, which is the point of it.
+`scaffold.py --git` used `check=True` on its initial commit, so a machine with
+no configured git identity got a raw `CalledProcessError` traceback reported as
+"scaffold failed" — when the project had in fact been created correctly and was
+perfectly usable. Every fresh runner and every developer who has never run
+`git config user.name` hits this. `git_init()` now reports failure instead of
+raising, and the scaffold succeeds with a warning naming the one-line fix.
+
+Two notes on what this exercise did *not* establish. A `--build web` run
+exceeded a 10-minute ceiling, but no component reproduced slowly in isolation
+(`npm install` 38s, `npm test` 12s, one agent install 3.1s) — the likely cause is
+a cold npm cache on first run, and I am not claiming a defect I could not
+reproduce. And the first draft of the test for the new override used
+`importlib.reload`, which mutates the shared module in place and leaked a
+`demo.md` into the real vault; it now asserts the resolution rule directly.
+
 ## [4.3.15] — 2026-08-02
 
 **Semantic search had never run on real embeddings.**

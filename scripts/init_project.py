@@ -39,7 +39,14 @@ CATALOG = REPO_ROOT / "registry" / "catalog.json"
 SCAFFOLD = REPO_ROOT / "scripts" / "scaffold.py"
 INSTALLER = REPO_ROOT / "scripts" / "install-agent.py"
 INDEXER = REPO_ROOT / "skills" / "memory" / "memory-index.py"
-PROJECTS_MOC = REPO_ROOT / "memory" / "projects-moc.md"
+# The vault `--apply` writes its project card and MOC entry into. Overridable
+# for the same reason DEST_ROOT is: without it, running the flagship command even
+# once dirties this repo — a memory card, a MOC line, a registry mutation — so it
+# was never exercised end to end, and a Windows crash in its own baseline step
+# survived unnoticed until 2026-08-02. A command you cannot run is a command you
+# cannot test.
+VAULT = Path(os.environ.get("ECOSYSTEM_VAULT") or REPO_ROOT / "memory")
+PROJECTS_MOC = VAULT / "projects-moc.md"
 # Sibling of the repo by default (e.g. D:\claude-projects); overridable for tests.
 DEST_ROOT = Path(os.environ.get("ECOSYSTEM_DEST_ROOT") or REPO_ROOT.parent)
 
@@ -278,8 +285,14 @@ def moc_line(name: str, blurb: str) -> str:
     return f"- [[{name}]] — {blurb}"
 
 
-def append_to_moc(name: str, blurb: str, moc: Path = PROJECTS_MOC) -> bool:
-    """Idempotently register a project in the projects MOC. Returns True if added."""
+def append_to_moc(name: str, blurb: str, moc: Path | None = None) -> bool:
+    """Idempotently register a project in the projects MOC. Returns True if added.
+
+    `moc=None` resolves PROJECTS_MOC at call time. A default argument would bind
+    the module constant at import, which is the trap that made `load_cards` in
+    project_doctor silently audit the real vault from a test pointed at a temp one.
+    """
+    moc = moc or PROJECTS_MOC
     header = (
         "---\ntype: moc\nstatus: active\ntags: [moc, projects]\n---\n"
         "# Projects\n\nEvery project scaffolded via `/ecosystem-brain:init`. "
@@ -386,6 +399,7 @@ def apply(
     api_keys: list[str],
     do_verify: bool,
     do_github: bool,
+    skip_agents: bool = False,
 ) -> int:
     dest = DEST_ROOT / name
     print(f"scaffolding {cfg['template']} -> {dest} ...")
@@ -411,6 +425,9 @@ def apply(
         print(f"  [ok] named {len(api_keys)} API key(s) in .env.example")
 
     installed = 0
+    if skip_agents:
+        print(f"  [skip] {len(resolved)} agent(s) — --skip-agents")
+        resolved = []
     for a in resolved:
         if a["source"] == "local":
             print(f"  [ok]      {a['name']} (local, already available)")
@@ -426,12 +443,13 @@ def apply(
             print(f"  [error]   {a['name']}: {ir.stderr.strip()[:60]}")
 
     # Memory card (linked into the graph) + register in the projects MOC.
-    card = REPO_ROOT / "memory" / "projects" / f"{name}.md"
+    card = VAULT / "projects" / f"{name}.md"
     card.parent.mkdir(parents=True, exist_ok=True)
     card.write_text(memory_card(name, cfg, resolved), encoding="utf-8", newline="\n")
     if append_to_moc(name, f"{build} · {card_stack(cfg)}"):
         print("  [ok] registered in projects-moc")
-    run(["uv", "run", "python", str(INDEXER)])
+    run(["uv", "run", "python", str(INDEXER), "--vault", str(VAULT),
+         "--out", str(VAULT / "index.json")])
     print("  [ok] memory card + index refreshed")
 
     # Verification loop: prove the scaffold is green before handing it over.
@@ -469,6 +487,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="create a private GitHub repo and push (requires gh; only if baseline passes)")
     ap.add_argument("--no-verify", action="store_true",
                     help="skip the green-baseline build+test check after scaffolding")
+    ap.add_argument("--skip-agents", action="store_true",
+                    help="scaffold without installing agents — leaves registry/installed.json "
+                         "and ~/.claude untouched, so --apply can be exercised end to end")
     mode = ap.add_mutually_exclusive_group(required=True)
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
@@ -487,6 +508,7 @@ def main(argv: list[str] | None = None) -> int:
         args.name, cfg, resolved,
         build=args.build, api_keys=api_keys,
         do_verify=not args.no_verify, do_github=args.github,
+        skip_agents=args.skip_agents,
     )
 
 
