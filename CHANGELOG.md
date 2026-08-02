@@ -2,6 +2,26 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.23] — 2026-08-03
+
+**The vault-hygiene agent did not check the thing that rotted.**
+
+`memory-curator` exists for weekly vault hygiene, and its workflow refreshed
+`index.json` — the frontmatter manifest — and stopped there. The embedding cache
+is a separate index, and it was the one that drifted to 24-of-28 notes on the
+offline hash embedder while still answering queries.
+
+Its workflow now refreshes **both** and reports `memory-search status`, with the
+distinction spelled out, since conflating the two is what let the drift last.
+It also runs `project_doctor`: a vault that tracks projects should notice when a
+card names a path that no longer exists — and it is told to report, never
+repair, because only the user knows whether a project was deleted, moved, or
+lives on another machine.
+
+This closes the last category of the sweep. Every doc, command and agent
+definition that describes something changed this session has now been checked
+against the code rather than re-read.
+
 ## [4.3.22] — 2026-08-03
 
 **Six commands documented an instruction that would break the install.**
