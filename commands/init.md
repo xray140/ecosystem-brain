@@ -73,7 +73,7 @@ gloss over it.
 
 Then sync newly-installed agents to the global dir:
 ```
-cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/
+uv run python {{ECOSYSTEM_ROOT}}/scripts/bootstrap.py
 ```
 Report: the created path, the green-baseline result, the repo URL (if `--github`),
 and any agent that was BLOCKED by the security scan.

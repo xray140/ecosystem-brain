@@ -233,3 +233,49 @@ def test_memory_check_fails_when_the_indexer_does(monkeypatch, capsys):
     sc.check_memory()
     assert sc.fails
     assert "memory-index failed" in capsys.readouterr().out
+
+
+# --- 6b. the raw-copy instruction -----------------------------------------
+# Six commands told the reader to `cp` repo files over ~/.claude. Following that
+# overwrites every working command with one containing the literal
+# {{ECOSYSTEM_ROOT}} token, and cannot copy skills at all.
+
+
+def test_a_cp_into_claude_instruction_is_flagged(fake_repo, capsys):
+    (fake_repo / "commands").mkdir()
+    (fake_repo / "commands" / "x.md").write_text(
+        "Then sync:\ncp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/\n", encoding="utf-8"
+    )
+    sc.check_paths()
+    assert sc.fails
+    out = capsys.readouterr().out
+    assert "copies into ~/.claude" in out
+    assert "bootstrap.py" in out, "the check must name the fix"
+
+
+def test_the_bootstrap_instruction_is_not_flagged(fake_repo):
+    (fake_repo / "commands").mkdir()
+    (fake_repo / "commands" / "x.md").write_text(
+        "Re-sync with `uv run python {{ECOSYSTEM_ROOT}}/scripts/bootstrap.py`\n",
+        encoding="utf-8",
+    )
+    sc.check_paths()
+    assert sc.fails == []
+
+
+def test_prose_mentioning_cp_and_claude_apart_is_not_flagged(fake_repo):
+    """The rule targets an instruction, not the words. A sentence explaining why
+    NOT to cp must not trip it."""
+    (fake_repo / "commands").mkdir()
+    (fake_repo / "commands" / "x.md").write_text(
+        "Never copy these by hand.\nThe live config lives in ~/.claude.\n", encoding="utf-8"
+    )
+    sc.check_paths()
+    assert sc.fails == []
+
+
+def test_the_real_repo_has_no_raw_copy_instruction(capsys):
+    """Live assertion: all six occurrences are gone and none came back."""
+    sc.fails.clear()
+    sc.check_paths()
+    assert sc.fails == [], sc.fails

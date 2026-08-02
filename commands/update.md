@@ -15,8 +15,7 @@ Steps:
 2. Show what would change, then apply all: `uv run python {{ECOSYSTEM_ROOT}}/scripts/update-agents.py --all`
 3. Re-sync global dirs:
    ```
-   cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/
-   cp {{ECOSYSTEM_ROOT}}/commands/*.md ~/.claude/commands/ecosystem-brain/
+   uv run python {{ECOSYSTEM_ROOT}}/scripts/bootstrap.py
    ```
 4. Commit any changes: `git -C {{ECOSYSTEM_ROOT}} add -A && git commit -m "chore: update agents"`
 

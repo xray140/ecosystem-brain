@@ -14,11 +14,20 @@ content is reproducible and tamper-evident — a moved branch can't swap it):
 uv run python {{ECOSYSTEM_ROOT}}/scripts/install-agent.py --repo <user/repo> --path <path/to/file.md>
 ```
 Every install is security-scanned; HIGH-risk content is refused and quarantined.
+A skill lands at `skills/<name>/SKILL.md` — that nested shape is the only one
+Claude Code loads.
 
-After installing, sync the command files:
+The installer writes both the repo copy and the `~/.claude` copy itself, so
+nothing further is needed. **Never `cp` the repo's files over `~/.claude`.**
+Committed files refer to the repo as `{{ECOSYSTEM_ROOT}}`, and `bootstrap`
+expands that token on the way out; a raw copy would overwrite every working
+command with one containing the literal token, and would miss skills entirely
+(their nested path does not match a flat `*.md` glob).
+
+If `~/.claude` really is out of sync, the one correct fix is:
 ```
-cp {{ECOSYSTEM_ROOT}}/commands/*.md ~/.claude/commands/ecosystem-brain/
-cp {{ECOSYSTEM_ROOT}}/agents/*.md ~/.claude/agents/
+uv run python {{ECOSYSTEM_ROOT}}/scripts/bootstrap.py
 ```
+`scripts/doctor.py` is what tells you whether it is.
 
 Then show the updated list: `uv run python {{ECOSYSTEM_ROOT}}/scripts/install-agent.py --list`
