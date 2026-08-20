@@ -97,6 +97,10 @@ def compose() -> str:
         "Written by `scripts/profile_machine.py`. Regenerate rather than edit —",
         "it is derived, and a hand-edit will be silently overwritten.",
         "",
+        "`updated` is the date these facts last *changed*. Re-running on a machine",
+        "that has not changed leaves the file alone, so the note never appears in",
+        "a diff for having been regenerated.",
+        "",
         "## Identity",
         f"- **host**: `{host()}`",
         f"- **os**: {platform.system()} {platform.release()} ({platform.machine()})",
@@ -107,7 +111,10 @@ def compose() -> str:
         "",
         "## This clone",
         f"- **path**: `{REPO}`",
-        f"- **branch**: {_git('rev-parse', '--abbrev-ref', 'HEAD') or 'unknown'}",
+        # No branch line. It changes on every checkout, so the note rewrote
+        # itself constantly and showed up dirty in unrelated commits — twice it
+        # was nearly committed recording a feature branch as this machine's
+        # durable state. The docstring's own rule: no per-session state.
         f"- **remote**: {_git('remote', 'get-url', 'origin') or 'none'}",
         "",
         "## Tooling",
@@ -125,6 +132,16 @@ def compose() -> str:
     return "\n".join(lines)
 
 
+def facts(note: str) -> str:
+    """The note minus its `updated:` line — what actually describes the machine.
+
+    Comparing on this is what makes a re-run a no-op: regenerating on an
+    unchanged machine differs only in that date, and rewriting for it produced a
+    tracked file that went dirty on every run of the weekly heartbeat.
+    """
+    return "\n".join(ln for ln in note.split("\n") if not ln.startswith("updated:"))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -140,7 +157,9 @@ def main(argv: list[str] | None = None) -> int:
     MACHINES.mkdir(parents=True, exist_ok=True)
     dest = MACHINES / f"{host()}.md"
     existed = dest.exists()
-    dest.write_text(note, encoding="utf-8", newline="\n")
+    unchanged = existed and facts(dest.read_text(encoding="utf-8")) == facts(note)
+    if not unchanged:
+        dest.write_text(note, encoding="utf-8", newline="\n")
     # relative_to raises when the destination is not under the repo — which it
     # is not when MACHINES is redirected. Report the path either way rather than
     # crashing on the success message.
@@ -148,7 +167,11 @@ def main(argv: list[str] | None = None) -> int:
         shown = dest.relative_to(REPO).as_posix()
     except ValueError:
         shown = str(dest)
-    print(f"[ok] {'updated' if existed else 'wrote'} {shown}")
+    if unchanged:
+        verb = "unchanged"
+    else:
+        verb = "updated" if existed else "wrote"
+    print(f"[ok] {verb} {shown}")
     print(f"     host={host()}  drives={', '.join(drives())}")
     return 0
 
