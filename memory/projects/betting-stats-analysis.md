@@ -1,14 +1,16 @@
 ---
 type: project
-status: archived
+status: active
 created: 2026-06-09
 stack: [python]
 tags: [project, python]
 ---
 
-> **Archived 2026-08-03.** The project lives on another PC's `D:` drive, or was
-> deleted from it — unknowable from this machine. The `- Project:` path below is
-> left as recorded so the card still knows where to look if that drive returns.
+> **Lives on another PC.** The `- Project:` path below is on a `D:` drive that
+> is not on Verdun10. That machine is still in use, so the project is live — it
+> simply cannot be checked from here. Pin it by adding `host: <machine>` to this
+> frontmatter once that machine's `hostname` is known; until then
+> `project_doctor` infers "elsewhere" from the absent drive root.
 # betting-stats-analysis
 
 Configured via /ecosystem-brain:init.

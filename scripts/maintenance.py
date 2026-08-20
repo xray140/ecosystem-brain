@@ -58,7 +58,9 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     ("selfcheck", py("selfcheck.py"), True),
     # Gating since 2026-08-03. It was advisory while four cards pointed at a
     # drive that is not on this machine — a permanently red report stops being
-    # read. Those are archived now, so a failure here means something new.
+    # read. Those four are on another PC that is still in use, and "elsewhere"
+    # is a recognised state that exits 0, so gating here is safe without
+    # archiving live projects. A failure now means something new.
     ("registered projects (project_doctor)", py("project_doctor.py"), True),
     # Gating: this one catches the heartbeat's own scheduler failing. It ran
     # here every week from 2026-07-15 without once completing, and nothing
