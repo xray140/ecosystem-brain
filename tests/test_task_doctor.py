@@ -164,3 +164,36 @@ def test_main_passes_when_all_tasks_are_healthy(monkeypatch, capsys):
     monkeypatch.setattr(td, "query_tasks", lambda: [task(), task(name="EcosystemBrain-Y")])
     assert td.main() == 0
     assert "completed a recent run" in capsys.readouterr().out
+
+
+# --- a run in flight is not a failed run ----------------------------------
+# The heartbeat runs task_doctor as one of its own checks, so task_doctor always
+# reads the heartbeat's OWN in-progress run. Judging that as a failure latched
+# the report red permanently: FAIL -> maintenance exits 1 -> next run reads 0x1
+# -> FAIL again. These pin the exit from that loop.
+def test_the_heartbeats_own_in_flight_run_is_not_a_failure():
+    """0x41301 on the task that is running us right now. Before the fix this
+    returned False, and the weekly report could never be green."""
+    ok, detail = td.assess(task(name="EcosystemBrain-Maintenance", result=td.RUNNING, days_ago=0))
+    assert ok
+    assert detail == "run in progress"
+
+
+def test_a_run_still_running_long_past_its_time_limit_is_stuck():
+    """The grace window must not swallow a genuine hang — a task pinned at
+    "running" for a day never completed."""
+    ok, detail = td.assess(task(result=td.RUNNING, days_ago=2))
+    assert not ok
+    assert "stuck" in detail
+
+
+def test_running_grace_is_wider_than_the_tasks_execution_time_limit():
+    """register-scheduled-tasks.ps1 caps every run at 15 minutes, so anything
+    inside that window is legitimately in flight."""
+    assert td.RUNNING_GRACE > timedelta(minutes=15)
+
+
+def test_a_previous_run_that_exited_1_is_still_a_failure():
+    """The grace path is scoped to 0x41301 only. A finished run that exited
+    non-zero stays red — that is the signal the doctor exists for."""
+    assert not td.assess(task(result=0x1))[0]

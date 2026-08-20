@@ -48,6 +48,16 @@ RESULT_MEANING = {
     0x1: "the task's own command exited 1",
 }
 
+# A run in progress is evidence the task STARTED, not that it failed — and this
+# doctor is itself one of the checks the weekly heartbeat runs, so it always
+# reads the heartbeat's own in-flight run here. Counting that as a failure
+# latched the report red for good: task_doctor failed -> maintenance exited 1 ->
+# the next run read 0x1 ("the task's own command exited 1") and failed again,
+# for ever. The heartbeat could never report itself green.
+# Only a run still "running" long past its execution time limit is truly stuck.
+RUNNING = 0x41301
+RUNNING_GRACE = timedelta(hours=1)
+
 # A weekly task that has not run in this long is not running at all.
 STALE_AFTER = timedelta(days=10)
 
@@ -103,11 +113,34 @@ def describe(result: int) -> str:
     return RESULT_MEANING.get(result, f"exit 0x{result:08X}")
 
 
+def _age(last: str, now: datetime) -> timedelta | None:
+    """How long ago `last` was — None when it is absent or unparseable."""
+    if not last:
+        return None
+    try:
+        when = datetime.fromisoformat(last)
+    except ValueError:
+        return None
+    return now - (when if when.tzinfo else when.replace(tzinfo=UTC))
+
+
+def _span(age: timedelta) -> str:
+    """Coarse duration. `age.days` alone renders a two-hour hang as "0d"."""
+    return f"{age.days}d" if age.days else f"{int(age.total_seconds() // 3600)}h"
+
+
 def assess(task: dict, now: datetime | None = None) -> tuple[bool, str]:
     """(ok, detail) for one task — judged on its last RESULT, not its state."""
     now = now or datetime.now(UTC)
     result = int(task.get("LastResult", 0))
     last = task.get("LastRun") or ""
+    age = _age(last, now)
+
+    # Checked before OK_RESULTS: a run in flight has no verdict yet. See RUNNING.
+    if result == RUNNING:
+        if age is None or age <= RUNNING_GRACE:
+            return True, "run in progress"
+        return False, f"still running {_span(age)} after it started — stuck?"
 
     if result not in OK_RESULTS:
         return False, f"last run {describe(result)}"
@@ -115,13 +148,9 @@ def assess(task: dict, now: datetime | None = None) -> tuple[bool, str]:
     if result == 0x41303 or not last:
         return True, "registered, not yet run"
 
-    try:
-        when = datetime.fromisoformat(last)
-        when = when if when.tzinfo else when.replace(tzinfo=UTC)
-    except ValueError:
+    if age is None:
         return True, "last run ok"
 
-    age = now - when
     if age > STALE_AFTER:
         return False, f"last succeeded {age.days} days ago — is the trigger firing?"
     return True, f"last run ok, {age.days}d ago"

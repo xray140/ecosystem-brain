@@ -279,3 +279,53 @@ def test_the_real_repo_has_no_raw_copy_instruction(capsys):
     sc.fails.clear()
     sc.check_paths()
     assert sc.fails == [], sc.fails
+
+
+# --- offline is not a finding ---------------------------------------------
+# check_tests/check_lint shell out through `uv run --with-requirements`, which
+# resolves the pinned toolchain from PyPI. Offline, that exits non-zero with a
+# DNS error and used to be reported as "pytest failed" — a false accusation
+# about the code, and what turned the 2026-08-20 weekly heartbeat red while the
+# suite was in fact green.
+DNS_ERROR = """error: Request failed after 3 retries in 36.5s
+  Caused by: Failed to fetch: `https://pypi.org/simple/ruff/`
+  Caused by: dns error"""
+
+
+class _Result:
+    def __init__(self, returncode, stdout="", stderr=""):
+        self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
+
+
+@pytest.fixture
+def _offline(monkeypatch):
+    monkeypatch.setattr(sc.subprocess, "run", lambda *a, **k: _Result(2, stderr=DNS_ERROR))
+
+
+@pytest.fixture
+def _real_failure(monkeypatch):
+    out = "1 failed, 2 passed in 0.4s"
+    monkeypatch.setattr(sc.subprocess, "run", lambda *a, **k: _Result(1, stdout=out))
+
+
+@pytest.mark.parametrize("check", ["check_tests", "check_lint"])
+def test_an_unreachable_toolchain_is_not_reported_as_a_finding(check, _offline, capsys):
+    getattr(sc, check)()
+    out = capsys.readouterr().out
+    assert sc.fails == []
+    assert "[skip]" in out
+    assert "did NOT run" in out
+
+
+@pytest.mark.parametrize("check", ["check_tests", "check_lint"])
+def test_a_real_failure_still_fails_when_the_network_is_fine(check, _real_failure):
+    """The offline branch must not become a blanket excuse for a red gate."""
+    getattr(sc, check)()
+    assert sc.fails
+
+
+def test_skip_does_not_claim_the_check_passed(capsys):
+    sc.skip("something did NOT run")
+    out = capsys.readouterr().out
+    assert "[ok]" not in out
+    assert sc.fails == []

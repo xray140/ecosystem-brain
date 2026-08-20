@@ -42,6 +42,15 @@ def fail(msg: str) -> None:
     fails.append(msg)
 
 
+def skip(msg: str) -> None:
+    """The gate could not run — neither a pass nor a finding.
+
+    Deliberately not `ok`: printing [ok] for a check that never executed is
+    how a green run stops meaning anything.
+    """
+    print(f"  [skip] {msg}")
+
+
 def check_json() -> None:
     print("1. JSON parses")
     globs = [
@@ -120,6 +129,18 @@ def check_memory() -> None:
 
 DEV_REQS = REPO / "requirements-dev.txt"
 LINT_PATHS = ("scripts", "tests", "hooks", "skills")
+
+
+# `uv run --with-requirements` resolves the pinned dev toolchain from PyPI, so
+# with no network BOTH gates below exit non-zero with a DNS error rather than a
+# finding. Reporting that as "pytest failed" / "ruff found problems" is a false
+# accusation about the code, and it is what turned the offline weekly heartbeat
+# red on 2026-08-20 while the suite was in fact green. Name it for what it is.
+NETWORK_ERRORS = ("Failed to fetch", "dns error", "error sending request", "Request failed after")
+
+
+def _toolchain_unreachable(output: str) -> bool:
+    return any(sig in output for sig in NETWORK_ERRORS)
 
 
 def _uv_tool() -> list[str]:
@@ -214,7 +235,11 @@ def check_lint() -> None:
         cwd=str(REPO),
     )
     if r.returncode != 0:
-        tail = "\n      ".join((r.stdout + r.stderr).strip().splitlines()[-12:])
+        out = r.stdout + r.stderr
+        if _toolchain_unreachable(out):
+            skip("pinned toolchain unreachable (offline) — ruff did NOT run")
+            return
+        tail = "\n      ".join(out.strip().splitlines()[-12:])
         fail(f"ruff found problems:\n      {tail}")
     else:
         ok(f"ruff clean across {', '.join(LINT_PATHS)}")
@@ -239,7 +264,11 @@ def check_tests() -> None:
         cwd=str(REPO),
     )
     if r.returncode != 0:
-        tail = "\n      ".join((r.stdout + r.stderr).strip().splitlines()[-12:])
+        out = r.stdout + r.stderr
+        if _toolchain_unreachable(out):
+            skip("pinned toolchain unreachable (offline) — pytest did NOT run")
+            return
+        tail = "\n      ".join(out.strip().splitlines()[-12:])
         fail(f"pytest failed:\n      {tail}")
     else:
         summary = (r.stdout.strip().splitlines() or ["passed"])[-1]
