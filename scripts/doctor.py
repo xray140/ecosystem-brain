@@ -8,7 +8,11 @@ Code config actually in sync with this repo?" Checks:
   2. Sync drift   — each repo command/agent matches its copy in ~/.claude, after
                     the same path-rewrite bootstrap applies on copy (so a clone at
                     a different path isn't flagged — only real edits are).
-  3. Prerequisites — uv/git/node/gh/gitleaks/ruff/ollama on PATH (advisory).
+  3. Orphans      — the reverse direction: a file this repo installed and has
+                    since DELETED, still sitting live. Checked against
+                    bootstrap's install manifest, so files the ecosystem never
+                    installed are never touched or blamed.
+  4. Prerequisites — uv/git/node/gh/gitleaks/ruff/ollama on PATH (advisory).
 
 Exit non-zero if hooks are broken or anything has drifted. Fix drift by re-running
 bootstrap.
@@ -74,6 +78,36 @@ def hooks_wiring_drift(bash_root: str) -> bool:
     return live != expected
 
 
+def orphans_live() -> tuple[list[str] | None, int]:
+    """(orphaned live paths, manifest size) — None when there is no manifest.
+
+    An orphan is a path bootstrap's manifest says THIS repo installed, that the
+    repo no longer produces, and that is still on disk. Scoping to the manifest
+    is what makes the check safe to gate on: a user's own agent under
+    ~/.claude/agents was never in it, so it can never be reported here.
+
+    The distinction the one-way check could not make: `drift_in` walks the repo
+    and asks "is each file live?". Nothing walked the other way, so deleting an
+    agent from the repo removed it from every future comparison — and it kept
+    loading into every session under a green report.
+    """
+    if not bs.INSTALL_MANIFEST.is_file():
+        return None, 0
+    recorded = bs.read_manifest()
+    expected = {
+        bs._live_rel(bs.CLAUDE_DIR / "commands" / "ecosystem-brain" / f.name)
+        for f in (REPO / "commands").glob("*.md")
+    }
+    expected |= {
+        bs._live_rel(bs.CLAUDE_DIR / "agents" / f.name) for f in (REPO / "agents").glob("*.md")
+    }
+    expected |= {
+        bs._live_rel(bs.CLAUDE_DIR / "skills" / m.parent.name / "SKILL.md")
+        for m in (REPO / "skills").glob("*/SKILL.md")
+    }
+    stale = [r for r in recorded if r not in expected and (bs.CLAUDE_DIR / r).is_file()]
+    return sorted(stale), len(recorded)
+
 def main() -> int:
     bash_root = bs.to_bash_path(REPO)
     print("ecosystem-brain doctor")
@@ -113,7 +147,22 @@ def main() -> int:
     else:
         print("  [ok] commands + agents + skills in sync")
 
-    # 3. prerequisites (advisory — never fails the run)
+    # 3. orphans (live -> repo, the direction the sync check never looked)
+    print("\n3. Orphans (live files the repo no longer ships)")
+    stale, recorded = orphans_live()
+    if stale is None:
+        # Not a pass. Every install predating the manifest lands here, and
+        # printing [ok] for a check that could not run is how a green report
+        # stops meaning anything.
+        print("  [--] no install manifest yet — re-run bootstrap to enable this check")
+    elif stale:
+        for rel in stale:
+            print(f"  [orphan] {rel} — deleted from the repo, still live")
+        fails.append("orphans")
+    else:
+        print(f"  [ok] nothing orphaned ({recorded} installed path(s) tracked)")
+
+    # 4. prerequisites (advisory — never fails the run)
     bs.check_prereqs()
 
     print()

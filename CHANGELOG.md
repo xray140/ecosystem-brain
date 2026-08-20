@@ -2,6 +2,46 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.4.1] — 2026-08-21
+
+**A deleted agent kept running, under a green report.**
+
+Minutes after 4.4.0 merged — the release that removes `cli-developer` and
+`python-pro` — `doctor` printed `[ok] healthy — live config in sync with the
+repo` while both agents were still in `~/.claude`, loading into every session.
+
+The sync check only ever ran one way. `drift_in` walks the *repo* and asks "is
+each file live, and does it match?", which catches a missing or edited copy and
+nothing else. Deleting a file from the repo removes it from that walk entirely,
+so the live copy becomes unreachable by the only check that looked — and the
+report says healthy because, in the direction it looked, everything was.
+
+A removed agent that keeps running is worse than one that never shipped: it is
+advertised at SessionStart, delegated to, and invisible to the tool whose whole
+job is to notice.
+
+**Bootstrap now records what it installed** — `~/.claude/.ecosystem-brain-installed.json`,
+the live paths written on the last run — and prunes its own leftovers on the
+next. `doctor` gained check 3, the reverse direction: a path the manifest says
+this repo installed, that the repo no longer produces, and that is still on
+disk.
+
+Scoping to the manifest is what makes it safe to gate on. A personal agent under
+`~/.claude/agents`, or another plugin's commands, was never in it and can
+therefore never be flagged or deleted — verified with both present. Two content
+markers were tried first and rejected on evidence: only 1 of 12 agents carries
+`{{ECOSYSTEM_ROOT}}`, and neither removed agent was in `registry/installed.json`
+by the time it mattered.
+
+Where there is no manifest yet — every install predating this release — check 3
+reports `[--] no install manifest yet` rather than `[ok]`. Same rule as 4.3.26:
+a check that could not run must not read as one that passed. It self-heals on
+the next bootstrap.
+
+Four mutations, **4 of 4 caught**: the orphan scan always returning clean (the
+original bug), a missing manifest reporting clean instead of unknown, pruning
+ignoring the manifest, and `--dry-run` deleting anyway.
+
 ## [4.4.0] — 2026-08-21
 
 The three open decisions, taken. Minor bump: this closes the last items on the
