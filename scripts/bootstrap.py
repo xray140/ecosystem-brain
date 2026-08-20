@@ -10,8 +10,12 @@ What it does:
   2. Merges hooks + permissions into ~/.claude/settings.json (keeps your MCPs).
   3. Copies commands  -> ~/.claude/commands/ecosystem-brain/
   4. Copies agents    -> ~/.claude/agents/
-  5. Seeds .env from .env.example if missing.
-  6. Reports missing prerequisites (uv, gitleaks, ollama, node, gh).
+  5. Copies skills    -> ~/.claude/skills/<name>/SKILL.md
+  6. Removes what it installed on a previous run and no longer ships, then
+     records the current set in ~/.claude/.ecosystem-brain-installed.json.
+     Nothing outside that manifest is ever touched.
+  7. Seeds .env from .env.example if missing.
+  8. Reports missing prerequisites (uv, gitleaks, ollama, node, gh).
 
 Usage:
     uv run python scripts/bootstrap.py            # apply
@@ -25,6 +29,7 @@ import json
 import os
 import shutil
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -131,17 +136,109 @@ def rewrite_paths(text: str, bash_root: str) -> str:
     )
 
 
+# Everything this repo has ever installed under ~/.claude, so a file the repo
+# later DELETES can be found and removed. Without it the sync was one-way:
+# bootstrap copied repo -> live and never looked the other way, so `doctor`
+# reported "healthy — live config in sync" on 2026-08-21 while two agents it
+# had just deleted were still loading into every session. A removed agent that
+# keeps running is worse than one that never shipped.
+INSTALL_MANIFEST = CLAUDE_DIR / ".ecosystem-brain-installed.json"
+
+
+def _live_rel(path: Path) -> str:
+    """A live path as recorded in the manifest: relative to CLAUDE_DIR, posix."""
+    try:
+        return path.relative_to(CLAUDE_DIR).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def read_manifest() -> list[str]:
+    """Paths this repo installed on the last run — [] when there is no manifest.
+
+    An empty list is "unknown", not "nothing installed": every install predating
+    the manifest reads this way, and the callers must not treat it as proof that
+    nothing is orphaned.
+    """
+    if not INSTALL_MANIFEST.is_file():
+        return []
+    try:
+        data = json.loads(INSTALL_MANIFEST.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    paths = data.get("paths", [])
+    return [p for p in paths if isinstance(p, str)]
+
+
+def prune_orphans(installed: list[str], dry: bool) -> list[str]:
+    """Delete live files this repo installed and no longer ships.
+
+    Scoped hard to the previous manifest: a file is removed only when THIS repo
+    is on record as having written it and the current run did not. Anything else
+    under ~/.claude — the user's own agents, another plugin's commands — is none
+    of our business and is never touched.
+    """
+    stale = [p for p in read_manifest() if p not in set(installed)]
+    removed: list[str] = []
+    for rel in sorted(stale):
+        target = CLAUDE_DIR / rel
+        if not target.is_file():
+            continue
+        removed.append(rel)
+        if dry:
+            continue
+        target.unlink()
+        # A skill is a directory; drop it once its SKILL.md is gone.
+        parent = target.parent
+        if parent != CLAUDE_DIR and not any(parent.iterdir()):
+            parent.rmdir()
+    if removed:
+        verb = "would remove" if dry else "removed"
+        print(f"  [ok] {verb} {len(removed)} file(s) the repo no longer ships:")
+        for rel in removed:
+            print(f"         {rel}")
+    return removed
+
+
+def record_install(installed: list[str], dry: bool) -> None:
+    """Write the manifest. Always last, so it records what actually happened."""
+    if dry:
+        print(f"  [dry] would record {len(installed)} installed path(s)")
+        return
+    INSTALL_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    INSTALL_MANIFEST.write_text(
+        json.dumps(
+            {
+                "generated": datetime.now(UTC).isoformat(),
+                "repo": str(REPO_ROOT),
+                "paths": sorted(installed),
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    print(f"  [ok] recorded {len(installed)} installed path(s) -> {INSTALL_MANIFEST.name}")
+
+
 def copy_tree(
     src: Path, dst: Path, dry: bool, label: str, bash_root: str, rewrite: bool = False
-) -> None:
+) -> list[str]:
+    """Copy, and return the live paths written, relative to CLAUDE_DIR.
+
+    The return value feeds the install manifest — see `record_install`.
+    Without it nothing knows which files under ~/.claude this repo put
+    there, and a file the repo later deletes stays live for ever.
+    """
     if not src.is_dir():
         print(f"  [skip] no {label} dir at {src}")
-        return
+        return []
     files = sorted(src.glob("*.md"))
     if dry:
         tag = " (paths rewritten)" if rewrite else ""
         print(f"  [dry] would copy {len(files)} {label} -> {dst}{tag}")
-        return
+        return [_live_rel(dst / f.name) for f in files]
     dst.mkdir(parents=True, exist_ok=True)
     for f in files:
         if rewrite:
@@ -151,9 +248,10 @@ def copy_tree(
             shutil.copy2(f, dst / f.name)
     suffix = " (paths rewritten to this clone)" if rewrite else ""
     print(f"  [ok] copied {len(files)} {label} -> {dst}{suffix}")
+    return [_live_rel(dst / f.name) for f in files]
 
 
-def copy_skills(src: Path, dst: Path, dry: bool, bash_root: str) -> None:
+def copy_skills(src: Path, dst: Path, dry: bool, bash_root: str) -> list[str]:
     """Copy skills/<name>/SKILL.md -> <claude-dir>/skills/<name>/SKILL.md.
 
     Skills sit one level deeper than commands/agents, so copy_tree's flat
@@ -166,11 +264,12 @@ def copy_skills(src: Path, dst: Path, dry: bool, bash_root: str) -> None:
     """
     if not src.is_dir():
         print(f"  [skip] no skills dir at {src}")
-        return
+        return []
     manifests = sorted(src.glob("*/SKILL.md"))
+    written = [_live_rel(dst / mf.parent.name / "SKILL.md") for mf in manifests]
     if dry:
         print(f"  [dry] would copy {len(manifests)} skills -> {dst} (paths rewritten)")
-        return
+        return written
     for m in manifests:
         target = dst / m.parent.name
         target.mkdir(parents=True, exist_ok=True)
@@ -179,6 +278,7 @@ def copy_skills(src: Path, dst: Path, dry: bool, bash_root: str) -> None:
     print(
         f"  [ok] copied {len(manifests)} skills -> {dst} (paths rewritten to this clone)"
     )
+    return written
 
 
 def seed_env(dry: bool) -> None:
@@ -295,7 +395,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  claude dir: {CLAUDE_DIR}\n")
 
     merge_settings(args.dry_run, bash_root)
-    copy_tree(
+    installed: list[str] = []
+    installed += copy_tree(
         REPO_ROOT / "commands",
         CLAUDE_DIR / "commands" / "ecosystem-brain",
         args.dry_run,
@@ -303,7 +404,7 @@ def main(argv: list[str] | None = None) -> int:
         bash_root,
         rewrite=True,
     )
-    copy_tree(
+    installed += copy_tree(
         REPO_ROOT / "agents",
         CLAUDE_DIR / "agents",
         args.dry_run,
@@ -311,7 +412,11 @@ def main(argv: list[str] | None = None) -> int:
         bash_root,
         rewrite=True,
     )
-    copy_skills(REPO_ROOT / "skills", CLAUDE_DIR / "skills", args.dry_run, bash_root)
+    installed += copy_skills(
+        REPO_ROOT / "skills", CLAUDE_DIR / "skills", args.dry_run, bash_root
+    )
+    prune_orphans(installed, args.dry_run)
+    record_install(installed, args.dry_run)
     seed_env(args.dry_run)
     write_machine_note(args.dry_run)
     check_prereqs()
