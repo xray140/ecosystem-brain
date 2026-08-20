@@ -2,6 +2,44 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.3.26] — 2026-08-20
+
+**The weekly heartbeat could never report itself green.**
+
+`maintenance.py` gates on `task_doctor.py`, and `task_doctor` inspects every
+`EcosystemBrain-*` task — including the one currently executing it. So it always
+read the heartbeat's own in-flight run: `LastResult = 0x41301`, "still running",
+which counted as a failure. That latched:
+
+    task_doctor fails -> maintenance exits 1 -> next run reads 0x1
+    ("the task's own command exited 1") -> task_doctor fails -> ...
+
+Once red, permanently red, regardless of the ecosystem's actual health. A run in
+progress is evidence the task *started*; it is not a verdict. It is now judged
+OK inside a one-hour grace window — comfortably wider than the 15-minute
+execution limit every task is registered with — and flagged `stuck?` beyond it.
+
+**And selfcheck blamed the code for the network.** Both `check_tests` and
+`check_lint` shell out through `uv run --with-requirements`, which resolves the
+pinned toolchain from PyPI on every invocation. The 2026-08-20 scheduled run had
+no DNS, so both exited non-zero with a connect error — and were reported as
+`[FAIL] pytest failed` and `[FAIL] ruff found problems` while the suite was in
+fact green. A false accusation about the code, from a gate that never ran.
+
+Network failure is now told apart from a finding and reported through a new
+`skip()` that deliberately does **not** print `[ok]`: a check that did not
+execute must not read as a check that passed. Same reasoning as the `warn` state
+in the heartbeat — *advisory means "does not turn the run red", not "did not
+happen"*.
+
+Nine tests, all mutation-checked: widening the grace window to infinity,
+restoring the original `RUNNING` failure, and making the offline branch swallow
+real failures each turn the relevant tests red. **3 of 3 caught.**
+
+Verified through Task Scheduler rather than by hand — the task was triggered and
+completed with `LastTaskResult = 0` and a verdict of `all clear`, the first
+clean scheduled run since it was registered on 2026-07-15.
+
 ## [4.3.25] — 2026-08-03
 
 The mutation harness now covers the gates that **predate** this session — 10
