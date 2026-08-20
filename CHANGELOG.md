@@ -2,6 +2,48 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.4.0] — 2026-08-21
+
+The three open decisions, taken. Minor bump: this closes the last items on the
+roadmap rather than fixing anything.
+
+**Pruned two agents.** `python-pro` and `cli-developer` were installed
+2026-07-17, *after* the oldest surviving transcript (2026-07-08), and never
+invoked since — the only two of eight whose evidence window is complete. The
+other six predate the window and keep their blind spot, so they stay. Both are
+reinstallable from their pinned SHA `947b44c`; the roster is 14 → 12.
+
+**Pinned four project cards to another machine — not archived.** `betting-tracker`,
+`betting-stats-analysis`, `my-first-tool` and `viral-videos-sm` describe projects
+on another PC's `D:` drive. An earlier draft of this change archived them on the
+reasoning that their fate was *unknowable from this machine*. It was knowable —
+by asking. That PC is still in use and the projects are live, so `status:
+archived` would have recorded a decision nobody took: four working projects
+retired because the drive they sit on is not mounted here.
+
+They stay `active`, each carrying a note saying where they live and what is
+still missing — the `host:` pin, which needs that machine's `hostname` and is
+the one fact this repo cannot derive on its own. `project_doctor` is now
+**gating** in the heartbeat regardless: `elsewhere` is a recognised state that
+exits 0, so a card on another machine never turns the report red. The reason it
+was advisory is gone without archiving anything.
+
+**`scripts/profile_machine.py`** — proposed 2026-07-15 and parked. What made it
+worth building is what this session kept running into: the vault is shared
+across machines while almost everything in it is machine-specific. A card's
+drive letter, an agent's usage count, which scheduled tasks exist — every one of
+those readings needs to know which machine is asking, and nothing recorded it.
+
+It writes `memory/machines/<host>.md`: hostname, OS, **which drive roots exist**,
+where this clone is, which prerequisites resolve. Deliberately a note rather than
+a config — read by a human or an agent reasoning about a discrepancy, never
+branched on by code. Written at bootstrap so a fresh clone knows where it is from
+the first session, refreshed weekly, and never fatal: a profile is a convenience,
+and failing to write one must not fail an install.
+
+On this machine it records `drives present: C:` — which is precisely the fact
+that turns "four cards point nowhere" into "four cards describe another PC".
+
 ## [4.3.26] — 2026-08-20
 
 **The weekly heartbeat could never report itself green.**

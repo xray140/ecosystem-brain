@@ -5,6 +5,12 @@ created: 2026-06-04
 stack: [python, uv, ruff, pytest]
 tags: [project, python]
 ---
+
+> **Lives on another PC.** The `- Project:` path below is on a `D:` drive that
+> is not on Verdun10. That machine is still in use, so the project is live — it
+> simply cannot be checked from here. Pin it by adding `host: <machine>` to this
+> frontmatter once that machine's `hostname` is known; until then
+> `project_doctor` infers "elsewhere" from the absent drive root.
 # my-first-tool
 
 Scaffolded from `python-project` template on 2026-06-04.
