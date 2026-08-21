@@ -2,6 +2,40 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.5.1] — 2026-08-21
+
+**The lowest-covered file in the repo was the one with a history of degrading
+without failing.**
+
+`memory-search.py` sat at 70%, and `cmd_search` — the function that actually
+answers a query — was **completely unexercised**. This is the module that once
+ran for weeks on an offline hash embedder while the README advertised Ollama
+semantic search, and once held 24 of 28 notes with nothing rebuilding it.
+Degraded search returns *plausible* results, which is exactly why nobody noticed.
+
+70% -> 99% (the one uncovered line is the `__main__` guard, which three
+subprocess tests do exercise; coverage.py cannot see a spawned child without
+repo-wide `COVERAGE_PROCESS_START` wiring, which was out of scope). Repo total
+89% -> 91%, 637 -> 656 tests.
+
+The tests pin behaviour rather than touching lines: `--offline` must not merely
+*prefer* not to call the network but must never attempt it (asserted with a spy
+that raises, not an `isinstance` check — the fallback path lands on the same
+class, so `isinstance` alone would have passed with the short-circuit deleted);
+a malformed Ollama response falls back rather than propagating a `KeyError`;
+`--rebuild` wipes the whole table including ghost rows from another model; an
+empty index fails loudly instead of reading as "no results".
+
+**One gap survived the agent's own mutation run and was found in review.**
+`cosine` returning `1.0` for zero-norm vectors passed all 31 tests. A zero
+vector is what a failed or empty embedding leaves behind, and scoring it as a
+perfect match would float that garbage to the top of every search — the exact
+failure mode this module's history is made of. The `if na and nb` guard is doing
+real work, not just dodging a `ZeroDivisionError`, and is now pinned.
+
+Twelve mutations from the agent plus two chosen independently in review, each
+proven live before its result was believed.
+
 ## [4.5.0] — 2026-08-21
 
 **The weekly catalog refresh now has somewhere to put its output.**
