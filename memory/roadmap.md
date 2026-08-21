@@ -174,18 +174,19 @@ cross-tool AGENTS.md, the memory vault) are in `CHANGELOG.md` under v4.0–v4.3.
   branch at first, so the note rewrote itself on every checkout and kept turning
   up in unrelated diffs; `updated` now means the date these facts last *changed*.
 
-- [ ] **The weekly catalog refresh has nowhere to put its output** (opened
-  2026-08-21) — `refresh-catalog.bat` runs `catalog.py build` every Sunday,
-  rewriting the **tracked** `registry/catalog.json`. Nothing commits it. The file
-  sat at its 2026-06-05 state for eleven weeks while the task reported success
-  every Sunday, and the most recent run's output was swept into an auto-stash
-  during unrelated branch work and nearly lost. The refresh itself is landed
-  (154 -> 158); the arrangement that stranded it is not fixed. Three ways out,
-  none obviously right:
-    - commit it by hand when noticed — the status quo, which failed for 11 weeks;
-    - have the task open a PR — a scheduled job writing to the remote;
-    - gitignore it like `index.json` — but `init_project.py` validates against
-      it, so a fresh clone would need a committed seed.
-  Note that a heartbeat check which merely reports the file dirty would fire
-  every week between Sunday's refresh and the next commit — permanently red is
-  how a gate stops being read. See [[decisions/verification-integrity]].
+- [x] **The weekly catalog refresh has nowhere to put its output** (opened and
+  closed 2026-08-21) — `refresh-catalog.bat` rewrote the **tracked**
+  `registry/catalog.json` every Sunday and nothing committed it: the file sat at
+  its 2026-06-05 state for eleven weeks while the task reported success, and one
+  refresh was nearly lost to an auto-stash.
+
+  Resolved by gitignoring `catalog.json` and committing
+  `registry/catalog.seed.json` as the floor. All three readers — `catalog.py`,
+  `init_project.py` and the `suggest-agents` hook — prefer the live file and
+  fall back to the seed, and a test asserts the three resolvers agree, since the
+  hook must stay importable from nothing and cannot share a module. Reading the
+  seed says so out loud: a stale answer that looks authoritative is the failure
+  mode the whole arrangement exists to avoid.
+
+  The seed is refreshed deliberately with `catalog.py build --seed`, not by the
+  weekly task — a floor that moves on its own is not a floor.
