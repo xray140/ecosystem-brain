@@ -87,13 +87,30 @@ def load_hooks(bash_root: str) -> dict:
     return json.loads(raw).get("hooks", {})
 
 
+# Deny is enumerated rather than a `.env.*` catch-all, because the catch-all also
+# matched `.env.example` — the committed, placeholder-only template that every
+# scaffolded project ships and that `project_doctor` diffs `.env` against. Denying
+# it made the one file meant to be edited the one file that could not be.
+#
+# `.gitignore` expresses this as `.env.*` then `!.env.example`. Permission globs
+# have no negation and `deny` outranks `allow`, so the exception cannot be written
+# that way here — the pattern itself has to stop matching.
+#
+# The cost is that this is now a list to maintain: a future `.env.<name>` holding
+# secrets is readable unless it is added below. Kept aligned with AGENTS.md, which
+# states secrets live in `.env` / `.identity.local.env` only — so this enumerates
+# the documented policy instead of over-reaching past it. Widen it here, not in
+# the live settings, or the next bootstrap run reverts the change.
 PERMISSIONS = {
     "deny": [
         "Read(./.env)",
-        "Read(./.env.*)",
         "Read(**/.env)",
-        "Read(**/.env.*)",
+        "Read(./.env.local)",
+        "Read(**/.env.local)",
+        "Read(./.env.*.local)",
+        "Read(**/.env.*.local)",
         "Read(./.identity.local.env)",
+        "Read(**/*.local.env)",
     ],
     "ask": [
         "Bash(rm *)",
