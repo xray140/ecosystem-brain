@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import collections
-import json
 import re
 import sys
 from datetime import UTC, datetime
@@ -35,6 +34,9 @@ from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import registry_io
 
 REPO = Path(__file__).resolve().parent.parent
 INSTALLED = REPO / "registry" / "installed.json"
@@ -85,10 +87,12 @@ def scan_transcripts_windowed(
 
 
 def load_installed(path: Path | None = None) -> list[dict]:
+    """Agents with this machine's `installed_at` merged back in — the blind-window
+    warning below compares it against local transcripts, so it must be local."""
     path = path or INSTALLED
     if not path.is_file():
         return []
-    return json.loads(path.read_text(encoding="utf-8")).get("agents", [])
+    return registry_io.load(path).get("agents", [])
 
 
 def report(agents: list[dict], counts: dict[str, int], last_seen: dict[str, str]) -> dict:

@@ -1,41 +1,30 @@
 {
-  "_version": 1,
-  "_note": "Tracks installed agents/skills/commands. Managed by install-agent.py and update-agents.py.",
+  "_version": 2,
   "agents": [
     {
       "name": "security-auditor",
       "source": "local",
-      "installed_at": "2026-06-04",
-      "hash": null,
-      "global_path": "~/.claude/agents/security-auditor.md"
+      "hash": null
     },
     {
       "name": "bug-fixer",
       "source": "local",
-      "installed_at": "2026-06-04",
-      "hash": null,
-      "global_path": "~/.claude/agents/bug-fixer.md"
+      "hash": null
     },
     {
       "name": "test-writer",
       "source": "local",
-      "installed_at": "2026-06-04",
-      "hash": null,
-      "global_path": "~/.claude/agents/test-writer.md"
+      "hash": null
     },
     {
       "name": "memory-curator",
       "source": "local",
-      "installed_at": "2026-06-04",
-      "hash": null,
-      "global_path": "~/.claude/agents/memory-curator.md"
+      "hash": null
     },
     {
       "name": "backend-developer",
       "source": "github:VoltAgent/awesome-claude-code-subagents/categories/01-core-development/backend-developer.md",
       "hash": "96e6441f1e598a22ef3ab5fe8131a108",
-      "installed_at": "2026-06-04",
-      "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\backend-developer.md",
       "commit": "2f9cf8b9562dcc235cc2296bda6df82d60e800be",
       "ref": "main"
     },
@@ -43,8 +32,6 @@
       "name": "frontend-developer",
       "source": "github:VoltAgent/awesome-claude-code-subagents/categories/01-core-development/frontend-developer.md",
       "hash": "fc7546f40f93172542c9789e5be5fe76",
-      "installed_at": "2026-06-05",
-      "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\frontend-developer.md",
       "commit": "2f9cf8b9562dcc235cc2296bda6df82d60e800be",
       "ref": "main"
     },
@@ -52,8 +39,6 @@
       "name": "ui-designer",
       "source": "github:VoltAgent/awesome-claude-code-subagents/categories/01-core-development/ui-designer.md",
       "hash": "55574a09b449198070edaaa7188a5fbd",
-      "installed_at": "2026-06-05",
-      "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\ui-designer.md",
       "commit": "2f9cf8b9562dcc235cc2296bda6df82d60e800be",
       "ref": "main"
     },
@@ -61,8 +46,6 @@
       "name": "react-specialist",
       "source": "github:VoltAgent/awesome-claude-code-subagents/categories/02-language-specialists/react-specialist.md",
       "hash": "5832a2277c610f12cdf5378f08c5176d",
-      "installed_at": "2026-06-05",
-      "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\react-specialist.md",
       "commit": "2f9cf8b9562dcc235cc2296bda6df82d60e800be",
       "ref": "main"
     },
@@ -70,33 +53,39 @@
       "name": "nextjs-developer",
       "source": "github:VoltAgent/awesome-claude-code-subagents/categories/02-language-specialists/nextjs-developer.md",
       "hash": "862316fe3ab234de717cc20b7c97f444",
-      "installed_at": "2026-06-05",
-      "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\nextjs-developer.md",
       "commit": "2f9cf8b9562dcc235cc2296bda6df82d60e800be",
       "ref": "main"
     },
     {
       "name": "script-smith",
       "source": "local",
-      "hash": "66bc337e1fcfe4b60160c658bd250aaa",
-      "installed_at": "2026-06-05",
-      "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\script-smith.md"
+      "hash": "66bc337e1fcfe4b60160c658bd250aaa"
     },
     {
       "name": "convention-keeper",
       "source": "local",
-      "hash": "1bb7f2541d22c61dbe3769d8487a7cba",
-      "installed_at": "2026-06-05",
-      "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\convention-keeper.md"
+      "hash": "1bb7f2541d22c61dbe3769d8487a7cba"
     },
     {
       "name": "data-engineer",
       "source": "github:VoltAgent/awesome-claude-code-subagents/categories/05-data-ai/data-engineer.md",
       "hash": "3201933d561e57806b26db558ea4216b",
-      "installed_at": "2026-06-29",
-      "global_path": "C:\\Users\\Verdun-10\\.claude\\agents\\data-engineer.md",
       "ref": "main",
       "commit": "947b44ca0c58d606b084e9cb1a2389335b49278b"
+    },
+    {
+      "name": "python-pro",
+      "source": "github:VoltAgent/awesome-claude-code-subagents/categories/02-language-specialists/python-pro.md",
+      "hash": "06ad241de505c99b3e166cfad17934a2",
+      "ref": "main",
+      "commit": "5983fe3b4ea2785335ac1712c4aa1ac4e13a8fa2"
+    },
+    {
+      "name": "cli-developer",
+      "source": "github:VoltAgent/awesome-claude-code-subagents/categories/06-developer-experience/cli-developer.md",
+      "hash": "db66bd6cb4ea0dc463b996c5b7dffa84",
+      "ref": "main",
+      "commit": "5983fe3b4ea2785335ac1712c4aa1ac4e13a8fa2"
     }
   ],
   "commands": [],
