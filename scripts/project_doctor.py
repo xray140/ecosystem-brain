@@ -257,9 +257,12 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  [{mark}] {card['name']:36s} {summary}")
 
     if elsewhere:
+        # No "add `host:`" advice here: a card only reaches this branch BECAUSE it
+        # already has one. Telling you to do the thing you just did leaves a
+        # nag with no way to satisfy it, which trains you to ignore the footer.
         print(
-            f"\n  {elsewhere} project(s) live on another machine — not checkable from"
-            f" {HOST}.\n  Add `host: <machine>` to those cards to say so explicitly."
+            f"\n  {elsewhere} project(s) are pinned to another machine — not"
+            f" checkable from {HOST}, and not counted as failures."
         )
 
     print()

@@ -2,6 +2,7 @@
 type: project
 status: active
 created: 2026-07-17
+host: Verdun10
 stack: [python]
 tags: [project, python]
 ---

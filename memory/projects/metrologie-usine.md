@@ -2,6 +2,7 @@
 type: project
 status: active
 created: 2026-07-13
+host: Verdun10
 stack: [python, uv, ruff, pytest]
 tags: [project, python, metrologie, compteurs, usine]
 ---

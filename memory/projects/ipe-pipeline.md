@@ -2,6 +2,7 @@
 type: project
 status: active
 created: 2026-06-29
+host: Verdun10
 stack: [python]
 tags: [project, python, iso50001, energie]
 ---
