@@ -1,7 +1,7 @@
 {
   "name": "ecosystem-brain",
   "description": "Control tower for Claude Code: guided project-init, GitHub agent discovery/install/update with security scanning, secrets-safe git hooks, scaffolding, and Obsidian-style memory with local semantic search.",
-  "version": "4.6.0",
+  "version": "4.7.0",
   "author": { "name": "Martin" },
   "license": "MIT",
   "keywords": ["ecosystem", "memory", "scaffold", "security", "subagents", "agent-registry", "project-init"]

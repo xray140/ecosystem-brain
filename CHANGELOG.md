@@ -2,6 +2,45 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.7.0] — 2026-08-21
+
+**Ollama was wired in like a dependency to power one optional feature.**
+
+It does exactly one job here — embeddings for `memory-search` — and
+`memory-search` already degrades gracefully without it. Yet it had a
+logon-triggered scheduled task keeping a server up, a line in the prerequisite
+list, and a status check that failed whenever the index used the offline
+embedder. On a machine without Ollama that check could not be satisfied except
+by installing software the user had chosen not to run.
+
+Most of its bad reputation was not its own. `OllamaServe` sat red for weeks
+pointing at `D:\ecosystem-tools\start-ollama.bat`, a path the script had long
+since left, and the degraded index found on 2026-08-21 came from the heartbeat
+being latched red and never running the refresh. Neither was Ollama
+misbehaving — but between them they made it look like the problem.
+
+Removed: the `OllamaServe` task and `scripts/start-ollama.bat`. The registration
+script now actively unregisters it, because dropping it from the list is not
+enough — a machine that already has it registered keeps failing until something
+removes it, and has no other way to learn the task is gone.
+
+Prerequisites split into `REQUIRED_TOOLS` and `OPTIONAL_TOOLS`. A missing
+optional tool prints `[--] ollama (optional)` rather than `MISS — install for
+full functionality`.
+
+The status check keeps its teeth where they mean something. A hash-embedded
+index is a defect when Ollama is **reachable**, because then the index is worse
+than the machine can do and a rebuild fixes it; it is the expected state when
+Ollama is absent. Same rule the rest of this release follows: do not raise a
+warning whose only remedy is unavailable.
+
+Kept: `OllamaEmbedder`, `nomic-embed-text`, and the semantic search the plugin
+description advertises — which is worth keeping. A query phrased *"why is the
+registry split between shared and machine-local"* returns the right note at
+0.805 against 0.545 for the runner-up, with almost no shared keywords. The
+fallback matches wording; this matches meaning. Run `ollama serve` and rebuild
+to use it.
+
 ## [4.6.0] — 2026-08-21
 
 **A shared file was recording machine state, so it was wrong on every machine
