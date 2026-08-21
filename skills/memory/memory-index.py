@@ -5,8 +5,21 @@ Walks the memory/ vault, extracts simple YAML frontmatter (stdlib only — no
 PyYAML dependency), collects [[wikilinks]] from each body, and writes a compact
 manifest the agent loads instead of reading the whole vault.
 
+`--check` compares the manifest on disk against a fresh build and exits
+non-zero when they disagree. It used to print counts and return 0 whatever it
+found, so nothing ever noticed the manifest going stale: on 2026-08-21 it had
+been frozen for 18 days, listing a note that no longer existed and missing three
+that did — while every check reported the vault healthy.
+
+`--dry-run` is the older behaviour under an honest name: walk the vault, print
+counts, write and judge nothing. `selfcheck` uses it to assert the indexer can
+parse every note — a question that has an answer on a fresh clone, where the
+manifest is gitignored and absent.
+
 Usage:
-    python skills/memory-index.py [--vault memory] [--out memory/index.json] [--check]
+    python skills/memory-index.py [--vault memory] [--out memory/index.json]
+    python skills/memory-index.py --check      # gate: manifest vs vault
+    python skills/memory-index.py --dry-run    # counts only, never fails on drift
 """
 from __future__ import annotations
 
@@ -120,12 +133,61 @@ def build(vault: Path) -> dict:
     }
 
 
+def compare(built: dict, existing: dict) -> list[str]:
+    """Disagreements between a fresh build and the manifest on disk.
+
+    Compared on the notes themselves, keyed by path. `generated` and `vault` are
+    excluded on purpose: the timestamp always differs, and the vault path varies
+    with how the script was invoked — neither says anything about whether the
+    manifest describes the vault.
+
+    The three findings this exists for, all present on 2026-08-21:
+      phantom  — listed, but the file is gone (a note from an unmerged branch)
+      unlisted — on disk, never indexed (every new maintenance report)
+      stale    — indexed, but its frontmatter or links have since changed
+    """
+    fresh = {n["path"]: n for n in built.get("notes", [])}
+    old = {n["path"]: n for n in existing.get("notes", []) if isinstance(n, dict) and "path" in n}
+    problems = [f"phantom  {p} — listed in the manifest, not in the vault" for p in sorted(old.keys() - fresh.keys())]
+    problems += [f"unlisted {p} — in the vault, missing from the manifest" for p in sorted(fresh.keys() - old.keys())]
+    problems += [
+        f"stale    {p} — indexed, but its frontmatter or links have changed"
+        for p in sorted(fresh.keys() & old.keys())
+        if fresh[p] != old[p]
+    ]
+    return problems
+
+
+def check(index: dict, out: Path) -> int:
+    """Gate: is `out` a faithful manifest of the vault we just walked?"""
+    if not out.is_file():
+        print(f"[!] no manifest at {out}")
+        print("    build it: memory-index.py --vault <vault>")
+        return 1
+    try:
+        existing = json.loads(out.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"[!] manifest at {out} is unreadable: {exc}")
+        return 1
+    problems = compare(index, existing)
+    if problems:
+        print(f"[!] manifest disagrees with the vault — {len(problems)} finding(s):")
+        for line in problems:
+            print(f"    {line}")
+        print("    refresh it: memory-index.py --vault <vault>")
+        return 1
+    print(f"[ok] manifest matches the vault ({index['counts']['notes']} notes)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--vault", default="memory", type=Path)
     ap.add_argument("--out", default=None, type=Path)
     ap.add_argument("--check", action="store_true",
-                    help="print summary only, do not write")
+                    help="compare the manifest against the vault; non-zero if they disagree")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="walk the vault and print counts, writing and judging nothing")
     args = ap.parse_args(argv)
 
     if not args.vault.is_dir():
@@ -133,11 +195,18 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     index = build(args.vault)
-    if args.check:
+    out = args.out or args.vault / "index.json"
+    # Two different questions, and conflating them broke a caller. --dry-run
+    # asks "can the indexer walk this vault?" — it fails only when a note cannot
+    # be parsed. --check asks "does the manifest still describe the vault?",
+    # which needs a manifest to exist and so cannot speak for a fresh clone,
+    # where `index.json` is gitignored and absent.
+    if args.dry_run:
         print(json.dumps(index["counts"], indent=2))
         return 0
+    if args.check:
+        return check(index, out)
 
-    out = args.out or args.vault / "index.json"
     out.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"[ok] {index['counts']['notes']} notes -> {out}")
     return 0

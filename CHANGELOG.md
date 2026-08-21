@@ -2,6 +2,48 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.4.3] — 2026-08-21
+
+**The manifest the agent loads at session start had been wrong for 18 days, and
+three checks watched it without looking at it.**
+
+`memory/index.json` is the frontmatter manifest `SKILL.md` tells the agent to
+load *instead of* reading the whole vault. On 2026-08-21 it was frozen at
+2026-08-02: it listed a note that no longer existed, missed three that did, and
+five more had changed underneath it. Every check reported the vault healthy.
+
+Three independent reasons nothing noticed:
+
+- `memory-index.py --check` built a fresh index, printed its counts, and
+  returned 0 whatever it found. A check that cannot fail is decoration —
+  [[decisions/verification-integrity]] says so, and this one had been decoration
+  since it was written.
+- `memory-search.py status` counts `.md` files against the *semantic* database
+  and never opens the manifest. Two different indexes, one of them unwatched.
+- The weekly heartbeat refreshed the semantic index only. Nothing rebuilt the
+  manifest, so it aged a week with every run that reported `all clear`.
+
+`--check` is now a real gate: it compares the manifest against a fresh walk and
+reports **phantom** (listed, file gone), **unlisted** (on disk, never indexed)
+and **stale** (indexed, but its frontmatter or links have since changed). Run
+against the real vault it found 9 disagreements — five more than a path-set
+comparison could see, because content drift leaves the paths intact. The
+heartbeat gained the missing pair: refresh the manifest, then gate on it.
+
+**One flag, two questions.** Making `--check` a gate silently repurposed a flag
+`selfcheck` already called, and `index.json` is gitignored — so on a fresh clone
+there is no manifest, and CI would have gone red on every build. The question
+selfcheck was actually asking is *can the indexer parse every note?*, which has
+an answer without a manifest. That is now `--dry-run`, and freshness stays with
+the heartbeat, which refreshes before it gates.
+
+Four mutations, **4 of 4 caught**. The first initially read as surviving: the
+injected `return []` had landed inside `compare`'s docstring rather than its
+body, so the code was never mutated. A mutation that does not apply is
+indistinguishable from one that is caught, so the harness now proves the mutant
+is live — by calling the function and requiring it to lie — before believing a
+green suite.
+
 ## [4.4.2] — 2026-08-21
 
 **The machine note rewrote itself for reasons that had nothing to do with the
