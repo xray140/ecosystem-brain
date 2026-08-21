@@ -18,3 +18,6 @@ compteurs (gaz/eau/vapeur/élec…), indicateurs IPE / Tableau de Bord NRJ.
 - Sources: `U:` = `\\NASBEC01.fr.lactadom.ad\COMVEN` — voir `docs/sources.md` du projet
   - `MAINTENANCE\1_Methode\3. Metrologie_ DEIV` (métrologie)
   - `MAINTENANCE\6_Compteurs_indicateurs` (compteurs + indicateurs)
+
+## Links
+- [[projects-moc]]
