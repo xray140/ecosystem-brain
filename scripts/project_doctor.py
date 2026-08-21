@@ -51,9 +51,13 @@ STATUS_RE = re.compile(r"^status:\s*(\S+)", re.M)
 # `D:\claude-projects\x` is a correct path — on the PC that has a D: drive.
 HOST_RE = re.compile(r"^host:\s*(\S+)", re.M)
 
-# `#! one-of: A, B` in a .env.example — the group is satisfied by any one member.
+# Directives in a .env.example, shared with skills/secrets/secrets-doctor.sh.
 # See env_gap for why a plain set difference was not enough.
+#   #! one-of: A, B    satisfied by any one member; reported once if none set
+#   #! optional: A, B  declared but never required — reserved names a project
+#                      documents for external tools it does not itself read
 ONE_OF_RE = re.compile(r"^#!\s*one-of:\s*(.+)$", re.M)
+OPTIONAL_RE = re.compile(r"^#!\s*optional:\s*(.+)$", re.M)
 
 # A project untouched for this long is worth a glance — not a failure.
 STALE_DAYS = 90
@@ -158,10 +162,13 @@ def env_gap(project: Path) -> list[str]:
         [k.strip() for k in m.group(1).split(",") if k.strip()]
         for m in ONE_OF_RE.finditer(text)
     ]
+    optional = {
+        k.strip() for m in OPTIONAL_RE.finditer(text) for k in m.group(1).split(",") if k.strip()
+    }
     present = keys(env)
     grouped = {k for g in groups for k in g}
 
-    missing = sorted(keys(example) - present - grouped)
+    missing = sorted(keys(example) - present - grouped - optional)
     for g in groups:
         if not present.intersection(g):
             missing.append("one of " + "|".join(g))
