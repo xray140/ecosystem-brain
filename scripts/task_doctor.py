@@ -35,12 +35,17 @@ if hasattr(sys.stdout, "reconfigure"):
 WINDOWS = os.name == "nt"
 PREFIX = "EcosystemBrain"
 
-# Absolute, because the reader is rarely standing in the repo when they read it.
-# The relative form printed here before was copy-pasteable and wrong: run from a
-# home directory it fails with "the argument ... does not exist", which reads
-# like a broken script rather than a wrong working directory.
+# Must be runnable exactly as printed, from anywhere, on a stock Windows box.
+# Two ways this line was wrong before:
+#   - relative path: from a home directory powershell answers "the argument ...
+#     does not exist", which reads like a broken script rather than a wrong cwd.
+#   - no -ExecutionPolicy Bypass: the default policy is Restricted, so no .ps1
+#     runs at all and it fails UnauthorizedAccess. INSTALL.md had the flag; this
+#     line did not, and this is the one the reader meets at the moment of
+#     failure. Bypass here is per-process — it changes no machine state.
 REGISTER_CMD = (
-    f'powershell -File "{Path(__file__).resolve().parent / "register-scheduled-tasks.ps1"}"'
+    "powershell -ExecutionPolicy Bypass -File "
+    f'"{Path(__file__).resolve().parent / "register-scheduled-tasks.ps1"}"'
 )
 
 # Exit codes that are not failures.

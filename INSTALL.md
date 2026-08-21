@@ -86,10 +86,13 @@ One idempotent script registers all recurring jobs, path-derived from this clone
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\register-scheduled-tasks.ps1
 ```
+`-ExecutionPolicy Bypass` is not optional: the Windows default is `Restricted`,
+so without it the script fails `UnauthorizedAccess` before running a line. The
+flag applies to that one process and changes no machine state.
+
 It schedules:
 | Task | When | Does |
 |------|------|------|
-| `EcosystemBrain-OllamaServe` | at logon | starts the Ollama server (semantic memory search) |
 | `EcosystemBrain-CatalogRefresh` | weekly (Sun 9am) | `catalog.py build` — refresh the agent catalog from GitHub |
 | `EcosystemBrain-Maintenance` | weekly (Mon 9am) | health heartbeat: 8 checks — `doctor`, `selfcheck`, `project_doctor`, `task_doctor`, memory index refresh + status, `agent_usage`, `update --check`. Writes `memory/maintenance/<date>.md` and `last-run.log` |
 
@@ -101,7 +104,9 @@ It schedules:
 
 - Re-running is safe (`-Force`). Overwriting a task first created in an **elevated**
   shell needs an elevated PowerShell; the script reports `[exists]` and moves on otherwise.
-- Remove them all: `scripts\register-scheduled-tasks.ps1 -Unregister`.
+- Re-running also drops tasks the script no longer ships — `EcosystemBrain-OllamaServe`
+  was retired in v4.7.0 and is unregistered on the next run.
+- Remove them all: `powershell -ExecutionPolicy Bypass -File scripts\register-scheduled-tasks.ps1 -Unregister`.
 - The catalog + update steps need `gh auth login`. Reports land in `memory/maintenance/`
   (gitignored) — read the latest to see the last heartbeat's verdict.
 
