@@ -2,13 +2,17 @@
 type: machine
 status: active
 host: Verdun10
-updated: 2026-08-03
+updated: 2026-08-21
 tags: [machine, environment]
 ---
 # Verdun10
 
 Written by `scripts/profile_machine.py`. Regenerate rather than edit —
 it is derived, and a hand-edit will be silently overwritten.
+
+`updated` is the date these facts last *changed*. Re-running on a machine
+that has not changed leaves the file alone, so the note never appears in
+a diff for having been regenerated.
 
 ## Identity
 - **host**: `Verdun10`
@@ -20,7 +24,6 @@ on a different machine — not a lost one.
 
 ## This clone
 - **path**: `C:\Users\Verdun-10\ecosystem-brain`
-- **branch**: master
 - **remote**: https://github.com/xray140/ecosystem-brain.git
 
 ## Tooling
