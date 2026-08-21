@@ -66,7 +66,9 @@ def test_classify_splits_local_github_dropped(profiles):
 
 
 def test_classify_github_agent_carries_repo_and_path(profiles):
-    catalog = ip.load(ip.CATALOG)["agents"]
+    # catalog_path(), not CATALOG: the live file is gitignored, so on a fresh
+    # clone (CI) only the committed seed exists.
+    catalog = ip.load(ip.catalog_path())["agents"]
     sample = catalog[0]["name"]
     resolved, _ = ip.classify_agents([sample], profiles)
     entry = next(r for r in resolved if r["name"] == sample)
