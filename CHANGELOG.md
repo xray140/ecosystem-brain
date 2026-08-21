@@ -2,6 +2,60 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.5.3] — 2026-08-21
+
+**Every hook was one space away from never running, and two tests were guarding
+the wrong thing.**
+
+`hooks.json` interpolated `{{ECOSYSTEM_ROOT}}` into each command unquoted:
+
+    bash {{ECOSYSTEM_ROOT}}/hooks/scripts/guard-secrets.sh
+
+That token expands to this clone's real path. On Windows the home directory
+routinely carries the user's full name, so the expansion contains a space, and
+the shell splits the path in half before `bash` ever sees it. The hook does not
+fail in a way anyone reads — it just doesn't run. That includes
+`guard-secrets.sh`, the gitleaks gate on every commit and push, and
+`guard_destructive.py`, the confirmation gate on `rm` and `git push`. The
+enforcement this repo prefers over prose was silently absent for anyone who
+cloned into a path containing a space.
+
+Every script path in `hooks.json` is now double-quoted, and
+`_hook_script_paths` splits with `shlex` instead of `str.split` so the verifier
+reads those quotes — `shlex` was already the idiom in `guard_destructive.py`.
+
+Worth recording why CI never saw it: the GitHub runners clone to
+`/home/runner/work/...`, which has no spaces. The bug was only reachable from a
+real Windows checkout, and it surfaced on a fresh clone rather than from the
+suite that had been green for months.
+
+Two tests failed alongside it for unrelated reasons, both the same species —
+asserting a proxy instead of the property:
+
+- `test_a_real_change_still_rewrites` forced `drives()` to a hardcoded
+  `["C:", "D:"]` to prove a changed fact rewrites the machine note. That is what
+  the developing machine already reports, so before and after were byte
+  identical and the test asserted its own no-op. It now derives a sentinel drive
+  letter absent from the real list.
+- `test_search_hint_uses_this_clones_real_path` banned the literal string
+  `/d/claude-projects` as a stand-in for "the path isn't hardcoded". But a
+  correctly derived hint contains that string on any machine that really does
+  clone there, so the check failed the very fix it was pinning. It now moves
+  `REPO_ROOT` somewhere arbitrary and asserts the hint follows.
+
+Both new hook tests were confirmed to fail against the original source before
+being accepted. The first draft of the space-in-path test passed against the
+unfixed code for the wrong reason — whitespace splitting leaves a
+`guard-secrets.sh"` fragment whose trailing quote fails the `.sh` suffix check,
+so the hook was skipped entirely and `verify_live()` returned 0 with nothing
+stale to report. It now asserts the path is actually recovered, not merely
+absent from the failure list.
+
+Anyone already bootstrapped from a path containing a space should re-run
+`uv run --no-project python scripts/bootstrap.py` to rewrite the live
+`settings.json`; `--verify` will now report such paths honestly instead of
+skipping them.
+
 ## [4.5.2] — 2026-08-21
 
 **A stubbed function stayed stubbed for the rest of the test session.**

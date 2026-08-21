@@ -206,14 +206,29 @@ def test_emits_sessionstart_context_json(tmp_path, monkeypatch, capsys):
 
 def test_search_hint_uses_this_clones_real_path(tmp_path, monkeypatch, capsys):
     """A hardcoded canonical path here sends every session to a script that may
-    not exist on this machine — the defect 4.3.2 fixed, pinned so it stays fixed."""
+    not exist on this machine — the defect 4.3.2 fixed, pinned so it stays fixed.
+
+    Banning the literal "/d/claude-projects" was the wrong way to pin it: that
+    string is also what a correctly-derived hint contains on any machine that
+    really does clone under /d/claude-projects, so the check failed the fix it
+    was guarding. Move REPO_ROOT somewhere arbitrary and assert the hint follows
+    it — that is the property, and it holds wherever the clone actually lives.
+    """
     _wire(tmp_path, monkeypatch, {"agents": [{"name": "security-auditor"}]})
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": str(tmp_path)})))
     sa.main()
     context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
     hint = next(ln for ln in context.splitlines() if "Search more" in ln)
-    assert "/d/claude-projects" not in hint
     assert sa.to_bash_path(sa.REPO_ROOT) in hint
+
+    elsewhere = tmp_path / "cloned" / "somewhere-else"
+    monkeypatch.setattr(sa, "REPO_ROOT", elsewhere)
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"cwd": str(tmp_path)})))
+    sa.main()
+    context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    moved = next(ln for ln in context.splitlines() if "Search more" in ln)
+    assert sa.to_bash_path(elsewhere) in moved
+    assert moved != hint
 
 
 def test_silent_when_nothing_installed(tmp_path, monkeypatch, capsys):
