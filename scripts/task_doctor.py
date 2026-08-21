@@ -35,6 +35,14 @@ if hasattr(sys.stdout, "reconfigure"):
 WINDOWS = os.name == "nt"
 PREFIX = "EcosystemBrain"
 
+# Absolute, because the reader is rarely standing in the repo when they read it.
+# The relative form printed here before was copy-pasteable and wrong: run from a
+# home directory it fails with "the argument ... does not exist", which reads
+# like a broken script rather than a wrong working directory.
+REGISTER_CMD = (
+    f'powershell -File "{Path(__file__).resolve().parent / "register-scheduled-tasks.ps1"}"'
+)
+
 # Exit codes that are not failures.
 OK_RESULTS = {
     0x0,  # success
@@ -179,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if not tasks:
         print(f"  [skip] no '{PREFIX}-*' tasks registered")
-        print(f"     register them: powershell {Path('scripts/register-scheduled-tasks.ps1')}")
+        print(f"     register them: {REGISTER_CMD}")
         return 0
 
     print(f"  {len(tasks)} registered\n")
@@ -202,8 +210,8 @@ def main(argv: list[str] | None = None) -> int:
     if failing:
         print(f"[!] {failing} scheduled task(s) are registered but not completing.")
         print("    A task can sit at State=Ready forever while every run dies.")
-        print("    Re-register with the current settings (fixes the battery guards):")
-        print("      powershell -File scripts/register-scheduled-tasks.ps1")
+        print("    Re-register — this rewrites each action's path and drops retired tasks:")
+        print(f"      {REGISTER_CMD}")
         return 1
     print("[ok] every scheduled task has completed a recent run")
     return 0
