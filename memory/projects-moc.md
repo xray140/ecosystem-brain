@@ -14,3 +14,4 @@ Every project scaffolded via `/ecosystem-brain:init`. Each card also links back 
 - [[ipe-pipeline]] — data-pipeline · python
 - [[plan-action-energie-environnement]] — cli · python
 - [[metrologie-usine]] — data-pipeline · python
+- [[bet-tracker]] — cli · python
