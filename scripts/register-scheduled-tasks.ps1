@@ -11,16 +11,29 @@ $scripts = $PSScriptRoot
 $repo = Split-Path -Parent $scripts
 
 # name -> (batch file, trigger). Triggers built lazily so -Unregister needs none.
+#
+# OllamaServe was removed in v4.7.0. Ollama is optional: memory-search uses it
+# when it happens to be running and falls back to the offline embedder when not,
+# so a logon task existed only to keep a server up for a capability that already
+# degrades gracefully. It cost more than it returned - it sat red for weeks
+# pointing at D:\ecosystem-tools\start-ollama.bat, a path the script had long
+# since left, and that red was most of the reason Ollama looked like a problem.
+# Start it yourself if you want embeddings: `ollama serve`.
 $tasks = @(
-    @{ Name = "EcosystemBrain-OllamaServe";    Bat = "start-ollama.bat";   Trigger = { New-ScheduledTaskTrigger -AtLogOn } }
     @{ Name = "EcosystemBrain-CatalogRefresh"; Bat = "refresh-catalog.bat"; Trigger = { New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 9am } }
     @{ Name = "EcosystemBrain-Maintenance";    Bat = "maintenance.bat";     Trigger = { New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 9am } }
 )
+# Registered previously and no longer shipped - removed on the next run so the
+# stale task does not linger and keep reporting red.
+$retired = @("EcosystemBrain-OllamaServe")
 
 if ($Unregister) {
     foreach ($t in $tasks) {
         Unregister-ScheduledTask -TaskName $t.Name -Confirm:$false -ErrorAction SilentlyContinue
         Write-Host "  [removed] $($t.Name)"
+    }
+    foreach ($name in $retired) {
+        Unregister-ScheduledTask -TaskName $name -Confirm:$false -ErrorAction SilentlyContinue
     }
     Write-Host "done."
     return
@@ -28,6 +41,15 @@ if ($Unregister) {
 
 Write-Host "registering ecosystem-brain scheduled tasks"
 Write-Host "  repo: $repo`n"
+# Drop tasks this script used to register. Without this a retired task keeps its
+# registration, keeps failing, and keeps task_doctor red - the machine has no
+# other way to learn the task is gone.
+foreach ($name in $retired) {
+    if (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue) {
+        Unregister-ScheduledTask -TaskName $name -Confirm:$false -ErrorAction SilentlyContinue
+        Write-Host "  [retired] $name"
+    }
+}
 # AllowStartIfOnBatteries / DontStopIfGoingOnBatteries are NOT the defaults:
 # New-ScheduledTaskSettingsSet sets both battery guards to $true, so on a laptop
 # every weekly run either refused to start or was killed mid-flight. That is

@@ -204,15 +204,32 @@ def _index_with(vault, model, dim, paths):
     con.close()
 
 
-def test_status_flags_the_offline_fallback(vault, capsys):
+def test_status_flags_the_offline_fallback(vault, capsys, monkeypatch):
     """The exact state this vault was in: rows present, search 'working',
-    every vector a bag of words."""
+    every vector a bag of words.
+
+    Ollama's reachability is now part of the condition — the fallback is a
+    defect only on a machine that could be doing better, which was the case
+    here. Pinned explicitly rather than left to whether the test host happens
+    to have a server up, which would make this pass or fail by accident.
+    """
+    monkeypatch.setattr(ms, "_ollama_reachable", lambda a: True)
     note(vault, "a.md")
     _index_with(vault, "hash-256", 256, ["a.md"])
     assert ms.cmd_status(Args(vault)) == 1
     out = capsys.readouterr().out
-    assert "expected real embeddings" in out
+    assert "rebuild" in out.lower()
     assert "degraded" in out
+
+
+def test_status_does_not_flag_the_fallback_without_ollama(vault, capsys, monkeypatch):
+    """Counterpart: with no server to rebuild against, the same index is the
+    intended state and must not report a problem the user cannot act on."""
+    monkeypatch.setattr(ms, "_ollama_reachable", lambda a: False)
+    note(vault, "a.md")
+    _index_with(vault, "hash-256", 256, ["a.md"])
+    assert ms.cmd_status(Args(vault)) == 0
+    assert "degraded" not in capsys.readouterr().out
 
 
 def test_status_accepts_the_fallback_when_it_was_asked_for(vault):

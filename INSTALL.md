@@ -49,16 +49,22 @@ Also set as a user env var so MCP servers resolve it:
 [Environment]::SetEnvironmentVariable("GITHUB_TOKEN", "ghp_...", "User")
 ```
 
-## 5. Ollama (semantic memory)
+## 5. Ollama — optional (semantic memory)
+Skip this and everything still works: `memory-search` falls back to an offline
+hash embedder, and no check reports it as a problem. Install it for markedly
+better recall — real embeddings match on meaning, the fallback on wording.
+
 ```bash
 ollama pull nomic-embed-text
+ollama serve          # only while you want embeddings; there is no logon task
 ```
+Index with it running: `memory-search.py index --rebuild`.
+
 On Windows with an accented username, set an ASCII-safe model path:
 ```powershell
 [Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "D:\ollama-models\models", "User")
 ```
-Optionally register `scripts/start-ollama.bat` as a logon task (see
-`memory/decisions/ollama-accented-path.md`).
+See `memory/decisions/ollama-accented-path.md` for why.
 
 ## 6. Restart Claude Code
 Hooks, commands, and the SessionStart agent-suggester load at startup.

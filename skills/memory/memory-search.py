@@ -147,6 +147,22 @@ def unpack(blob: bytes) -> list[float]:
 
 
 # --------------------------------------------------------------------- commands
+def _ollama_reachable(args) -> bool:
+    """Can this machine embed for real right now?
+
+    Separate from pick_embedder because status must ask the question without
+    the side effect of choosing — and without pick_embedder's `[warn]`, which
+    would be noise on a machine that is deliberately Ollama-free.
+    """
+    if getattr(args, "offline", False):
+        return False
+    try:
+        OllamaEmbedder(args.model, args.ollama_host).embed("ping")
+    except (urllib.error.URLError, OSError, KeyError):
+        return False
+    return True
+
+
 def pick_embedder(args) -> HashEmbedder | OllamaEmbedder:
     """Choose Ollama if reachable, else fall back to the hash embedder."""
     if args.offline:
@@ -248,6 +264,13 @@ def cmd_status(args) -> int:
         print("  [!!] index is empty — run: memory-search.py index")
         return 1
 
+    # Ollama is optional. A hash-embedded index is a defect only when Ollama is
+    # actually reachable — then the index is worse than the machine can do, and
+    # a rebuild fixes it. On a machine without Ollama the fallback IS the
+    # intended state, and flagging it produced a permanent failure whose only
+    # remedy was installing software the user had chosen not to run.
+    ollama_up = _ollama_reachable(args)
+
     problems = 0
     for model, dim, count in rows:
         offline = model.startswith("hash-")
@@ -255,8 +278,11 @@ def cmd_status(args) -> int:
         missing = notes - count
         detail = f"{count} note(s), {tag}"
         if offline and not args.offline:
-            detail += "  <- expected real embeddings"
-            problems += 1
+            if ollama_up:
+                detail += "  <- Ollama is up; rebuild for real embeddings"
+                problems += 1
+            else:
+                detail += " (Ollama not running — expected)"
         if missing > 0:
             detail += f", {missing} not indexed"
             problems += 1

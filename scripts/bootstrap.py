@@ -346,15 +346,29 @@ def write_machine_note(dry: bool) -> None:
         print(f"  [skip] machine note: {e}")
 
 
+#: Absent, something the ecosystem does every day stops working.
+REQUIRED_TOOLS = ("uv", "git", "node", "gh", "gitleaks", "ruff")
+#: Absent, one capability quietly degrades and everything else is unaffected.
+#: `ollama` powers memory-search's embeddings; without it search falls back to
+#: the offline hash embedder rather than failing. Listing it as a prerequisite
+#: printed `MISS ... install for full functionality` on machines that had made a
+#: deliberate choice not to run a local model server.
+OPTIONAL_TOOLS = {"ollama": "memory-search embeddings; falls back to offline"}
+
+
 def check_prereqs() -> None:
     print("\nprerequisites:")
-    for tool in ("uv", "git", "node", "gh", "gitleaks", "ruff", "ollama"):
+    for tool in REQUIRED_TOOLS:
         found = shutil.which(tool)
         mark = "ok " if found else "MISS"
         print(
             f"  [{mark}] {tool}"
             + (f"  ({found})" if found else "  — install for full functionality")
         )
+    for tool, why in OPTIONAL_TOOLS.items():
+        found = shutil.which(tool)
+        mark = "ok " if found else "--  "
+        print(f"  [{mark}] {tool} (optional)" + (f"  ({found})" if found else f"  — {why}"))
 
 
 def _normalize(raw: str) -> Path:
