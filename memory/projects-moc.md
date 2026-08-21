@@ -13,3 +13,4 @@ Every project scaffolded via `/ecosystem-brain:init`. Each card also links back 
 - [[viral-videos-sm]] — cli · python
 - [[ipe-pipeline]] — data-pipeline · python
 - [[plan-action-energie-environnement]] — cli · python
+- [[metrologie-usine]] — data-pipeline · python

@@ -19,6 +19,12 @@ semantically. Each note has YAML frontmatter and wiki-style links to related not
 - `templates/` — note templates for the Templates plugin
 
 ## Key decisions
+- [[verification-integrity]] — gates must be executed and read; check the artefact
+- [[toolchain-pinning]] — CI + local gates use the same toolchain versions
+- [[agent-pinning]] — pin installed agents to commit SHAs
+- [[model-routing]] — route agents by task shape (haiku / inherit)
+- [[install-manifest]] — bootstrap records what it installed for cleanup
+- [[catalog-seed]] — derived files go to .gitignore; commit a seed floor
 - [[hook-format]] — correct Claude Code hook structure
 - [[windows-python-invocation]] — use `uv run python`, not bare `python`
 - [[windows-path-translation]] — `/d/` works as a CLI arg, not inside Python code
@@ -26,9 +32,6 @@ semantically. Each note has YAML frontmatter and wiki-style links to related not
 - [[text-file-write-conventions]] — UTF-8 + LF in all `Path.write_text()` calls
 - [[powershell-utf8-bom]] — avoid Out-File `-Encoding utf8` (adds a BOM)
 - [[claude-best-practices]] — conventions grounded in Anthropic's guidance
-- [[agent-pinning]] — pin installed agents to commit SHAs
-- [[model-routing]] — route agents by task shape (haiku / inherit)
-- [[betting-tracker-stack]] — a project's stack decision
 
 ## Usage
 Paths are relative to the repo root — the clone location differs per machine,
