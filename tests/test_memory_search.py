@@ -30,10 +30,40 @@ spec = importlib.util.spec_from_file_location("memory_search", SKILL)
 ms = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ms)
 
-# Captured before any test can reassign ms.pick_embedder at module scope
-# (several existing tests do `ms.pick_embedder = lambda args: ...` without
-# restoring it, which otherwise leaks into whichever test runs next).
+# The real one, captured at import. Tests that need the genuine embedder-chooser
+# say so by name instead of assuming module state is pristine.
 _real_pick_embedder = ms.pick_embedder
+
+
+@pytest.fixture(autouse=True)
+def _module_state_is_restored():
+    """Fail any test that reassigns a module attribute without restoring it.
+
+    Two tests here set `ms.pick_embedder = lambda ...` as a bare assignment.
+    That survives the test and changes what every later test in the session
+    sees — `pick_embedder` stayed stubbed for the rest of the run, so anything
+    downstream depending on the real one was testing a leftover fake. It was
+    caught by a probe, not by a failure: the suite stayed green because no test
+    happened to notice.
+
+    Snapshots every module-level function and class, and compares identity
+    afterwards. `monkeypatch` undoes itself before this teardown runs, so
+    legitimate patching passes and only bare assignment trips it.
+    """
+    import inspect
+
+    before = {
+        n: v
+        for n, v in vars(ms).items()
+        if inspect.isfunction(v) or inspect.isclass(v)
+    }
+    yield
+    leaked = sorted(n for n, v in before.items() if getattr(ms, n, None) is not v)
+    assert not leaked, (
+        f"module attribute(s) left reassigned after the test: {leaked}. "
+        "Use monkeypatch.setattr so it is undone."
+    )
+
 
 
 class Args:
@@ -125,7 +155,7 @@ def test_the_cap_is_below_what_actually_failed():
 
 
 # --- one bad note must not abort the build --------------------------------
-def test_a_failing_note_is_skipped_not_fatal(vault, capsys):
+def test_a_failing_note_is_skipped_not_fatal(vault, capsys, monkeypatch):
     note(vault, "good-a.md")
     note(vault, "bad.md")
     note(vault, "good-b.md")
@@ -138,7 +168,7 @@ def test_a_failing_note_is_skipped_not_fatal(vault, capsys):
                 raise urllib.error.HTTPError("u", 500, "boom", {}, None)
             return [0.5, 0.5]
 
-    ms.pick_embedder = lambda args: Flaky()
+    monkeypatch.setattr(ms, "pick_embedder", lambda args: Flaky())
     assert ms.cmd_index(Args(vault)) == 0
     con = sqlite3.connect(vault / ".search-index.db")
     indexed = {r[0] for r in con.execute("SELECT path FROM vec")}
@@ -146,7 +176,7 @@ def test_a_failing_note_is_skipped_not_fatal(vault, capsys):
     assert "bad.md" in capsys.readouterr().err
 
 
-def test_unembeddable_notes_are_named_as_unsearchable(vault, capsys):
+def test_unembeddable_notes_are_named_as_unsearchable(vault, capsys, monkeypatch):
     note(vault, "bad.md")
 
     class AlwaysFails:
@@ -155,7 +185,7 @@ def test_unembeddable_notes_are_named_as_unsearchable(vault, capsys):
         def embed(self, text):
             raise OSError("nope")
 
-    ms.pick_embedder = lambda args: AlwaysFails()
+    monkeypatch.setattr(ms, "pick_embedder", lambda args: AlwaysFails())
     ms.cmd_index(Args(vault))
     err = capsys.readouterr().err
     assert "NOT searchable" in err
@@ -459,9 +489,9 @@ def test_cmd_search_ranks_by_cosine_and_caps_at_top_k(vault, monkeypatch, capsys
 def test_main_in_process_dispatches_index_search_status(vault, monkeypatch):
     """main() is the actual wiring between argv and cmd_index/cmd_search/
     cmd_status; every other test in this file bypasses it by calling those
-    directly. Restores the real pick_embedder first: earlier tests reassign
-    ms.pick_embedder as a bare module attribute (not via monkeypatch) and
-    never restore it, which would otherwise leak into this test."""
+    directly. Pins the real pick_embedder explicitly rather than relying on no
+    earlier test having replaced it — the autouse guard now enforces that, but
+    stating the dependency keeps this test readable on its own."""
     monkeypatch.setattr(ms, "pick_embedder", _real_pick_embedder)
     note(vault, "a.md")
     assert ms.main(["--vault", str(vault), "--offline", "index"]) == 0

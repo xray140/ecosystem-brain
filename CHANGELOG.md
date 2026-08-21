@@ -2,6 +2,34 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.5.2] — 2026-08-21
+
+**A stubbed function stayed stubbed for the rest of the test session.**
+
+Two tests in `test_memory_search.py` set `ms.pick_embedder = lambda ...` as a
+bare module assignment rather than through `monkeypatch`. That survives the
+test: for every test that ran afterwards in the same session, `pick_embedder`
+was still the fake. Anything downstream depending on the real one was exercising
+a leftover stub and passing for the wrong reason.
+
+The suite stayed green throughout, because no test happened to notice. It was
+found by the `test-writer` agent while raising coverage — flagged, correctly, as
+out of scope for that task rather than fixed silently in passing.
+
+Demonstrated before fixing: a probe asserting `ms.pick_embedder is
+_real_pick_embedder` passes in isolation and fails after the file runs.
+
+Both are now `monkeypatch.setattr`, which undoes itself. More usefully, an
+autouse fixture snapshots every module-level function and class and compares
+identity at teardown, so the whole class of leak fails immediately rather than
+waiting for a downstream test to be quietly wrong. `monkeypatch` unwinds before
+that teardown, so legitimate patching passes and only bare assignment trips it.
+
+Verified by reintroducing the original bug: pytest exits 1. Worth noting the
+summary line reads `32 passed, 1 error` — the failure surfaces as a teardown
+error rather than a test failure, which looks green to a skimmer but is red to
+anything reading the exit code, which is what selfcheck and CI do.
+
 ## [4.5.1] — 2026-08-21
 
 **The lowest-covered file in the repo was the one with a history of degrading
