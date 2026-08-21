@@ -4,6 +4,14 @@
 # Shell scripts must be LF
 *.sh text eol=lf
 
+# Batch files must be CRLF. cmd.exe's parser is byte-oriented and mis-splits an
+# LF-only .bat, reading `REM` as a command named `M`. The `* text=auto eol=lf`
+# rule above had been normalising these to LF since the repo-wide LF sweep, so
+# every scheduled task that shells through a .bat printed parse errors on each
+# run. Interactively it limped through; under Task Scheduler CatalogRefresh
+# exited 1 without ever reaching the line that writes its own log.
+*.bat text eol=crlf
+
 # Windows-safe files
 *.json text eol=lf
 *.md text eol=lf
