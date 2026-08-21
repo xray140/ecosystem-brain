@@ -52,6 +52,20 @@ def search(subcommand: str) -> list[str]:
     ]
 
 
+def manifest(*args: str) -> list[str]:
+    """The memory-index CLI (the frontmatter manifest), pinned to this vault."""
+    return [
+        "uv",
+        "run",
+        "--no-project",
+        "python",
+        str(REPO / "skills" / "memory" / "memory-index.py"),
+        "--vault",
+        str(REPO / "memory"),
+        *args,
+    ]
+
+
 # (label, command, treat-nonzero-as-failure)
 CHECKS: list[tuple[str, list[str], bool]] = [
     ("config in sync (doctor)", py("doctor.py"), True),
@@ -76,6 +90,14 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     ("machine profile", py("profile_machine.py"), False),
     ("memory index refresh", search("index"), False),
     ("memory index status", search("status"), True),
+    # The OTHER index. `index.json` is the frontmatter manifest the memory skill
+    # loads at session start instead of reading the whole vault; the two above
+    # are the semantic search database. Only the semantic one was ever
+    # refreshed here, so the manifest sat frozen for 18 days listing a note that
+    # no longer existed and missing three that did — and every check said the
+    # vault was healthy, because none of them opened it.
+    ("memory manifest refresh", manifest(), False),
+    ("memory manifest check", manifest("--check"), True),
     # Advisory: it reports which installed agents never get invoked. Nothing here
     # is broken when the list is long — it is a prompt to prune, not a fault.
     ("agent usage", py("agent_usage.py"), False),

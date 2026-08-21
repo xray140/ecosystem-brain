@@ -117,14 +117,19 @@ def check_profiles() -> None:
 def check_memory() -> None:
     print("4. Memory vault indexes")
     r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
-        [sys.executable, str(REPO / "skills/memory/memory-index.py"), "--check"],
+        # --dry-run, not --check: this asserts the indexer can parse every note.
+        # --check judges whether memory/index.json is CURRENT, which is a
+        # different question and unanswerable here — the manifest is gitignored,
+        # so on a fresh clone (CI) there is none, and gating on it would fail
+        # every build. Freshness is the heartbeat's job: it refreshes, then gates.
+        [sys.executable, str(REPO / "skills/memory/memory-index.py"), "--dry-run"],
         capture_output=True,
         text=True,
     )
     if r.returncode != 0:
         fail(f"memory-index failed: {r.stderr.strip()[:80]}")
     else:
-        ok("vault indexed")
+        ok("vault parses — every note walked by the indexer")
 
 
 DEV_REQS = REPO / "requirements-dev.txt"
