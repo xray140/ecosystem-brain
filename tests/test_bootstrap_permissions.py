@@ -74,3 +74,33 @@ def test_deny_still_covers_the_documented_secret_files():
     written policy names."""
     assert _denied(".env")
     assert _denied(".identity.local.env")
+
+
+# --- destructive commands, both spellings ----------------------------------
+
+ASK = bs.PERMISSIONS["ask"]
+
+
+@pytest.mark.parametrize("verb", ["push", "reset --hard", "clean"])
+def test_the_git_c_spelling_is_gated_too(verb):
+    """Patterns match from the start of the command, so `Bash(git push*)` does
+    not cover `git -C <path> push` — the form that acts on a sibling repo.
+
+    The gap did not make the wider action safer: it fell through to the
+    classifier and hard-failed, while the narrower spelling merely prompted.
+    """
+    plain = next(r for r in ASK if r.startswith(f"Bash(git {verb}"))
+    scoped = f"Bash(git -C * {verb}*)"
+    assert plain in ASK
+    assert scoped in ASK, f"{verb} is gated as `git {verb}` but not as `git -C … {verb}`"
+
+
+def test_nothing_destructive_is_auto_allowed():
+    """`ask` prompts, `allow` does not. The spelling that can target any repo on
+    disk must never be the one that skips the prompt."""
+    allow = bs.PERMISSIONS.get("allow", [])
+    for rule in allow:
+        assert "push" not in rule
+        assert "reset" not in rule
+        assert "clean" not in rule
+        assert "rm " not in rule

@@ -112,11 +112,20 @@ PERMISSIONS = {
         "Read(./.identity.local.env)",
         "Read(**/*.local.env)",
     ],
+    # These patterns match from the START of the command, so a rule written for
+    # `git push` does not cover `git -C <path> push` — the form used to act on a
+    # sibling repo. That gap did not make the wider action safer: it fell through
+    # to the classifier and hard-failed, where the narrower one merely prompted.
+    # Both spellings are listed, and both are `ask` rather than `allow`, so the
+    # form that can target any repo on disk is never the unprompted one.
     "ask": [
         "Bash(rm *)",
         "Bash(git push*)",
+        "Bash(git -C * push*)",
         "Bash(git reset --hard*)",
+        "Bash(git -C * reset --hard*)",
         "Bash(git clean*)",
+        "Bash(git -C * clean*)",
     ],
 }
 
