@@ -29,6 +29,21 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 INSTALLED = REPO_ROOT / "registry" / "installed.json"
 REGISTRY = REPO_ROOT / "registry" / "registry.json"
 CATALOG = REPO_ROOT / "registry" / "catalog.json"
+CATALOG_SEED = REPO_ROOT / "registry" / "catalog.seed.json"
+
+
+def catalog_path():
+    """The live catalog, else the committed seed, else None.
+
+    catalog.json is gitignored (a scheduled task rewrites it weekly). Kept in
+    step with catalog.py and init_project.py by a test that asserts all
+    three resolve to the same file.
+    """
+    if CATALOG.exists():
+        return CATALOG
+    if CATALOG_SEED.exists():
+        return CATALOG_SEED
+    return None
 
 # First-party squad: name -> when the control tower should delegate to it.
 # Shown every session so the soldiers actually get used, not just defined.
@@ -103,7 +118,8 @@ def suggest_uninstalled(project_tags: set[str], installed_names: set[str],
     """Top uninstalled catalog agents whose tags overlap the project's tags."""
     if not project_tags:
         return []
-    catalog = load_json(CATALOG)
+    path = catalog_path()
+    catalog = load_json(path) if path else {}
     scored = []
     for a in catalog.get("agents", []):
         if a["name"] in installed_names:

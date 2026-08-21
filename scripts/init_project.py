@@ -36,6 +36,21 @@ if hasattr(sys.stdout, "reconfigure"):
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROFILES = REPO_ROOT / "registry" / "project-profiles.json"
 CATALOG = REPO_ROOT / "registry" / "catalog.json"
+CATALOG_SEED = REPO_ROOT / "registry" / "catalog.seed.json"
+
+
+def catalog_path():
+    """The live catalog, else the committed seed, else None.
+
+    catalog.json is gitignored (a scheduled task rewrites it weekly). Kept in
+    step with catalog.py and the suggest-agents hook by a test that asserts all
+    three resolve to the same file.
+    """
+    if CATALOG.exists():
+        return CATALOG
+    if CATALOG_SEED.exists():
+        return CATALOG_SEED
+    return None
 SCAFFOLD = REPO_ROOT / "scripts" / "scaffold.py"
 INSTALLER = REPO_ROOT / "scripts" / "install-agent.py"
 INDEXER = REPO_ROOT / "skills" / "memory" / "memory-index.py"
@@ -165,9 +180,11 @@ def resolve(
 def classify_agents(names: list[str], profiles: dict) -> tuple[list[dict], list[str]]:
     """Split into installable (catalog github) + local + dropped(unknown)."""
     local = set(profiles.get("local_agents", []))
-    catalog = (
-        {a["name"]: a for a in load(CATALOG)["agents"]} if CATALOG.exists() else {}
-    )
+    # Falling back to {} here is not harmless: every catalog agent then lands in
+    # `dropped` as unknown, so a fresh clone would quietly scaffold projects with
+    # their agent roster stripped. The seed keeps that from being the default.
+    path = catalog_path()
+    catalog = {a["name"]: a for a in load(path)["agents"]} if path else {}
     resolved: list[dict] = []
     dropped: list[str] = []
     for n in names:

@@ -2,6 +2,46 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.5.0] — 2026-08-21
+
+**The weekly catalog refresh now has somewhere to put its output.**
+
+`registry/catalog.json` was tracked, and `refresh-catalog.bat` rewrote it every
+Sunday via `catalog.py build`. Nothing committed it. So the file on `master` sat
+at its 2026-06-05 state for eleven weeks while `task_doctor` reported the task
+healthy each week — and the 2026-08-16 refresh was swept into an auto-stash
+during unrelated branch work and came within one `git stash drop` of being lost.
+
+Minor bump: this changes where a file lives, which is a contract.
+
+`catalog.json` is now **gitignored**, with `registry/catalog.seed.json` as the
+committed floor. The weekly rewrite no longer touches the repo, and a fresh
+clone still has a catalog.
+
+**All three readers resolve live-then-seed**, and that mattered most in the
+quietest one: `init_project.py` fell back to `{}` when the catalog was missing,
+which sends every catalog agent to `dropped` as unknown. Without a seed, a fresh
+clone would have scaffolded projects with their agent roster silently stripped —
+the file being absent would have become a *default*, not an edge case.
+
+The resolver is duplicated three ways on purpose — the `suggest-agents` hook must
+stay importable from nothing, and `init_project.py` has no shared-module habit —
+so a test asserts all three resolve to the same file. Reading the seed prints a
+note naming it: a stale answer that looks authoritative is the failure mode this
+whole arrangement exists to avoid.
+
+The seed moves only when asked, via `catalog.py build --seed`. A floor that
+drifts on its own is not a floor.
+
+Two existing tests failed on the contract change and were corrected rather than
+deleted. One of them exposed a test-isolation bug it had been hiding: the
+`catalog_file` fixture redirected `CATALOG` but not `CATALOG_SEED`, so any test
+without a temp catalog was quietly reading the real `registry/` on disk.
+
+Five mutations, **5 of 5 caught** — seed never consulted, seed winning over a
+live catalog, the seed note silenced, `init_project` dropping catalog agents
+again, and the hook's resolver diverging from the other two.
+
 ## [4.4.3] — 2026-08-21
 
 **The manifest the agent loads at session start had been wrong for 18 days, and

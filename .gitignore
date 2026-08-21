@@ -41,3 +41,7 @@ Thumbs.db
 # Quarantined (blocked) agent content — untrusted, never committed (keep README)
 quarantine/*
 !quarantine/README.md
+
+# The agent catalog is refreshed weekly by a scheduled task; the committed
+# seed (registry/catalog.seed.json) is what a fresh clone falls back to.
+registry/catalog.json

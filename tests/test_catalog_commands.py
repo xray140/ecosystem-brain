@@ -20,6 +20,9 @@ import pytest
 def catalog_file(tmp_path, monkeypatch):
     p = tmp_path / "catalog.json"
     monkeypatch.setattr(catalog, "CATALOG", p)
+    # Redirect the seed too, or an absent temp catalog silently falls back to
+    # the REAL registry/catalog.seed.json and the test reads repo data.
+    monkeypatch.setattr(catalog, "CATALOG_SEED", tmp_path / "catalog.seed.json")
     return p
 
 
@@ -95,9 +98,17 @@ def test_categories_counts_per_folder(catalog_file, capsys):
     assert "1  02-lang" in out
 
 
-def test_missing_catalog_tells_you_to_build(catalog_file):
+def test_no_catalog_and_no_seed_tells_you_to_build(catalog_file):
     with pytest.raises(SystemExit, match=r"catalog\.py build"):
         catalog.main(["categories"])
+
+
+def test_a_missing_catalog_falls_back_to_the_seed(catalog_file, capsys):
+    """catalog.json is gitignored, so on a fresh clone the seed is all there is.
+    Exiting here would make a clean checkout unusable until someone ran build."""
+    _write(catalog.CATALOG_SEED, [_agent("alpha")])
+    assert catalog.main(["categories"]) == 0
+    assert "seed" in capsys.readouterr().err
 
 
 # --- install --------------------------------------------------------------
