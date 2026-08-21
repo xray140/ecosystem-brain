@@ -1,6 +1,6 @@
 {
   "repo": "VoltAgent/awesome-claude-code-subagents",
-  "count": 154,
+  "count": 158,
   "agents": [
     {
       "name": "api-designer",
@@ -896,6 +896,15 @@
       ]
     },
     {
+      "name": "docs-drift-editor",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/06-developer-experience/docs-drift-editor.md",
+      "category": "06-developer-experience",
+      "tags": [
+        "06-developer-experience"
+      ]
+    },
+    {
       "name": "documentation-engineer",
       "repo": "VoltAgent/awesome-claude-code-subagents",
       "path": "categories/06-developer-experience/documentation-engineer.md",
@@ -1025,6 +1034,16 @@
       ]
     },
     {
+      "name": "email-deliverability-engineer",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/email-deliverability-engineer.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai"
+      ]
+    },
+    {
       "name": "embedded-systems",
       "repo": "VoltAgent/awesome-claude-code-subagents",
       "path": "categories/07-specialized-domains/embedded-systems.md",
@@ -1146,6 +1165,17 @@
       ]
     },
     {
+      "name": "x-api-integration",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/07-specialized-domains/x-api-integration.md",
+      "category": "07-specialized-domains",
+      "tags": [
+        "07-specialized-domains",
+        "ai",
+        "api"
+      ]
+    },
+    {
       "name": "assumption-mapping",
       "repo": "VoltAgent/awesome-claude-code-subagents",
       "path": "categories/08-business-product/assumption-mapping.md",
@@ -1203,6 +1233,15 @@
       "name": "growth-loops",
       "repo": "VoltAgent/awesome-claude-code-subagents",
       "path": "categories/08-business-product/growth-loops.md",
+      "category": "08-business-product",
+      "tags": [
+        "08-business-product"
+      ]
+    },
+    {
+      "name": "landing-page-copywriter",
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "path": "categories/08-business-product/landing-page-copywriter.md",
       "category": "08-business-product",
       "tags": [
         "08-business-product"
