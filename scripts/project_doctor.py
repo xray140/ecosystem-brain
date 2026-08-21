@@ -51,6 +51,10 @@ STATUS_RE = re.compile(r"^status:\s*(\S+)", re.M)
 # `D:\claude-projects\x` is a correct path — on the PC that has a D: drive.
 HOST_RE = re.compile(r"^host:\s*(\S+)", re.M)
 
+# `#! one-of: A, B` in a .env.example — the group is satisfied by any one member.
+# See env_gap for why a plain set difference was not enough.
+ONE_OF_RE = re.compile(r"^#!\s*one-of:\s*(.+)$", re.M)
+
 # A project untouched for this long is worth a glance — not a failure.
 STALE_DAYS = 90
 
@@ -121,6 +125,21 @@ def env_gap(project: Path) -> list[str]:
     The ecosystem seeds .env from the example at init; keys added to the example
     afterwards never reach the .env, and the failure shows up as a confusing
     runtime error rather than a missing-config message.
+
+    Plain set difference cannot tell "not configured yet" from "picked the other
+    one". An example offering a choice of provider — pick Groq *or* Anthropic —
+    made a correctly-configured project report a missing key forever, with no
+    edit that would satisfy it short of storing a key you deliberately do not
+    use. A warning you cannot clear is one you learn to skip.
+
+    So a group can declare itself satisfied by any one member:
+
+        #! one-of: GROQ_API_KEY, ANTHROPIC_API_KEY
+        GROQ_API_KEY=...
+        ANTHROPIC_API_KEY=...
+
+    Set either and the group is met. Set neither and it reports once, as the
+    choice it is, rather than as two independent missing keys.
     """
     example, env = project / ".env.example", project / ".env"
     if not example.is_file() or not env.is_file():
@@ -134,7 +153,19 @@ def env_gap(project: Path) -> list[str]:
                 out.add(line.split("=", 1)[0].strip())
         return out
 
-    return sorted(keys(example) - keys(env))
+    text = example.read_text(encoding="utf-8", errors="replace")
+    groups = [
+        [k.strip() for k in m.group(1).split(",") if k.strip()]
+        for m in ONE_OF_RE.finditer(text)
+    ]
+    present = keys(env)
+    grouped = {k for g in groups for k in g}
+
+    missing = sorted(keys(example) - present - grouped)
+    for g in groups:
+        if not present.intersection(g):
+            missing.append("one of " + "|".join(g))
+    return missing
 
 
 def ci_status(project: Path) -> str | None:

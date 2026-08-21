@@ -60,6 +60,16 @@ SessionStart hook suggests relevant installed + uninstalled agents
   Four doctors, split by what they judge: `doctor` (the install), `project_doctor`
   (the projects it built), `task_doctor` (whether the scheduled tasks actually
   complete), `agent_usage` (which agents are ever invoked).
+  `project_doctor` compares a project's `.env` against its `.env.example`. Where
+  the example offers a choice rather than a requirement, mark the group so that
+  picking one satisfies it — otherwise the unused key reports as missing forever
+  and the warning becomes noise:
+
+  ```
+  #! one-of: GROQ_API_KEY, ANTHROPIC_API_KEY
+  GROQ_API_KEY=...
+  ANTHROPIC_API_KEY=...
+  ```
 - **skills/** — `memory` (index + semantic search), `secrets` (doctor + identity).
 - **hooks/** — gitleaks gate, catastrophic-command block, ruff auto-format, SessionStart agent-suggester, session logging.
 - **tests/** — the suite `selfcheck` and CI both run; see *Verification* below.
