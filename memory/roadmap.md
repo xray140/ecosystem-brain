@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.3.16)
+## Current state (v4.4.3)
 - **17 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, **project-doctor**, **agent-usage**,
   security-audit, write-tests, fix-bug, context-sync, memory-gc
@@ -24,9 +24,9 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin) -> **rollback**
   (`--rollback <name>` re-fetches at the previous SHA, re-scans, swaps pins;
-  itself undoable). Shared helpers in `github_util.py`. Catalog = 154 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (549
-  tests, ~6s) + `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each
+  itself undoable). Shared helpers in `github_util.py`. Catalog = 158 agents, cached. See [[decisions/agent-pinning]].
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (619
+  tests, ~16s) + `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each
   blueprint for real and runs its baseline) + gitleaks. **Green on the ubuntu
   runner** since 2026-08-01 (it had been red on every push for weeks on an
   unpinned ruff — 57 findings no commit introduced). Toolchain pinned in
@@ -36,7 +36,7 @@ Read this first in a fresh session (after CLAUDE.md). Run
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
   runs the *same* invocation and the same pinned binary as CI, so local-green
   and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (549, **90%** coverage, every script >=81%) covers scan_agent, init_project,
+- **Tests**: `tests/` (619, **89%** coverage; `memory-search.py` lowest at 70%) covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
@@ -122,23 +122,70 @@ artefact the ecosystem produces now has a reader.
 
 The rule that came out of it: [[decisions/verification-integrity]].
 
+**2026-08-20 → 08-21, v4.3.26 → v4.4.3.** The same defect as the audit before
+it, one layer further in: last time the finding was *information existed and
+nothing read it back*. This time every reader existed, ran, and reported green —
+while unable to fail in the way that mattered.
+
+The weekly heartbeat had been structurally incapable of reporting itself
+healthy: `task_doctor` inspected every `EcosystemBrain-*` task including the one
+executing it, read its own in-flight run as a failure, and latched red for ever.
+Nothing else surfaced for three weeks because that heartbeat is what surfaces
+things. Underneath it: `doctor` compared repo → `~/.claude` and never the
+reverse, so an agent deleted from the repo kept loading into every session under
+`[ok] healthy`; `memory-index.py --check` printed counts and returned 0 whatever
+it found, so the manifest the agent loads at session start went 18 days stale
+unnoticed; `selfcheck` reported "pytest failed" when the real fault was no DNS;
+a tracked machine note rewrote itself on every checkout; and four *live* projects
+were nearly archived for sitting on a drive that is not mounted here.
+
+Tests 549 → 619, heartbeat 8 → 11 checks, and every check that reports success
+now has a way to fail. Four of five fixes were mutation-tested; one mutation
+initially read as *caught* when it had simply never applied — the harness now
+proves a mutant is live before believing a green suite.
+
 Earlier milestones (project init engine, agent SHA pinning, model routing,
 cross-tool AGENTS.md, the memory vault) are in `CHANGELOG.md` under v4.0–v4.3.4.
 
 ## Open questions
 
-- [ ] **Triage the 4 dead project cards** (opened 2026-08-02) — betting-tracker,
-  betting-stats-analysis, my-first-tool, viral-videos-sm all point at
-  `D:\claude-projects\…`, which does not exist on this machine. Deleted, on
-  another machine, or an unmounted drive? Each needs either a corrected
-  `- Project: ` line or `status: archived`. Flip project_doctor to gating in
-  `maintenance.CHECKS` once done.
+- [x] **Triage the 4 dead project cards** (opened 2026-08-02, closed 2026-08-21)
+  — not dead. `betting-tracker`, `betting-stats-analysis`, `my-first-tool` and
+  `viral-videos-sm` live on another PC that is still in use. An earlier draft
+  archived them on the reasoning that this was *unknowable from this machine*;
+  it was knowable by asking. They stay `active`, each with a note saying where
+  it lives. `project_doctor` is gating in `maintenance.CHECKS` — safe because
+  `elsewhere` exits 0, so a card on another machine never turns the report red.
+  **Left over:** the `host:` pin needs that machine's `hostname`, the one fact
+  this repo cannot derive on its own.
 
-- [ ] **Prune the 8 unused third-party agents** (opened 2026-08-02) — evidence
-  is local-only, so confirm against the other PC before removing anything.
-  Four first-party agents also show zero: that is a delegation habit to change,
-  not a cleanup.
+- [ ] **Prune the 6 unused third-party agents** (opened 2026-08-02, partly done
+  2026-08-21) — `python-pro` and `cli-developer` are gone: the only two whose
+  evidence window was complete. The other six predate the oldest transcript, so
+  "never invoked" cannot speak for their first weeks. Transcripts are local, so
+  confirm against the other PC before removing anything — parked behind the same
+  hostname as above. Four *first-party* agents also show zero: that is a
+  delegation habit to change, not a cleanup.
 
-- [ ] **profile_machine.py** (proposed 2026-07-15, parked) — per-machine vault
-  note (OS, tools, apps, drives/shares, project dirs) generated at bootstrap and
-  injected at SessionStart, so any PC is known from the first second.
+- [x] **profile_machine.py** (proposed 2026-07-15, shipped 2026-08-21) — writes
+  `memory/machines/<host>.md`: hostname, OS, which drive roots exist, where this
+  clone is, which prerequisites resolve. It is what turns "four cards point
+  nowhere" into "four cards describe another PC". It recorded the current git
+  branch at first, so the note rewrote itself on every checkout and kept turning
+  up in unrelated diffs; `updated` now means the date these facts last *changed*.
+
+- [ ] **The weekly catalog refresh has nowhere to put its output** (opened
+  2026-08-21) — `refresh-catalog.bat` runs `catalog.py build` every Sunday,
+  rewriting the **tracked** `registry/catalog.json`. Nothing commits it. The file
+  sat at its 2026-06-05 state for eleven weeks while the task reported success
+  every Sunday, and the most recent run's output was swept into an auto-stash
+  during unrelated branch work and nearly lost. The refresh itself is landed
+  (154 -> 158); the arrangement that stranded it is not fixed. Three ways out,
+  none obviously right:
+    - commit it by hand when noticed — the status quo, which failed for 11 weeks;
+    - have the task open a PR — a scheduled job writing to the remote;
+    - gitignore it like `index.json` — but `init_project.py` validates against
+      it, so a fresh clone would need a committed seed.
+  Note that a heartbeat check which merely reports the file dirty would fire
+  every week between Sunday's refresh and the next commit — permanently red is
+  how a gate stops being read. See [[decisions/verification-integrity]].
