@@ -92,13 +92,13 @@ def test_an_unparseable_timestamp_does_not_crash():
 # --- the environment gate -------------------------------------------------
 def test_non_windows_reports_not_applicable(monkeypatch, capsys):
     monkeypatch.setattr(td, "WINDOWS", False)
-    assert td.main() == 0
+    assert td.main([]) == 0
     assert "not available here" in capsys.readouterr().out
 
 
 def test_no_registered_tasks_is_not_a_failure(monkeypatch, capsys):
     monkeypatch.setattr(td, "query_tasks", lambda: [])
-    assert td.main() == 0
+    assert td.main([]) == 0
     out = capsys.readouterr().out
     assert "no 'EcosystemBrain-*' tasks" in out
     assert "register-scheduled-tasks" in out, "say how to fix it"
@@ -154,7 +154,7 @@ def test_unparseable_output_is_reported_as_unavailable(monkeypatch):
 # --- exit contract --------------------------------------------------------
 def test_main_fails_when_a_task_is_failing(monkeypatch, capsys):
     monkeypatch.setattr(td, "query_tasks", lambda: [task(result=0xC000013A)])
-    assert td.main() == 1
+    assert td.main([]) == 1
     out = capsys.readouterr().out
     assert "not completing" in out
     assert "State=Ready forever" in out, "name the trap explicitly"
@@ -162,7 +162,7 @@ def test_main_fails_when_a_task_is_failing(monkeypatch, capsys):
 
 def test_main_passes_when_all_tasks_are_healthy(monkeypatch, capsys):
     monkeypatch.setattr(td, "query_tasks", lambda: [task(), task(name="EcosystemBrain-Y")])
-    assert td.main() == 0
+    assert td.main([]) == 0
     assert "completed a recent run" in capsys.readouterr().out
 
 

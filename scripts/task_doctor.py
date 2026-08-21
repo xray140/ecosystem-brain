@@ -20,6 +20,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import shutil
@@ -156,7 +157,21 @@ def assess(task: dict, now: datetime | None = None) -> tuple[bool, str]:
     return True, f"last run ok, {age.days}d ago"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="TASK",
+        help=(
+            "task to report but not gate on. Pass the task this check is running "
+            "inside: its recorded result describes the PREVIOUS run, and the "
+            "current one has no verdict yet."
+        ),
+    )
+    args = ap.parse_args(argv)
+
     print("ecosystem-brain scheduled-task doctor")
     tasks = query_tasks()
     if tasks is None:
@@ -171,6 +186,15 @@ def main() -> int:
     failing = 0
     for t in sorted(tasks, key=lambda x: x["Name"]):
         ok, detail = assess(t)
+        # Self-reference is not evidence. When maintenance runs this check, the
+        # Maintenance task's last result is its own PREVIOUS run — so one real
+        # failure made the heartbeat permanently red: it exited 1, Task Scheduler
+        # recorded 0x1, and the next run failed this check on that record and
+        # exited 1 again. It stayed red on 2026-08-21 with every other check
+        # green, still carrying the pytest failure fixed the day before.
+        if t["Name"] in args.exclude:
+            print(f"  [--] {t['Name']:34s} {detail} (this run — not gated on)")
+            continue
         failing += not ok
         print(f"  [{'ok' if ok else '!!'}] {t['Name']:34s} {detail}")
 

@@ -26,6 +26,11 @@ if hasattr(sys.stdout, "reconfigure"):
 REPO = Path(__file__).resolve().parent.parent
 REPORT_DIR = REPO / "memory" / "maintenance"
 
+# The scheduled task that runs this script. Must match the name registered by
+# scripts/register-scheduled-tasks.ps1, or the self-exclusion below silently
+# stops matching and the heartbeat can latch red again — a test pins the pair.
+SELF_TASK = "EcosystemBrain-Maintenance"
+
 
 def py(script: str, *args: str) -> list[str]:
     return [
@@ -80,7 +85,14 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     # here every week from 2026-07-15 without once completing, and nothing
     # noticed — because everything that looked at those tasks looked at their
     # State ("Ready") rather than their last result.
-    ("scheduled tasks (task_doctor)", py("task_doctor.py"), True),
+    #
+    # --exclude the task this very run IS. Without it the gate is self-referential:
+    # the Maintenance task's recorded result is the PREVIOUS run's, so one real
+    # failure latched permanently — exit 1, scheduler records 0x1, next run fails
+    # this check on that record and exits 1 again. Seen on 2026-08-21, still red
+    # with every other check green, carrying a pytest failure fixed the day before.
+    # It is still printed, just not gated on: the other tasks remain judged.
+    ("scheduled tasks (task_doctor)", py("task_doctor.py", "--exclude", SELF_TASK), True),
     # Keep the semantic index current, then assert it really is. Nothing rebuilt
     # it before, so it sat at 24-of-28 notes on the offline hash fallback while
     # the README advertised Ollama embeddings. Degraded search returns plausible
