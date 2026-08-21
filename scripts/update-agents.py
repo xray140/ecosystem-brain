@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import sys
 from pathlib import Path
@@ -24,6 +23,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import registry_io
+
 import github_util as gh
 import layout
 from scan_agent import quarantine, scan, worst
@@ -180,9 +181,7 @@ def status_symbol(status: str) -> str:
 
 
 def _save(data: dict) -> None:
-    INSTALLED_FILE.write_text(
-        json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n"
-    )
+    registry_io.save(data, INSTALLED_FILE)
 
 
 def _do_rollback(data: dict, name: str) -> int:
@@ -224,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
         print("[warn] no installed.json found — nothing to update")
         return 0
 
-    data = json.loads(INSTALLED_FILE.read_text(encoding="utf-8"))
+    data = registry_io.load(INSTALLED_FILE)
 
     if args.rollback:
         return _do_rollback(data, args.rollback)

@@ -45,3 +45,8 @@ quarantine/*
 # The agent catalog is refreshed weekly by a scheduled task; the committed
 # seed (registry/catalog.seed.json) is what a fresh clone falls back to.
 registry/catalog.json
+
+# Where each item landed on THIS machine (global_path, installed_at). Tracking
+# it made every checkout rewrite every entry, so two machines conflicted on
+# each line and an un-bootstrapped one appeared to have agents it did not.
+registry/installed.local.json

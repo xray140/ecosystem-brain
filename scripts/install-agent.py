@@ -18,7 +18,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import sys
 import urllib.parse
@@ -36,6 +35,8 @@ if hasattr(sys.stderr, "reconfigure"):
 
 # Local modules (same dir): security scanner, GitHub helpers, install layout.
 sys.path.insert(0, str(Path(__file__).parent))
+import registry_io
+
 import github_util as gh
 import layout
 from scan_agent import format_report, quarantine, scan, worst
@@ -51,15 +52,13 @@ target_paths = layout.target_paths
 
 
 def load_installed() -> dict:
-    if INSTALLED_FILE.exists():
-        return json.loads(INSTALLED_FILE.read_text(encoding="utf-8"))
-    return {"_version": 1, "agents": [], "commands": [], "skills": []}
+    """Merged view of the registry — see registry_io for the shared/local split."""
+    return registry_io.load(INSTALLED_FILE)
 
 
 def save_installed(data: dict) -> None:
-    INSTALLED_FILE.write_text(
-        json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n"
-    )
+    """Writes the tracked half and this machine's half; callers pass the merge."""
+    registry_io.save(data, INSTALLED_FILE)
 
 
 def detect_type(content: str, filename: str, path: str = "") -> str:
