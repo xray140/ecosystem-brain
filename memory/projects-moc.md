@@ -7,11 +7,16 @@ tags: [moc, projects]
 
 Every project scaffolded via `/ecosystem-brain:init`. Each card also links back here.
 
+- [[viral-videos-sm]] — cli · python
+- [[ipe-pipeline]] — data-pipeline · python · Verdun10
+- [[plan-action-energie-environnement]] — cli · python · Verdun10
+- [[metrologie-usine]] — data-pipeline · python · Verdun10
+- [[bet-tracker]] — cli · python
+
+## Archived
+
+Directory deleted; the card stays because decisions and links still point at it.
+
 - [[betting-tracker]] — web · typescript
 - [[my-first-tool]] — cli · python
 - [[betting-stats-analysis]] — cli · python
-- [[viral-videos-sm]] — cli · python
-- [[ipe-pipeline]] — data-pipeline · python
-- [[plan-action-energie-environnement]] — cli · python
-- [[metrologie-usine]] — data-pipeline · python
-- [[bet-tracker]] — cli · python

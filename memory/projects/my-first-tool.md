@@ -1,16 +1,16 @@
 ---
 type: project
-status: active
+status: archived
 created: 2026-06-04
 stack: [python, uv, ruff, pytest]
 tags: [project, python]
 ---
 
-> **Lives on another PC.** The `- Project:` path below is on a `D:` drive that
-> is not on Verdun10. That machine is still in use, so the project is live — it
-> simply cannot be checked from here. Pin it by adding `host: <machine>` to this
-> frontmatter once that machine's `hostname` is known; until then
-> `project_doctor` infers "elsewhere" from the absent drive root.
+> **Archived — the project directory is gone.** `D:\claude-projects\my-first-tool`
+> no longer exists on MSI, the machine that held it. Deleted; confirmed by the
+> owner on 2026-08-21 rather than inferred from the absent path, which is the
+> mistake 90b52db reverted. The card is kept because decisions and links still
+> point at it.
 # my-first-tool
 
 Scaffolded from `python-project` template on 2026-06-04.
