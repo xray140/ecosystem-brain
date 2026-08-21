@@ -187,15 +187,22 @@ def test_a_rerun_says_unchanged_rather_than_updated(tmp_path, monkeypatch, capsy
 
 def test_a_real_change_still_rewrites(tmp_path, monkeypatch):
     """Not churning must not become not working: when a fact about the machine
-    actually changes, the note has to follow."""
+    actually changes, the note has to follow.
+
+    The substituted drive list must be derived from the real one, not hardcoded:
+    a fixed ["C:", "D:"] is what this machine already reports, so the "change"
+    was identical to the baseline and the test asserted its own no-op.
+    """
     monkeypatch.setattr(pm, "MACHINES", tmp_path / "machines")
     pm.main([])
     dest = tmp_path / "machines" / f"{pm.host()}.md"
     before = dest.read_text(encoding="utf-8")
 
-    monkeypatch.setattr(pm, "drives", lambda: ["C:", "D:"])
+    real = pm.drives()
+    sentinel = next(f"{c}:" for c in "ZYXWV" if f"{c}:" not in real)
+    monkeypatch.setattr(pm, "drives", lambda: [*real, sentinel])
     pm.main([])
 
     after = dest.read_text(encoding="utf-8")
     assert after != before
-    assert "D:" in after
+    assert sentinel in after

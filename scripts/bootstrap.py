@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import sys
 from datetime import UTC, datetime
@@ -342,11 +343,22 @@ def _normalize(raw: str) -> Path:
 
 
 def _hook_script_paths(hooks: dict):
-    """Yield the .sh/.py filesystem paths referenced by hook command strings."""
+    """Yield the .sh/.py filesystem paths referenced by hook command strings.
+
+    Split with shlex, not str.split: the paths are double-quoted in hooks.json
+    precisely because a clone root on Windows routinely contains a space
+    (C:/Users/First Last/...). Splitting on whitespace tears such a path in half
+    and reports the fragment as a stale hook.
+    """
     for event in hooks.values():
         for group in event:
             for hook in group.get("hooks", []):
-                for tok in (hook.get("command") or "").split():
+                cmd = hook.get("command") or ""
+                try:
+                    toks = shlex.split(cmd, posix=True)
+                except ValueError:
+                    toks = cmd.split()  # unbalanced quotes: degrade, don't crash
+                for tok in toks:
                     if tok.endswith((".sh", ".py")):
                         yield tok
 

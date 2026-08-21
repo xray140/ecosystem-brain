@@ -184,7 +184,7 @@ def test_verify_passes_when_every_script_resolves(claude_dir, tmp_path, capsys):
             {
                 "hooks": {
                     "SessionStart": [
-                        {"hooks": [{"type": "command", "command": f"bash {real.as_posix()}"}]}
+                        {"hooks": [{"type": "command", "command": f'bash "{real.as_posix()}"'}]}
                     ]
                 }
             }
@@ -193,6 +193,60 @@ def test_verify_passes_when_every_script_resolves(claude_dir, tmp_path, capsys):
     )
     assert bs.verify_live() == 0
     assert "[ok]" in capsys.readouterr().out
+
+
+def test_verify_handles_a_clone_root_containing_a_space(claude_dir, tmp_path, capsys):
+    """C:/Users/First Last/... is the common case on Windows, not an edge case.
+
+    Unquoted, the shell tears the path at the space and the hook never runs —
+    including the gitleaks secret guard. hooks.json quotes every script path;
+    this pins that the verifier reads those quotes rather than splitting on
+    whitespace and calling the surviving fragment stale.
+    """
+    claude_dir.mkdir()
+    spaced = tmp_path / "First Last" / "ecosystem brain"
+    spaced.mkdir(parents=True)
+    script = spaced / "guard-secrets.sh"
+    script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    (claude_dir / "settings.json").write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {"hooks": [{"type": "command", "command": f'bash "{script.as_posix()}"'}]}
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    # Assert the path was actually parsed out, not merely absent from the stale
+    # list: whitespace splitting leaves a `...guard-secrets.sh"` fragment whose
+    # trailing quote fails the .sh suffix test, so the hook is skipped entirely
+    # and verify_live() returns 0 for the wrong reason.
+    hooks = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))["hooks"]
+    assert list(bs._hook_script_paths(hooks)) == [script.as_posix()]
+    assert bs.verify_live() == 0
+    assert "[ok]" in capsys.readouterr().out
+
+
+def test_shipped_hooks_quote_every_script_path(tmp_path):
+    """The fix lives in hooks.json, so assert it there: an unquoted path would
+    reintroduce the break for every user whose clone root contains a space."""
+    hooks = bs.load_hooks("/c/Users/First Last/ecosystem-brain")
+    found = 0
+    for event in hooks.values():
+        for group in event:
+            for hook in group.get("hooks", []):
+                cmd = hook["command"]
+                assert "First Last" in cmd
+                assert '"' in cmd, f"unquoted script path in hook command: {cmd}"
+                found += 1
+    assert found, "no hook commands found — the template moved"
+    # And the verifier must recover exactly the intended paths from them.
+    paths = list(bs._hook_script_paths(hooks))
+    assert paths, "no script paths parsed out of the shipped hooks"
+    assert all("First Last" in p and p.endswith((".sh", ".py")) for p in paths)
 
 
 def test_verify_without_settings_is_not_a_failure(claude_dir, capsys):

@@ -4,10 +4,10 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "if": "Bash(git commit*)", "command": "bash {{ECOSYSTEM_ROOT}}/hooks/scripts/guard-secrets.sh" },
-          { "type": "command", "if": "Bash(git push*)",   "command": "bash {{ECOSYSTEM_ROOT}}/hooks/scripts/guard-secrets.sh" },
-          { "type": "command", "if": "Bash(git push*)",   "command": "uv run --no-project python {{ECOSYSTEM_ROOT}}/hooks/scripts/guard_destructive.py" },
-          { "type": "command", "if": "Bash(rm *)",        "command": "uv run --no-project python {{ECOSYSTEM_ROOT}}/hooks/scripts/guard_destructive.py" }
+          { "type": "command", "if": "Bash(git commit*)", "command": "bash \"{{ECOSYSTEM_ROOT}}/hooks/scripts/guard-secrets.sh\"" },
+          { "type": "command", "if": "Bash(git push*)",   "command": "bash \"{{ECOSYSTEM_ROOT}}/hooks/scripts/guard-secrets.sh\"" },
+          { "type": "command", "if": "Bash(git push*)",   "command": "uv run --no-project python \"{{ECOSYSTEM_ROOT}}/hooks/scripts/guard_destructive.py\"" },
+          { "type": "command", "if": "Bash(rm *)",        "command": "uv run --no-project python \"{{ECOSYSTEM_ROOT}}/hooks/scripts/guard_destructive.py\"" }
         ]
       }
     ],
@@ -15,18 +15,18 @@
       {
         "matcher": "Write",
         "hooks": [
-          { "type": "command", "if": "Write(*.py)", "command": "bash {{ECOSYSTEM_ROOT}}/hooks/scripts/fmt-python.sh" }
+          { "type": "command", "if": "Write(*.py)", "command": "bash \"{{ECOSYSTEM_ROOT}}/hooks/scripts/fmt-python.sh\"" }
         ]
       }
     ],
     "SessionStart": [
       {
-        "hooks": [{ "type": "command", "command": "uv run --no-project python {{ECOSYSTEM_ROOT}}/hooks/scripts/suggest-agents.py" }]
+        "hooks": [{ "type": "command", "command": "uv run --no-project python \"{{ECOSYSTEM_ROOT}}/hooks/scripts/suggest-agents.py\"" }]
       }
     ],
     "SessionEnd": [
       {
-        "hooks": [{ "type": "command", "command": "bash {{ECOSYSTEM_ROOT}}/hooks/scripts/log-session.sh" }]
+        "hooks": [{ "type": "command", "command": "bash \"{{ECOSYSTEM_ROOT}}/hooks/scripts/log-session.sh\"" }]
       }
     ]
   },
@@ -34,6 +34,7 @@
     "matcher": "tool name only (Bash, Write, Edit)",
     "if": "permission-rule syntax — Write(*.py) matches by filename suffix; Write(**/*.py) does NOT",
     "SessionStart": "suggest-agents.py reads project cwd from stdin JSON, suggests relevant installed agents",
-    "windows_path_gotcha": "/d/ as a command ARG is auto-translated by Git Bash; /d/ hardcoded inside python code is NOT — use __file__-relative paths"
+    "windows_path_gotcha": "/d/ as a command ARG is auto-translated by Git Bash; /d/ hardcoded inside python code is NOT — use __file__-relative paths",
+    "quoting": "script paths are double-quoted: {{ECOSYSTEM_ROOT}} expands to this clone's real path, which on Windows routinely contains a space because the home directory carries the user's full name. Unquoted, the shell splits the path at that space and the hook silently never runs — including the secret guard."
   }
 }
