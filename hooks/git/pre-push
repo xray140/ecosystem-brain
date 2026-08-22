@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# git pre-push: do not push a red tree.
+#
+# selfcheck is the repo's canonical gate and what CI runs; running it here moves
+# the failure from "a red badge minutes later" to "before it left the machine".
+# It takes ~20s, which is the whole design constraint: a gate slow enough to be
+# routinely bypassed is not a gate. See memory/decisions/verification-integrity.
+set -euo pipefail
+
+# Nothing to verify when the push deletes a ref, and selfcheck would still cost
+# 20s. `git push --delete` sends an all-zero local SHA.
+all_deletes=1
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  [ -z "${local_sha:-}" ] && continue
+  case "$local_sha" in
+    *[!0]*) all_deletes=0 ;;
+  esac
+done
+[ "$all_deletes" -eq 1 ] && exit 0
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "pre-push: uv is not installed, so selfcheck cannot run." >&2
+  echo "  install : https://docs.astral.sh/uv/getting-started/installation/" >&2
+  echo "  override: git push --no-verify" >&2
+  exit 1
+fi
+
+echo "pre-push: running selfcheck (ruff, pytest, JSON, agent scan, vault)..."
+if ! (cd "$repo_root" && uv run --no-project python scripts/selfcheck.py); then
+  echo "" >&2
+  echo "pre-push: selfcheck failed — push blocked." >&2
+  echo "  The output above names the failing check; CI runs the same script, so" >&2
+  echo "  pushing would turn the badge red for the same reason." >&2
+  echo "  override: git push --no-verify" >&2
+  exit 1
+fi

@@ -5,7 +5,7 @@ OpenAI Codex, Cursor, Copilot. This is the source of truth; `CLAUDE.md` imports 
 
 You are the control tower for the claude-unified-ecosystem. Output-oriented; propose, get approval, execute.
 
-**Enforcement over intention.** Rules that can be config already are: secret reads are denied, destructive commands ask, gitleaks gates commits. Don't re-litigate them in prose — rely on them.
+**Enforcement over intention.** Rules that can be config already are: secret reads are denied, destructive commands ask, gitleaks gates commits — via a real git `pre-commit`, so it holds for any tool and not only Claude Code — and `pre-push` refuses a red tree. Don't re-litigate them in prose; rely on them, and reach for `--no-verify` only when you have read the diff yourself.
 
 **Security.** Secrets live in `.env` / `.identity.local.env` only (both gitignored), never committed, never echoed into logs or pushed files.
 

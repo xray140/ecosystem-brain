@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# git pre-commit: refuse to commit a staged secret.
+#
+# The equivalent Claude Code hook (hooks/scripts/guard-secrets.sh) only fires
+# inside Claude Code. AGENTS.md says "gitleaks gates commits" without that
+# qualifier, and it was not true of `git commit` from a terminal, VS Code, or
+# another assistant — Gemini CLI and Codex do not read Claude Code's hook config.
+# This makes the sentence true wherever the commit is made.
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  # Fail closed. The Claude Code hook skips when gitleaks is absent because CI
+  # still scans; here that reasoning does not hold — CI scans *after* a push, by
+  # which time a leaked secret is already on GitHub. gitleaks is in
+  # bootstrap.REQUIRED_TOOLS, so this is a stated dependency, not a surprise.
+  echo "pre-commit: gitleaks is not installed, so staged changes cannot be scanned." >&2
+  echo "  install : winget install Gitleaks.Gitleaks   (or: brew install gitleaks)" >&2
+  echo "  verify  : uv run --no-project python scripts/doctor.py" >&2
+  echo "  override: git commit --no-verify   (only if you have read the diff yourself)" >&2
+  exit 1
+fi
+
+if ! gitleaks protect --staged --redact --no-banner --log-level error; then
+  echo "" >&2
+  echo "pre-commit: gitleaks found a secret in the staged changes — commit blocked." >&2
+  echo "  Values are redacted above; the finding names the file and rule." >&2
+  echo "  Move the value into .env (gitignored) and stage again." >&2
+  exit 1
+fi

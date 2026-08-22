@@ -71,7 +71,7 @@ SessionStart hook suggests relevant installed + uninstalled agents
   ANTHROPIC_API_KEY=...
   ```
 - **skills/** — `memory` (index + semantic search), `secrets` (doctor + identity).
-- **hooks/** — gitleaks gate, catastrophic-command block, ruff auto-format, SessionStart agent-suggester, session logging.
+- **hooks/** — two kinds, deliberately. `hooks/scripts/` are Claude Code hooks (gitleaks gate, catastrophic-command block, ruff auto-format, SessionStart agent-suggester, session logging) and fire only inside Claude Code. `hooks/git/` are real git hooks — `pre-commit` (gitleaks, fails closed) and `pre-push` (selfcheck) — wired by `bootstrap.py` via `core.hooksPath`, so they hold for a commit made from a terminal, an IDE, or another assistant.
 - **tests/** — the suite `selfcheck` and CI both run; see *Verification* below.
 - **registry/** — `registry.json` (curated sources), `installed.json` (what is installed and the commit each item is pinned at — tracked, identical on every machine), `installed.local.json` (where it landed on *this* machine — gitignored), `catalog.json` (cached agent catalog).
 - **templates/** — `python-project` + `typescript-project` blueprints (each with `AGENTS.md` + `CLAUDE.md` + `GEMINI.md`).

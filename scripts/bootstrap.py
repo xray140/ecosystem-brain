@@ -29,6 +29,7 @@ import json
 import os
 import shlex
 import shutil
+import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -356,6 +357,51 @@ REQUIRED_TOOLS = ("uv", "git", "node", "gh", "gitleaks", "ruff")
 OPTIONAL_TOOLS = {"ollama": "memory-search embeddings; falls back to offline"}
 
 
+GIT_HOOKS_DIR = REPO_ROOT / "hooks" / "git"
+
+
+def wire_git_hooks(dry: bool) -> None:
+    """Point this clone's git at hooks/git/ via core.hooksPath.
+
+    Not copied into .git/hooks: that directory is untracked, so copies drift
+    silently and a `git pull` bringing a fixed hook would not apply it. Pointing
+    at a tracked directory means the hooks version with the repo.
+
+    Absolute rather than relative — a relative core.hooksPath resolves against
+    the process's working directory on older git, so it works from the repo root
+    and silently does nothing from a subdirectory. The value is per-clone local
+    config, never committed, so absolute costs no portability.
+
+    These gates exist because the Claude Code hooks only fire inside Claude Code.
+    AGENTS.md claims gitleaks gates commits; without these, that was untrue of
+    `git commit` from a terminal, VS Code, or another assistant.
+    """
+    if not GIT_HOOKS_DIR.is_dir():
+        print(f"  [skip] no {GIT_HOOKS_DIR.name}/ directory — git hooks not wired")
+        return
+    if dry:
+        print(f"  [dry] would set core.hooksPath -> {GIT_HOOKS_DIR}")
+        return
+    try:
+        subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "config", "core.hooksPath", str(GIT_HOOKS_DIR)],
+            check=True,
+            capture_output=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        # A clone without git on PATH is unusual but must not fail the install:
+        # everything else bootstrap does is still valid without the hooks.
+        print(f"  [warn] could not set core.hooksPath ({e}); git hooks not wired")
+        return
+    # The bit is what makes them run: a hook without +x is silently skipped, which
+    # looks exactly like a hook that ran and passed.
+    for hook in sorted(GIT_HOOKS_DIR.iterdir()):
+        if hook.is_file():
+            hook.chmod(hook.stat().st_mode | 0o111)
+    names = ", ".join(h.name for h in sorted(GIT_HOOKS_DIR.iterdir()) if h.is_file())
+    print(f"  [ok] git hooks wired via core.hooksPath ({names})")
+
+
 def check_prereqs() -> None:
     print("\nprerequisites:")
     for tool in REQUIRED_TOOLS:
@@ -470,6 +516,7 @@ def main(argv: list[str] | None = None) -> int:
     prune_orphans(installed, args.dry_run)
     record_install(installed, args.dry_run)
     seed_env(args.dry_run)
+    wire_git_hooks(args.dry_run)
     write_machine_note(args.dry_run)
     check_prereqs()
 
