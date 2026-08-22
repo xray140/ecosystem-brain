@@ -24,42 +24,32 @@ for f in .env .identity.local.env; do
 done
 
 echo "- .env vs .env.example"
-# Two directives in .env.example, shared with project_doctor.py:
-#   #! optional: A, B     never reported; declared but not required
-#   #! one-of: A, B       satisfied by any one member; reported once if none set
-# Without them a plain set difference cannot tell "not configured yet" from
-# "deliberately not using that tool". The four multi-LLM keys here are reserved
-# names that nothing in this repo reads, and they were warned about on every run
-# with no edit that would clear them short of pasting keys you do not use.
+# Delegated to scripts/env_spec.py rather than reimplemented here. The bash and
+# Python versions disagreed within an hour of both existing: this side excluded
+# `optional` keys from its per-key loop but not `one-of` members, so it reported
+# the unchosen alternative as missing — the exact defect the markers exist to
+# prevent. One parser, two callers.
+#
+# Only SKILL.md is installed to ~/.claude; this script runs from the repo, so
+# scripts/ is reachable relative to its own location and needs no path rewriting.
+ENV_SPEC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/env_spec.py"
 if [ -f .env.example ] && [ -f .env ]; then
   missing=0
-  optional="$(grep -oE '^#!\s*optional:.*' .env.example | sed 's/^#!\s*optional:\s*//' \
-    | tr ',' '\n' | tr -d ' ' | grep -v '^$' || true)"
-  # Members of a one-of group are excluded here and judged as a group below.
-  # Without this the unchosen member is reported missing — the exact defect the
-  # marker exists to prevent, reintroduced one layer down. Caught by the test
-  # that asserts this script and project_doctor.py reach the same verdict.
-  grouped="$(grep -oE '^#!\s*one-of:.*' .env.example | sed 's/^#!\s*one-of:\s*//' \
-    | tr ',' '\n' | tr -d ' ' | grep -v '^$' || true)"
-  skip="$(printf '%s\n%s\n' "$optional" "$grouped" | grep -v '^$' || true)"
-  while IFS= read -r key; do
-    [ -z "$key" ] && continue
-    printf '%s\n' "$skip" | grep -qx "$key" && continue
-    grep -q "^${key}=" .env || { warn "missing in .env: $key"; missing=1; }
-  done < <(grep -oE '^[A-Z0-9_]+=' .env.example | sed 's/=$//')
-
-  # one-of groups: the group is met when any member is set.
-  while IFS= read -r group; do
-    [ -z "$group" ] && continue
-    satisfied=0
-    for key in $(printf '%s' "$group" | tr ',' ' '); do
-      grep -q "^${key}=" .env && satisfied=1
-    done
-    if [ "$satisfied" -eq 0 ]; then
-      warn "missing in .env: one of $(printf '%s' "$group" | tr -d ' ' | tr ',' '|')"
+  if ! command -v uv >/dev/null 2>&1; then
+    warn "uv not installed — cannot compare .env against .env.example"
+    missing=1
+  elif [ ! -f "$ENV_SPEC" ]; then
+    warn "env_spec.py not found at $ENV_SPEC — skipping key diff"
+    missing=1
+  else
+    # Exit 0 no gaps, 1 gaps (one per line), 2 nothing to compare.
+    gap_out="$(uv run --no-project python "$ENV_SPEC" --dir . || true)"
+    while IFS= read -r key; do
+      [ -z "$key" ] && continue
+      warn "missing in .env: $key"
       missing=1
-    fi
-  done < <(grep -oE '^#!\s*one-of:.*' .env.example | sed 's/^#!\s*one-of:\s*//' || true)
+    done <<< "$gap_out"
+  fi
 
   [ "$missing" -eq 0 ] && ok "all required .env.example keys present in .env"
 else

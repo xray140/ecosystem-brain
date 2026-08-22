@@ -38,6 +38,9 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import env_spec
+
 REPO = Path(__file__).resolve().parent.parent
 VAULT_PROJECTS = REPO / "memory" / "projects"
 
@@ -51,13 +54,11 @@ STATUS_RE = re.compile(r"^status:\s*(\S+)", re.M)
 # `D:\claude-projects\x` is a correct path — on the PC that has a D: drive.
 HOST_RE = re.compile(r"^host:\s*(\S+)", re.M)
 
-# Directives in a .env.example, shared with skills/secrets/secrets-doctor.sh.
-# See env_gap for why a plain set difference was not enough.
-#   #! one-of: A, B    satisfied by any one member; reported once if none set
-#   #! optional: A, B  declared but never required — reserved names a project
-#                      documents for external tools it does not itself read
-ONE_OF_RE = re.compile(r"^#!\s*one-of:\s*(.+)$", re.M)
-OPTIONAL_RE = re.compile(r"^#!\s*optional:\s*(.+)$", re.M)
+# `.env.example` directive parsing lives in env_spec, which secrets-doctor.sh
+# also calls — one implementation, two callers. Re-exported here because callers
+# and tests referenced these names before the extraction.
+ONE_OF_RE = env_spec.ONE_OF_RE
+OPTIONAL_RE = env_spec.OPTIONAL_RE
 
 # A project untouched for this long is worth a glance — not a failure.
 STALE_DAYS = 90
@@ -130,49 +131,14 @@ def env_gap(project: Path) -> list[str]:
     afterwards never reach the .env, and the failure shows up as a confusing
     runtime error rather than a missing-config message.
 
-    Plain set difference cannot tell "not configured yet" from "picked the other
-    one". An example offering a choice of provider — pick Groq *or* Anthropic —
-    made a correctly-configured project report a missing key forever, with no
-    edit that would satisfy it short of storing a key you deliberately do not
-    use. A warning you cannot clear is one you learn to skip.
-
-    So a group can declare itself satisfied by any one member:
-
-        #! one-of: GROQ_API_KEY, ANTHROPIC_API_KEY
-        GROQ_API_KEY=...
-        ANTHROPIC_API_KEY=...
-
-    Set either and the group is met. Set neither and it reports once, as the
-    choice it is, rather than as two independent missing keys.
+    Parsing lives in env_spec, shared with secrets-doctor.sh. Two independent
+    parsers of one format is how the bash side came to exclude `optional` keys
+    but not `one-of` members, reporting the unchosen alternative as missing.
     """
     example, env = project / ".env.example", project / ".env"
     if not example.is_file() or not env.is_file():
         return []
-
-    def keys(p: Path) -> set[str]:
-        out = set()
-        for raw in p.read_text(encoding="utf-8", errors="replace").splitlines():
-            line = raw.strip()
-            if line and not line.startswith("#") and "=" in line:
-                out.add(line.split("=", 1)[0].strip())
-        return out
-
-    text = example.read_text(encoding="utf-8", errors="replace")
-    groups = [
-        [k.strip() for k in m.group(1).split(",") if k.strip()]
-        for m in ONE_OF_RE.finditer(text)
-    ]
-    optional = {
-        k.strip() for m in OPTIONAL_RE.finditer(text) for k in m.group(1).split(",") if k.strip()
-    }
-    present = keys(env)
-    grouped = {k for g in groups for k in g}
-
-    missing = sorted(keys(example) - present - grouped - optional)
-    for g in groups:
-        if not present.intersection(g):
-            missing.append("one of " + "|".join(g))
-    return missing
+    return env_spec.gaps(example, env)
 
 
 def ci_status(project: Path) -> str | None:

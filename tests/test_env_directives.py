@@ -61,7 +61,7 @@ def test_setting_an_optional_key_is_not_an_error(tmp_path):
     assert pd.env_gap(p) == []
 
 
-# --- the two implementations must agree ------------------------------------
+# --- the shell caller reaches the shared implementation ---------------------
 
 
 # Resolve bash to an absolute path and hand THAT to subprocess. Passing the bare
@@ -83,6 +83,13 @@ BASH = shutil.which("bash")
 )
 def test_secrets_doctor_agrees_with_project_doctor(tmp_path, env_body, expect_clean):
     """Same file, same verdict, whichever doctor you ask.
+
+    This no longer proves two implementations agree — since the extraction there
+    is one, and agreement is structural. What it still proves is that the shell
+    caller actually reaches it: that the relative path to env_spec.py resolves,
+    that uv runs it, and that gap lines are parsed back out and surfaced as
+    warnings. Those are the parts that can silently break, and a doctor that
+    reports nothing looks identical to a doctor that found nothing.
 
     Only the key-diff section is compared — secrets-doctor also runs gitleaks and
     inspects git config, which are not this test's subject.
@@ -109,3 +116,39 @@ def test_the_repos_own_example_declares_its_reserved_names(tmp_path):
     declared = {k.strip() for m in pd.OPTIONAL_RE.finditer(text) for k in m.group(1).split(",")}
     for key in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY"):
         assert key in declared, f"{key} is reserved but not marked optional"
+
+
+# --- the CLI contract the shell depends on ---------------------------------
+
+
+def _cli(tmp_path, argv):
+    import env_spec
+
+    return env_spec.main(argv)
+
+
+def test_cli_exits_0_when_nothing_is_missing(tmp_path):
+    p = _project(tmp_path, "REQUIRED_KEY=1\nPICK_A=1\n")
+    assert _cli(tmp_path, ["--dir", str(p)]) == 0
+
+
+def test_cli_exits_1_and_prints_each_gap(tmp_path, capsys):
+    p = _project(tmp_path, "PICK_A=1\n")
+    assert _cli(tmp_path, ["--dir", str(p)]) == 1
+    assert capsys.readouterr().out.split() == ["REQUIRED_KEY"]
+
+
+def test_cli_exits_2_when_there_is_nothing_to_compare(tmp_path):
+    """Distinct from "no gaps": the shell must not report a clean diff for a
+    project that has no .env at all."""
+    import env_spec
+
+    (tmp_path / ".env.example").write_text("A=1\n", encoding="utf-8")
+    assert _cli(tmp_path, ["--dir", str(tmp_path)]) == env_spec.NOTHING_TO_COMPARE
+
+
+def test_directive_lines_are_not_parsed_as_keys():
+    """`#! one-of: A, B` contains a colon and words but must never become a key."""
+    import env_spec
+
+    assert env_spec.declared_keys("#! one-of: A, B\nREAL=1\n") == {"REAL"}
