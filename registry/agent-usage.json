@@ -1,0 +1,10 @@
+{
+  "_version": 1,
+  "machines": {
+    "MSI": {
+      "agents": {},
+      "since": "2026-08-22",
+      "updated": "2026-08-22"
+    }
+  }
+}

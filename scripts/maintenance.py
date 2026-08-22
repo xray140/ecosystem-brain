@@ -112,7 +112,13 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     ("memory manifest check", manifest("--check"), True),
     # Advisory: it reports which installed agents never get invoked. Nothing here
     # is broken when the list is long — it is a prompt to prune, not a fault.
-    ("agent usage", py("agent_usage.py"), False),
+    #
+    # --record is what makes the report mean anything over time. Transcripts
+    # rotate, so a scan alone sees only what is still on disk: on 2026-08-22 that
+    # was one day, and every agent read "never invoked". The weekly run folds
+    # each week's evidence into registry/agent-usage.json, so the window grows
+    # instead of sliding.
+    ("agent usage", py("agent_usage.py", "--record"), False),
     # --check is informational (updates available is not a failure); network
     # hiccups shouldn't flip the heartbeat red, so don't gate on its exit code.
     ("agent updates (update --check)", py("update-agents.py", "--check"), False),

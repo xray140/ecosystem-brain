@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import argparse
 import collections
+import json
+import platform
 import re
 import sys
 from datetime import UTC, datetime
@@ -86,6 +88,84 @@ def scan_transcripts_windowed(
     return dict(counts), last_seen, oldest
 
 
+LEDGER = REPO / "registry" / "agent-usage.json"
+
+
+def load_ledger(path: Path | None = None) -> dict:
+    """Durable record of which agents have ever been invoked, and where.
+
+    Transcripts are the evidence and they rotate: this machine holds one day's
+    worth, so every agent reads "never invoked" and the report has to disclaim
+    its own central number. The ledger is the accumulated part — once an agent
+    has been seen, that fact survives the transcript being deleted.
+
+    Dates, not counts. The decision this feeds is "remove this agent or keep it",
+    for which ever-versus-never is the whole question; a count would also have to
+    solve double-counting as transcripts roll, and would be wrong more often than
+    it was useful.
+
+    Tracked in git and keyed by machine — the opposite call from registry_io,
+    deliberately. There the machine-specific field made the file conflict on
+    every pull; here the machine IS the finding, because "unused on MSI" and
+    "unused anywhere" are different verdicts and only the second justifies
+    removing a shared agent. Each machine writes only its own key, so two
+    machines never edit the same lines.
+    """
+    path = path or LEDGER
+    if not path.is_file():
+        return {"_version": 1, "machines": {}}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"_version": 1, "machines": {}}
+
+
+def record(last_seen: dict[str, str], path: Path | None = None, host: str | None = None) -> dict:
+    """Fold this machine's current evidence into the ledger and write it.
+
+    Idempotent: re-running on the same transcripts changes nothing, because each
+    date only ever advances. `since` is the earliest evidence this machine has
+    ever contributed, which is what widens the window past what is still on disk.
+    """
+    path = path or LEDGER
+    host = host or platform.node() or "unknown"
+    ledger = load_ledger(path)
+    today = datetime.now(UTC).date().isoformat()
+    entry = ledger.setdefault("machines", {}).setdefault(host, {})
+    agents = entry.setdefault("agents", {})
+    for name, when in last_seen.items():
+        if when > agents.get(name, ""):
+            agents[name] = when
+    # Earliest evidence ever contributed by this machine — not today's oldest
+    # transcript, which moves forward as old ones are deleted.
+    candidates = [d for d in [entry.get("since"), *last_seen.values()] if d]
+    entry["since"] = min(candidates) if candidates else today
+    entry["updated"] = today
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(ledger, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return ledger
+
+
+def ledger_seen(ledger: dict) -> dict[str, str]:
+    """agent -> most recent date seen on ANY machine."""
+    out: dict[str, str] = {}
+    for entry in ledger.get("machines", {}).values():
+        for name, when in (entry.get("agents") or {}).items():
+            if when > out.get(name, ""):
+                out[name] = when
+    return out
+
+
+def ledger_since(ledger: dict) -> str | None:
+    """Earliest date any machine has evidence for — the real evidence window."""
+    dates = [e["since"] for e in ledger.get("machines", {}).values() if e.get("since")]
+    return min(dates) if dates else None
+
+
 def load_installed(path: Path | None = None) -> list[dict]:
     """Agents with this machine's `installed_at` merged back in — the blind-window
     warning below compares it against local transcripts, so it must be local."""
@@ -95,29 +175,51 @@ def load_installed(path: Path | None = None) -> list[dict]:
     return registry_io.load(path).get("agents", [])
 
 
-def report(agents: list[dict], counts: dict[str, int], last_seen: dict[str, str]) -> dict:
-    """Split the roster into first-party, used, and removal candidates."""
+def report(
+    agents: list[dict],
+    counts: dict[str, int],
+    last_seen: dict[str, str],
+    remembered: dict[str, str] | None = None,
+) -> dict:
+    """Split the roster into first-party, used, and removal candidates.
+
+    `remembered` is the ledger's agent -> last-seen across all machines. An agent
+    is a removal candidate only when neither the surviving transcripts nor the
+    ledger has ever seen it — otherwise "unused" means "unused since the last
+    transcript rotation", which is not a reason to delete anything.
+    """
+    remembered = remembered or {}
     first_party, used, unused = [], [], []
     for a in agents:
+        name = a["name"]
+        ever = remembered.get(name)
         row = {
-            "name": a["name"],
+            "name": name,
             "local": a.get("source") == "local",
-            "count": counts.get(a["name"], 0),
-            "last": last_seen.get(a["name"], "—"),
+            "count": counts.get(name, 0),
+            "last": last_seen.get(name) or ever or "—",
+            "elsewhere": bool(ever) and not counts.get(name),
         }
         if row["local"]:
             first_party.append(row)
-        elif row["count"]:
+        elif row["count"] or ever:
             used.append(row)
         else:
             unused.append(row)
-    used.sort(key=lambda r: -r["count"])
+    used.sort(key=lambda r: (-r["count"], r["name"]))
     return {"first_party": first_party, "used": used, "unused": unused}
 
 
 def _print_rows(rows: list[dict]) -> None:
     for r in rows:
-        seen = f"last {r['last']}" if r["count"] else "never invoked here"
+        if r["count"]:
+            seen = f"last {r['last']}"
+        elif r["elsewhere"]:
+            # Recorded before the current transcripts existed, or on another
+            # machine. Either way it is evidence of use, not of absence.
+            seen = f"last {r['last']} (from the ledger)"
+        else:
+            seen = "never invoked here"
         print(f"    {r['name']:24s} {r['count']:3d}x   {seen}")
 
 
@@ -126,6 +228,11 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     ap.add_argument("--unused", action="store_true", help="print only the removal candidates")
+    ap.add_argument(
+        "--record",
+        action="store_true",
+        help="fold today's evidence into registry/agent-usage.json before reporting",
+    )
     args = ap.parse_args(argv)
 
     agents = load_installed()
@@ -134,7 +241,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     counts, last_seen, oldest = scan_transcripts_windowed()
     n_files = sum(1 for _ in TRANSCRIPTS.rglob("*.jsonl")) if TRANSCRIPTS.is_dir() else 0
-    r = report(agents, counts, last_seen)
+    ledger = record(last_seen) if args.record else load_ledger()
+    remembered = ledger_seen(ledger)
+    since = ledger_since(ledger)
+    r = report(agents, counts, last_seen, remembered)
 
     if args.unused:
         for row in r["unused"]:
@@ -142,16 +252,22 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     print(f"agent usage — {len(agents)} installed, {n_files} local transcript(s) scanned")
-    if oldest:
-        print(f"  evidence window: {oldest} -> today")
+    # The ledger's reach, when it has any, is the real window: transcripts rotate
+    # but the record of having seen an agent does not.
+    window = min([d for d in (since, oldest) if d], default=None)
+    if window:
+        source = "ledger + transcripts" if since else "transcripts only"
+        print(f"  evidence window: {window} -> today ({source})")
         blind = [
             a["name"]
             for a in agents
-            if a.get("source") != "local" and (a.get("installed_at") or "9999") < oldest
+            if a.get("source") != "local"
+            and (a.get("installed_at") or "9999") < window
+            and a["name"] not in remembered
         ]
         if blind:
             print(
-                f"  [!] {len(blind)} agent(s) were installed BEFORE the oldest transcript,"
+                f"  [!] {len(blind)} agent(s) were installed BEFORE the evidence window,"
                 f"\n      so 'never invoked' cannot speak for their first weeks: "
                 + ", ".join(blind)
             )

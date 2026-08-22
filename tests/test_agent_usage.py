@@ -15,6 +15,19 @@ import agent_usage as au
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def isolated_ledger(tmp_path, monkeypatch):
+    """No test in this file may read the repo's real registry/agent-usage.json.
+
+    `main()` consults the ledger to widen its evidence window, so a test that
+    does not redirect it produces a verdict that depends on how much evidence
+    this machine has accumulated — passing or failing by the calendar rather than
+    by the code. Autouse because the trap is invisible: the test still passes
+    today and starts failing weeks later on a different machine.
+    """
+    monkeypatch.setattr(au, "LEDGER", tmp_path / "isolated-ledger.json")
+
+
 def _transcript(root, name, *subagents):
     f = root / f"{name}.jsonl"
     lines = [json.dumps({"type": "user", "text": "hi"})]
@@ -181,11 +194,19 @@ def test_agents_installed_before_the_window_are_flagged(tmp_path, monkeypatch, c
         ),
     )
     monkeypatch.setattr(au, "TRANSCRIPTS", tmp_path)
+    # Point at an empty ledger. Without this the test reads the repo's real
+    # registry/agent-usage.json, so its verdict depends on how much evidence this
+    # machine happens to have accumulated — a test that passes or fails by the
+    # calendar rather than by the code.
+    monkeypatch.setattr(au, "LEDGER", tmp_path / "ledger.json")
     au.main([])
     out = capsys.readouterr().out
     assert "evidence window" in out
-    assert "installed BEFORE the oldest transcript" in out
-    warning = out.split("installed BEFORE the oldest transcript", 1)[1].split("\n\n", 1)[0]
+    # Wording follows the source of the window: it is no longer always the oldest
+    # transcript, because the ledger can reach back further.
+    marker = "installed BEFORE the evidence window"
+    assert marker in out
+    warning = out.split(marker, 1)[1].split("\n\n", 1)[0]
     assert "old-one" in warning
     assert "python-pro" not in warning, "installed inside the window, so not a blind spot"
 
