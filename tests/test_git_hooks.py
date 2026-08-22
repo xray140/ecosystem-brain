@@ -69,6 +69,30 @@ def test_hook_exists_and_has_a_shebang(hook):
     assert p.read_text(encoding="utf-8").startswith("#!"), f"{hook} has no shebang"
 
 
+@pytest.mark.parametrize("hook", ["pre-commit", "pre-push"])
+def test_hook_is_executable_in_git(hook):
+    """Git must record mode 100755, not just the filesystem.
+
+    core.filemode is false on Windows, so the first commit of these hooks stored
+    them 100644 despite bootstrap having chmod'd them locally. A clone on
+    Linux/macOS would then check out non-executable hooks — and git SKIPS a
+    non-executable hook silently, which is indistinguishable from one that ran
+    and passed. Read from the index rather than the filesystem so the assertion
+    means the same thing on every platform.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "-s", f"hooks/git/{hook}"],
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert out.strip(), f"hooks/git/{hook} is not tracked"
+    mode = out.split()[0]
+    assert mode == "100755", (
+        f"hooks/git/{hook} is recorded {mode}; git skips a non-executable hook "
+        "silently. Fix: git update-index --chmod=+x hooks/git/" + hook
+    )
+
+
 def test_bootstrap_points_git_at_the_tracked_hook_dir():
     """Not copied into .git/hooks: that is untracked, so copies drift and a pull
     carrying a fixed hook would never apply."""
