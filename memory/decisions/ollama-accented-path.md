@@ -1,10 +1,16 @@
 ---
 type: decision
-status: confirmed
+status: superseded
 date: 2026-06-04
-tags: [ollama, windows, path]
+superseded_by: no-ollama
+tags: [ollama, windows, path, historical]
 ---
 # Ollama — Accented Username Path Bug
+
+> **Superseded 2026-08-22 by [[no-ollama]].** Ollama was removed from the
+> ecosystem; `OLLAMA_MODELS` is no longer set or documented anywhere here. Kept
+> because the underlying trap is not Ollama-specific: a native tool that mangles
+> an accented Windows username will do it again, and this is the worked example.
 
 ## Problem
 Username `Martin Cayré` contains `é` (accented char). Ollama's llama-server

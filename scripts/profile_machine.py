@@ -45,7 +45,7 @@ MACHINES = REPO / "memory" / "machines"
 
 # The tools the ecosystem's own checks depend on. Absence is worth recording:
 # it explains why a check on this machine reports "skipped" rather than green.
-PREREQS = ("git", "uv", "ruff", "node", "gh", "gitleaks", "ollama", "powershell")
+PREREQS = ("git", "uv", "ruff", "node", "gh", "gitleaks", "powershell")
 
 
 def host() -> str:

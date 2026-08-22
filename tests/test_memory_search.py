@@ -1,26 +1,26 @@
-"""Tests for the semantic search index — truncation, resilience, and status.
+"""Tests for the search index — truncation, resilience, and status.
 
 Three defects motivated these, and they compounded into one silent failure:
 
-  * `nomic-embed-text` answers HTTP 500 past ~2k tokens, and nothing truncated —
-    `roadmap.md`, the largest and most important note, could not be embedded.
+  * The embedding backend answered HTTP 500 past ~2k tokens and nothing
+    truncated — `roadmap.md`, the largest and most important note, could not be
+    embedded. That backend is gone (v4.8.0, [[decisions/no-ollama]]) but the cap
+    stayed: the head of a note is the right thing to index either way.
   * One failing note aborted the whole build with a traceback, leaving the old
     index untouched.
-  * Nothing ever rebuilt the index, so it sat at 24-of-28 notes on the offline
-    hash fallback while the README advertised Ollama embeddings.
+  * Nothing ever rebuilt the index, so it sat at 24-of-28 notes while the README
+    advertised semantics it was not delivering.
 
 Degraded search returns *plausible* results. That is exactly why it went
-unnoticed, and why `status` has to assert the embedder, not just that rows exist.
+unnoticed, and why `status` has to assert coverage, not just that rows exist.
 """
 
 from __future__ import annotations
 
 import importlib.util
-import json
 import sqlite3
 import subprocess
 import sys
-import urllib.error
 from pathlib import Path
 
 import pytest
@@ -69,12 +69,9 @@ def _module_state_is_restored():
 class Args:
     """Stand-in for the argparse namespace."""
 
-    def __init__(self, vault, db=None, offline=False, model="nomic-embed-text"):
+    def __init__(self, vault, db=None):
         self.vault = vault
         self.db = db or vault / ".search-index.db"
-        self.offline = offline
-        self.model = model
-        self.ollama_host = "http://localhost:11434"
         self.rebuild = False
 
 
@@ -92,65 +89,32 @@ def note(vault, name, body="body text"):
     return p
 
 
-# --- truncation: the root cause of the 500 --------------------------------
-def test_long_text_is_truncated_before_sending(monkeypatch):
-    """Ollama answers 500 rather than truncating for you, and that 500 took the
-    whole index build down.
+# --- truncation: the root cause of the 500, kept for recall ---------------
+def test_text_past_the_cap_does_not_reach_the_vector():
+    """The cap has to be applied by the embedder, not merely documented.
 
-    This intercepts the payload the REAL embed() builds. An earlier version
-    subclassed OllamaEmbedder and re-implemented the truncation inside the test,
-    so it passed no matter what the source did — a mutation run caught it, which
-    is the whole argument for mutating your own checks.
+    An earlier version of this test re-implemented the truncation inside the
+    test itself, so it passed no matter what the source did — a mutation run
+    caught it, which is the whole argument for mutating your own checks. This
+    one can only pass if the real embed() drops what is past the cap: the
+    trailing word is beyond it, so it must not move the vector at all.
     """
-    sent = {}
-
-    class FakeResponse:
-        def read(self):
-            return json.dumps({"embedding": [1.0, 0.0]}).encode()
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    def capture(req, timeout=None):
-        sent["payload"] = json.loads(req.data.decode())
-        return FakeResponse()
-
-    monkeypatch.setattr(ms.urllib.request, "urlopen", capture)
-    ms.OllamaEmbedder("m", "http://x").embed("x" * 100_000)
-    assert len(sent["payload"]["prompt"]) == ms.MAX_EMBED_CHARS
+    emb = ms.HashEmbedder()
+    filler = "x " * ms.MAX_EMBED_CHARS
+    assert emb.embed(filler + " zebra") == emb.embed(filler)
 
 
-def test_short_text_is_sent_whole(monkeypatch):
-    """Truncation must not clip an ordinary note."""
-    sent = {}
-
-    class FakeResponse:
-        def read(self):
-            return json.dumps({"embedding": [1.0, 0.0]}).encode()
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    monkeypatch.setattr(
-        ms.urllib.request,
-        "urlopen",
-        lambda req, timeout=None: (
-            sent.update(payload=json.loads(req.data.decode())),
-            FakeResponse(),
-        )[1],
-    )
-    ms.OllamaEmbedder("m", "http://x").embed("a short note")
-    assert sent["payload"]["prompt"] == "a short note"
+def test_text_within_the_cap_is_indexed_whole():
+    """Truncation must not clip an ordinary note: a word near the end of a
+    short note still has to reach the vector."""
+    emb = ms.HashEmbedder()
+    assert emb.embed("alpha zebra") != emb.embed("alpha")
 
 
-def test_the_cap_is_below_what_actually_failed():
-    """Measured on this vault: 4k chars fine, 14k (roadmap.md) and 20k → 500."""
+def test_the_cap_still_clips_the_biggest_note():
+    """`roadmap.md` is ~14k chars. The cap outlived the 500s that first forced
+    it, so this pins the surviving reason: index the head, where the topic is,
+    rather than the whole note."""
     assert ms.MAX_EMBED_CHARS < 14_000
 
 
@@ -165,7 +129,7 @@ def test_a_failing_note_is_skipped_not_fatal(vault, capsys, monkeypatch):
 
         def embed(self, text):
             if "bad" in text:
-                raise urllib.error.HTTPError("u", 500, "boom", {}, None)
+                raise OSError("boom")
             return [0.5, 0.5]
 
     monkeypatch.setattr(ms, "pick_embedder", lambda args: Flaky())
@@ -204,45 +168,11 @@ def _index_with(vault, model, dim, paths):
     con.close()
 
 
-def test_status_flags_the_offline_fallback(vault, capsys, monkeypatch):
-    """The exact state this vault was in: rows present, search 'working',
-    every vector a bag of words.
-
-    Ollama's reachability is now part of the condition — the fallback is a
-    defect only on a machine that could be doing better, which was the case
-    here. Pinned explicitly rather than left to whether the test host happens
-    to have a server up, which would make this pass or fail by accident.
-    """
-    monkeypatch.setattr(ms, "_ollama_reachable", lambda a: True)
-    note(vault, "a.md")
-    _index_with(vault, "hash-256", 256, ["a.md"])
-    assert ms.cmd_status(Args(vault)) == 1
-    out = capsys.readouterr().out
-    assert "rebuild" in out.lower()
-    assert "degraded" in out
-
-
-def test_status_does_not_flag_the_fallback_without_ollama(vault, capsys, monkeypatch):
-    """Counterpart: with no server to rebuild against, the same index is the
-    intended state and must not report a problem the user cannot act on."""
-    monkeypatch.setattr(ms, "_ollama_reachable", lambda a: False)
-    note(vault, "a.md")
-    _index_with(vault, "hash-256", 256, ["a.md"])
-    assert ms.cmd_status(Args(vault)) == 0
-    assert "degraded" not in capsys.readouterr().out
-
-
-def test_status_accepts_the_fallback_when_it_was_asked_for(vault):
-    note(vault, "a.md")
-    _index_with(vault, "hash-256", 256, ["a.md"])
-    assert ms.cmd_status(Args(vault, offline=True)) == 0
-
-
 def test_status_flags_partial_coverage(vault, capsys):
     """24 of 28 notes indexed was the other half of the rot."""
     for n in ("a.md", "b.md", "c.md"):
         note(vault, n)
-    _index_with(vault, "nomic-embed-text", 768, ["a.md"])
+    _index_with(vault, "hash-256", 256, ["a.md"])
     assert ms.cmd_status(Args(vault)) == 1
     assert "2 not indexed" in capsys.readouterr().out
 
@@ -250,7 +180,7 @@ def test_status_flags_partial_coverage(vault, capsys):
 def test_status_passes_on_a_healthy_index(vault, capsys):
     for n in ("a.md", "b.md"):
         note(vault, n)
-    _index_with(vault, "nomic-embed-text", 768, ["a.md", "b.md"])
+    _index_with(vault, "hash-256", 256, ["a.md", "b.md"])
     assert ms.cmd_status(Args(vault)) == 0
     assert "covers the vault" in capsys.readouterr().out
 
@@ -263,10 +193,11 @@ def test_status_flags_an_empty_index(vault, capsys):
 
 def test_status_flags_mixed_embedders(vault, capsys):
     """Cosine scores from two different models are not comparable, so a mixed
-    index silently ranks nonsense."""
+    index silently ranks nonsense. Still reachable with one backend: change
+    HASH_DIM, or index a vault that a previous version already embedded."""
     for n in ("a.md", "b.md"):
         note(vault, n)
-    _index_with(vault, "nomic-embed-text", 768, ["a.md"])
+    _index_with(vault, "hash-512", 512, ["a.md"])
     _index_with(vault, "hash-256", 256, ["b.md"])
     assert ms.cmd_status(Args(vault)) == 1
     assert "not comparable" in capsys.readouterr().out
@@ -333,71 +264,16 @@ def test_pack_unpack_roundtrip():
     assert ms.unpack(ms.pack(original)) == pytest.approx(original, rel=1e-6)
 
 
-# --- pick_embedder: the fallback the whole file exists to catch -----------
-def test_pick_embedder_short_circuits_when_offline(vault, monkeypatch):
-    """--offline must never attempt to reach Ollama at all, not merely prefer
-    not to."""
-
-    def fail_if_called(self, text):
-        raise AssertionError("must not attempt a network call when --offline is set")
-
-    monkeypatch.setattr(ms.OllamaEmbedder, "embed", fail_if_called)
-    emb = _real_pick_embedder(Args(vault, offline=True))
+# --- pick_embedder: one backend, one seam --------------------------------
+def test_pick_embedder_returns_the_hash_embedder(vault):
+    """There is one backend since v4.8.0. This pins that the seam still hands
+    back a working embedder rather than, say, a class — the four tests it
+    replaces all guarded a fallback that no longer has anything to fall back
+    from."""
+    emb = _real_pick_embedder(Args(vault))
     assert isinstance(emb, ms.HashEmbedder)
-
-
-def test_pick_embedder_uses_ollama_when_reachable(vault, monkeypatch):
-    """The non-degraded path: a healthy server must not be routed to the
-    fallback."""
-
-    class FakeResponse:
-        def read(self):
-            return json.dumps({"embedding": [1.0, 0.0]}).encode()
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    monkeypatch.setattr(ms.urllib.request, "urlopen", lambda req, timeout=None: FakeResponse())
-    emb = _real_pick_embedder(Args(vault, offline=False))
-    assert isinstance(emb, ms.OllamaEmbedder)
-    assert emb.model == "nomic-embed-text"
-
-
-def test_pick_embedder_falls_back_to_hash_when_ollama_unreachable(vault, monkeypatch, capsys):
-    """The exact defect `cmd_status` exists to catch: this must not raise and
-    must not silently hand back an embedder that will fail on every note — it
-    has to warn and return something usable."""
-
-    def boom(req, timeout=None):
-        raise urllib.error.URLError("connection refused")
-
-    monkeypatch.setattr(ms.urllib.request, "urlopen", boom)
-    emb = _real_pick_embedder(Args(vault, offline=False))
-    assert isinstance(emb, ms.HashEmbedder)
-    assert "Ollama unavailable" in capsys.readouterr().err
-
-
-def test_pick_embedder_falls_back_on_malformed_response(vault, monkeypatch):
-    """A response body without an "embedding" key (an error payload, a wrong
-    endpoint) raises KeyError inside embed(); that must be caught here too, or
-    one bad response aborts the whole run instead of degrading gracefully."""
-
-    class FakeResponse:
-        def read(self):
-            return json.dumps({"error": "model not found"}).encode()
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    monkeypatch.setattr(ms.urllib.request, "urlopen", lambda req, timeout=None: FakeResponse())
-    emb = _real_pick_embedder(Args(vault, offline=False))
-    assert isinstance(emb, ms.HashEmbedder)
+    assert emb.model == f"hash-{ms.HASH_DIM}"
+    assert len(emb.embed("a note")) == ms.HASH_DIM
 
 
 # --- cmd_index: the vault guard, --rebuild, and the mtime cache -----------
@@ -432,8 +308,8 @@ def test_cmd_index_skips_unchanged_notes_without_reembedding(vault, monkeypatch)
 def test_cmd_index_rebuild_clears_the_whole_table(vault, monkeypatch):
     """--rebuild is the fix `cmd_status` prescribes for a degraded index. If
     the DELETE did not run, a stale row (wrong model, or a note since deleted)
-    would survive the rebuild and keep tripping the mixed-embedder or
-    offline-fallback check even after the operator "fixed" it."""
+    would survive the rebuild and keep tripping the mixed-embedder check even
+    after the operator "fixed" it."""
     note(vault, "a.md")
     _index_with(vault, "old-model", 2, ["a.md", "ghost.md"])
 
@@ -469,7 +345,7 @@ def _insert_vec(vault, model, path, vec):
 def test_cmd_search_errors_when_no_embeddings_for_model(vault, capsys):
     """A missing index for the active model must fail loudly. Read as "no
     results" it would look identical to a query that simply matched nothing."""
-    args = Args(vault, offline=True)
+    args = Args(vault)
     args.query = "anything"
     args.top = 5
     assert ms.cmd_search(args) == 1
@@ -511,22 +387,22 @@ def test_main_in_process_dispatches_index_search_status(vault, monkeypatch):
     stating the dependency keeps this test readable on its own."""
     monkeypatch.setattr(ms, "pick_embedder", _real_pick_embedder)
     note(vault, "a.md")
-    assert ms.main(["--vault", str(vault), "--offline", "index"]) == 0
+    assert ms.main(["--vault", str(vault), "index"]) == 0
     assert (vault / ".search-index.db").exists(), "default --db must derive from --vault"
-    assert ms.main(["--vault", str(vault), "--offline", "status"]) == 0
-    assert ms.main(["--vault", str(vault), "--offline", "search", "body", "-k", "1"]) == 0
+    assert ms.main(["--vault", str(vault), "status"]) == 0
+    assert ms.main(["--vault", str(vault), "search", "body", "-k", "1"]) == 0
 
 
 # --- main(): the actual entry point, run as a real subprocess -------------
 # These three exercise argparse wiring and the `if __name__ == "__main__"`
-# guard that in-process importlib loading never triggers. --offline keeps
-# them off the network and off Ollama.
-def test_main_offline_index_builds_a_real_cache_file(tmp_path):
+# guard that in-process importlib loading never triggers. Nothing here can
+# touch the network: there is no backend left to reach.
+def test_main_index_builds_a_real_cache_file(tmp_path):
     vault = tmp_path / "memory"
     vault.mkdir()
     (vault / "a.md").write_text("---\ntype: note\n---\n# A\nhello\n", encoding="utf-8")
     result = subprocess.run(
-        [sys.executable, str(SKILL), "--vault", str(vault), "--offline", "index"],
+        [sys.executable, str(SKILL), "--vault", str(vault), "index"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -536,19 +412,19 @@ def test_main_offline_index_builds_a_real_cache_file(tmp_path):
     assert (vault / ".search-index.db").exists(), "default --db must derive from --vault"
 
 
-def test_main_offline_status_reports_a_healthy_index(tmp_path):
+def test_main_status_reports_a_healthy_index(tmp_path):
     vault = tmp_path / "memory"
     vault.mkdir()
     (vault / "a.md").write_text("---\ntype: note\n---\n# A\nhello\n", encoding="utf-8")
     subprocess.run(
-        [sys.executable, str(SKILL), "--vault", str(vault), "--offline", "index"],
+        [sys.executable, str(SKILL), "--vault", str(vault), "index"],
         capture_output=True,
         text=True,
         timeout=30,
         check=True,
     )
     status = subprocess.run(
-        [sys.executable, str(SKILL), "--vault", str(vault), "--offline", "status"],
+        [sys.executable, str(SKILL), "--vault", str(vault), "status"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -557,12 +433,12 @@ def test_main_offline_status_reports_a_healthy_index(tmp_path):
     assert "covers the vault" in status.stdout
 
 
-def test_main_offline_search_finds_the_indexed_note(tmp_path):
+def test_main_search_finds_the_indexed_note(tmp_path):
     vault = tmp_path / "memory"
     vault.mkdir()
     (vault / "a.md").write_text("---\ntype: note\n---\n# A\nhello\n", encoding="utf-8")
     subprocess.run(
-        [sys.executable, str(SKILL), "--vault", str(vault), "--offline", "index"],
+        [sys.executable, str(SKILL), "--vault", str(vault), "index"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -574,7 +450,6 @@ def test_main_offline_search_finds_the_indexed_note(tmp_path):
             str(SKILL),
             "--vault",
             str(vault),
-            "--offline",
             "search",
             "hello",
             "-k",

@@ -22,12 +22,12 @@ Run these and summarise:
    `State: Ready` forever while every run dies — which is exactly what the
    weekly heartbeat did for three weeks.
 5. **Memory** — `uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory status`
-   Confirms the semantic index covers the vault with the intended embedder,
-   rather than having silently fallen back to the offline hash one.
+   Confirms the search index covers the vault with the intended embedder,
+   rather than having quietly gone stale or partial.
 6. **Agents** — `uv run --no-project python {{ECOSYSTEM_ROOT}}/scripts/agent_usage.py`
    Report the evidence window it prints alongside any "never invoked" counts;
    the counts mean nothing without it.
-7. **Tools** — versions of git, node, uv, ruff, gitleaks, ollama; note any missing.
+7. **Tools** — versions of git, node, uv, ruff, gitleaks; note any missing.
 8. **MCP** — connected servers and their status.
 
 ## How to report it

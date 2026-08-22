@@ -27,7 +27,7 @@ on a different machine — not a lost one.
 - **remote**: https://github.com/xray140/ecosystem-brain.git
 
 ## Tooling
-- **present**: git, uv, ruff, node, gh, gitleaks, ollama, powershell
+- **present**: git, uv, ruff, node, gh, gitleaks, powershell
 - **missing**: none
 
 ## Links

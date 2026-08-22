@@ -14,16 +14,20 @@ whatever project the session happens to be in, and `--vault` is required for
 the same reason: it defaults to the relative `memory`, which only resolves
 when the working directory is the repo root.
 
-## Recall (semantic search)
+## Recall (keyword search)
 ```bash
-# build/refresh embeddings (Ollama: nomic-embed-text)
+# build/refresh the index
 uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory index
 uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory search "QUERY" -k 5
 uv run --no-project python {{ECOSYSTEM_ROOT}}/skills/memory/memory-search.py --vault {{ECOSYSTEM_ROOT}}/memory status
 ```
-Add `--offline` to use the deterministic hash embedder when Ollama isn't running.
-It is a global flag: it goes **before** the subcommand, not after. The cache is
+There is one embedder — a deterministic hashed bag-of-words — so there is no
+backend to choose and no `--offline` flag any more (v4.8.0). The cache is
 `<vault>/.search-index.db` (gitignored).
+
+It matches **wording, not meaning**: a query finds a note only if they share
+vocabulary. Phrase queries with words you expect the note itself to use, and
+fall back to `grep` / the `index.json` tags when recall comes up short.
 
 `status` is worth running before you trust a result. The offline embedder is a
 bag of words, and a search backed by it still returns related-*looking* notes —

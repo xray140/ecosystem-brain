@@ -1,7 +1,7 @@
 # Using the Memory Vault in Obsidian
 
 The `memory/` folder is a fully configured Obsidian vault. Obsidian is the
-human-readable window into the same knowledge base Claude searches semantically.
+human-readable window into the same knowledge base Claude searches.
 
 ## Open it
 1. Launch Obsidian
@@ -58,10 +58,10 @@ and to the stack decisions it relies on. To see it cleanly:
 - Claude writes notes here (decisions, project cards) as markdown with frontmatter.
 - The SessionEnd hook appends a dated session note automatically.
 - `memory-index.py` rebuilds `index.json` (the manifest Claude loads first).
-- `memory-search.py` embeds notes (Ollama `nomic-embed-text`, 768d) for semantic
-  recall. `status` reports whether the index really covers the vault with that
-  embedder — it silently fell back to the offline hash one for weeks, and a
-  degraded search still returns plausible-looking notes.
+- `memory-search.py` indexes notes as hashed bag-of-words vectors for keyword
+  recall. `status` reports whether the index really covers the vault — it went
+  weeks holding 24 of 28 notes, and a stale search still returns
+  plausible-looking ones.
 
 You edit in Obsidian; Claude reads/writes the same files. No special sync — it's
 just markdown on disk. Run `/ecosystem-brain:memory-gc` to prune + re-index.

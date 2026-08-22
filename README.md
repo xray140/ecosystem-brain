@@ -2,13 +2,13 @@
 
 The control tower for your Claude Code setup: a guided project-init interview,
 GitHub agent discovery/install/update with security scanning, secrets-safe git
-hooks, project scaffolding, and an Obsidian-style memory with local semantic
+hooks, project scaffolding, and an Obsidian-style memory with local keyword
 search. Installed into `~/.claude/` from a single clone via `bootstrap.py`.
 
 ## Install
 
 One command after cloning — see **[INSTALL.md](INSTALL.md)** for the full guide
-(prerequisites, secrets, Ollama, other PCs):
+(prerequisites, secrets, other PCs):
 
 ```bash
 git clone https://github.com/xray140/ecosystem-brain.git
@@ -70,7 +70,7 @@ SessionStart hook suggests relevant installed + uninstalled agents
   GROQ_API_KEY=...
   ANTHROPIC_API_KEY=...
   ```
-- **skills/** — `memory` (index + semantic search), `secrets` (doctor + identity).
+- **skills/** — `memory` (index + keyword search), `secrets` (doctor + identity).
 - **hooks/** — two kinds, deliberately. `hooks/scripts/` are Claude Code hooks (gitleaks gate, catastrophic-command block, ruff auto-format, SessionStart agent-suggester, session logging) and fire only inside Claude Code. `hooks/git/` are real git hooks — `pre-commit` (gitleaks, fails closed) and `pre-push` (selfcheck) — wired by `bootstrap.py` via `core.hooksPath`, so they hold for a commit made from a terminal, an IDE, or another assistant.
 - **tests/** — the suite `selfcheck` and CI both run; see *Verification* below.
 - **registry/** — `registry.json` (curated sources), `installed.json` (what is installed and the commit each item is pinned at — tracked, identical on every machine), `installed.local.json` (where it landed on *this* machine — gitignored), `catalog.json` (cached agent catalog).
@@ -97,12 +97,11 @@ pinned in `requirements-dev.txt` and the rule set in `ruff.toml`; see
 
 ## Prerequisites
 - **Required:** `git`, `node`/`npx`, `uv` (installs Python + ruff)
-- **Recommended:** `gitleaks` (secret scanning), `gh` (GitHub CLI, for search/install), `ollama` + `nomic-embed-text` (semantic memory)
-- Missing tools degrade gracefully — hooks skip, search falls back to offline hash embedder.
+- **Recommended:** `gitleaks` (secret scanning), `gh` (GitHub CLI, for search/install)
+- Missing tools degrade gracefully — the hooks that need them skip rather than fail.
 
 ## Windows-specific notes
 - Use `uv run python` instead of bare `python` (Windows Store stub intercepts).
-- `OLLAMA_MODELS` must point to an ASCII-safe path if your username has accented characters (e.g. `D:\ollama-models\models`).
 - GitHub access comes from `gh auth login` (the CLI's own keyring), which is what
   `install`/`update`/`search` use to resolve commit SHAs. `.mcp.json` ships empty
   — the servers it once declared were dead weight (v4.3.3).

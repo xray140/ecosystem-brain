@@ -15,7 +15,7 @@ What it does:
      records the current set in ~/.claude/.ecosystem-brain-installed.json.
      Nothing outside that manifest is ever touched.
   7. Seeds .env from .env.example if missing.
-  8. Reports missing prerequisites (uv, gitleaks, ollama, node, gh).
+  8. Reports missing prerequisites (uv, git, node, gh, gitleaks, ruff).
 
 Usage:
     uv run python scripts/bootstrap.py            # apply
@@ -349,12 +349,10 @@ def write_machine_note(dry: bool) -> None:
 
 #: Absent, something the ecosystem does every day stops working.
 REQUIRED_TOOLS = ("uv", "git", "node", "gh", "gitleaks", "ruff")
-#: Absent, one capability quietly degrades and everything else is unaffected.
-#: `ollama` powers memory-search's embeddings; without it search falls back to
-#: the offline hash embedder rather than failing. Listing it as a prerequisite
-#: printed `MISS ... install for full functionality` on machines that had made a
-#: deliberate choice not to run a local model server.
-OPTIONAL_TOOLS = {"ollama": "memory-search embeddings; falls back to offline"}
+#: There is no OPTIONAL_TOOLS list any more. It held exactly one entry, `ollama`,
+#: dropped in v4.8.0 — see [[decisions/no-ollama]]. An empty dict would have kept
+#: a printing branch nothing exercises; re-add the list with its loop if a second
+#: optional tool ever earns one.
 
 
 GIT_HOOKS_DIR = REPO_ROOT / "hooks" / "git"
@@ -411,10 +409,6 @@ def check_prereqs() -> None:
             f"  [{mark}] {tool}"
             + (f"  ({found})" if found else "  — install for full functionality")
         )
-    for tool, why in OPTIONAL_TOOLS.items():
-        found = shutil.which(tool)
-        mark = "ok " if found else "--  "
-        print(f"  [{mark}] {tool} (optional)" + (f"  ({found})" if found else f"  — {why}"))
 
 
 def _normalize(raw: str) -> Path:

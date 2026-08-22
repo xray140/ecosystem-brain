@@ -93,9 +93,9 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     # with every other check green, carrying a pytest failure fixed the day before.
     # It is still printed, just not gated on: the other tasks remain judged.
     ("scheduled tasks (task_doctor)", py("task_doctor.py", "--exclude", SELF_TASK), True),
-    # Keep the semantic index current, then assert it really is. Nothing rebuilt
-    # it before, so it sat at 24-of-28 notes on the offline hash fallback while
-    # the README advertised Ollama embeddings. Degraded search returns plausible
+    # Keep the search index current, then assert it really is. Nothing rebuilt
+    # it before, so it sat at 24-of-28 notes while the README advertised
+    # semantics it was not delivering. Degraded search returns plausible
     # results, which is exactly why it went unnoticed for weeks.
     # Keeps the machine note current — drives get mounted, tools get installed.
     # Never gating: a profile is a convenience, not a health signal.

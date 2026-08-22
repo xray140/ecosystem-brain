@@ -8,7 +8,7 @@ Each mutation is a one-line textual change to the SOURCE, chosen to reintroduce
 the exact defect the tool exists for. The file is restored either way, including
 on failure.
 
-Its first run found a real hole: the truncation test subclassed OllamaEmbedder
+Its first run found a real hole: the truncation test subclassed the embedder
 and re-implemented the truncation inside the test, so it passed no matter what
 the source did. Nine of ten mutations were caught; that one was not.
 

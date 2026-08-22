@@ -12,7 +12,7 @@ Code config actually in sync with this repo?" Checks:
                     since DELETED, still sitting live. Checked against
                     bootstrap's install manifest, so files the ecosystem never
                     installed are never touched or blamed.
-  4. Prerequisites — uv/git/node/gh/gitleaks/ruff/ollama on PATH (advisory).
+  4. Prerequisites — uv/git/node/gh/gitleaks/ruff on PATH (advisory).
 
 Exit non-zero if hooks are broken or anything has drifted. Fix drift by re-running
 bootstrap.

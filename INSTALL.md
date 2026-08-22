@@ -5,11 +5,11 @@ The whole control tower is portable. On any machine:
 ## 1. Prerequisites
 Install these (the bootstrap reports which are missing):
 - **Required:** `git`, `node`/`npx`, `uv` (provides Python + ruff)
-- **Recommended:** `gitleaks`, `gh` (GitHub CLI), `ollama` + `nomic-embed-text`
+- **Recommended:** `gitleaks`, `gh` (GitHub CLI)
 
 Windows (winget):
 ```powershell
-winget install Git.Git OpenJS.NodeJS GitHub.cli Gitleaks.Gitleaks Ollama.Ollama
+winget install Git.Git OpenJS.NodeJS GitHub.cli Gitleaks.Gitleaks
 irm https://astral.sh/uv/install.ps1 | iex
 uv tool install ruff
 ```
@@ -49,27 +49,10 @@ Also set as a user env var so MCP servers resolve it:
 [Environment]::SetEnvironmentVariable("GITHUB_TOKEN", "ghp_...", "User")
 ```
 
-## 5. Ollama — optional (semantic memory)
-Skip this and everything still works: `memory-search` falls back to an offline
-hash embedder, and no check reports it as a problem. Install it for markedly
-better recall — real embeddings match on meaning, the fallback on wording.
-
-```bash
-ollama pull nomic-embed-text
-ollama serve          # only while you want embeddings; there is no logon task
-```
-Index with it running: `memory-search.py index --rebuild`.
-
-On Windows with an accented username, set an ASCII-safe model path:
-```powershell
-[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "D:\ollama-models\models", "User")
-```
-See `memory/decisions/ollama-accented-path.md` for why.
-
-## 6. Restart Claude Code
+## 5. Restart Claude Code
 Hooks, commands, and the SessionStart agent-suggester load at startup.
 
-## 7. Verify
+## 6. Verify
 ```bash
 /ecosystem-brain:health-check
 ```
@@ -105,7 +88,9 @@ It schedules:
 - Re-running is safe (`-Force`). Overwriting a task first created in an **elevated**
   shell needs an elevated PowerShell; the script reports `[exists]` and moves on otherwise.
 - Re-running also drops tasks the script no longer ships — `EcosystemBrain-OllamaServe`
-  was retired in v4.7.0 and is unregistered on the next run.
+  was retired in v4.7.0 and is unregistered on the next run. Removing a task that
+  was itself registered elevated needs an elevated PowerShell; the script reports
+  `[STUCK]` and exits non-zero rather than claiming a removal that did not happen.
 - Remove them all: `powershell -ExecutionPolicy Bypass -File scripts\register-scheduled-tasks.ps1 -Unregister`.
 - The catalog + update steps need `gh auth login`. Reports land in `memory/maintenance/`
   (gitignored) — read the latest to see the last heartbeat's verdict.

@@ -77,13 +77,13 @@ Read this first in a fresh session (after CLAUDE.md). Run
   works. selfcheck fails on any literal path that creeps back in.
   `ECOSYSTEM_CLAUDE_DIR` overrides for testing.
 - **Memory**: Obsidian vault (project cards linked into `projects-moc` hub +
-  stack decisions — no orphans). Semantic search really is on Ollama
-  `nomic-embed-text` (768d) since 2026-08-02 — before that the index held
-  24/28 notes on the offline hash fallback, because a 500 on the vault's
-  largest note aborted every build and nothing rebuilt it. Input is capped at
-  6000 chars, per-note failures are survivable, and `memory-search.py status`
+  stack decisions — no orphans). Search is **keyword only** since 2026-08-22
+  ([[no-ollama]]): one hashed bag-of-words embedder, no server, no network. It
+  ran on Ollama `nomic-embed-text` (768d) from 2026-08-02 and matched meaning
+  rather than wording; that is the capability the removal cost. Input is capped
+  at 6000 chars, per-note failures are survivable, and `memory-search.py status`
   gates coverage + embedder in the heartbeat.
-- **Scheduled tasks**: Ollama-at-logon, weekly catalog refresh, weekly
+- **Scheduled tasks**: weekly catalog refresh, weekly
   maintenance heartbeat (`maintenance.py`: doctor + selfcheck + project-doctor +
   task-doctor + memory index refresh/status + agent-usage + update --check →
   `memory/maintenance/<date>.md`).
@@ -116,7 +116,8 @@ times: information existed and nothing read it back. CI had been red on every
 push for weeks; the local gate never ran the linter that was failing; 58
 committed paths pointed at a drive that no longer existed; the weekly scheduled
 tasks had *never once* completed a run while reporting `Ready`; "semantic"
-search ran on a bag-of-words fallback; nothing had ever re-read the project
+search ran on a bag-of-words fallback (and, since [[no-ollama]], the honest
+name for it is keyword search); nothing had ever re-read the project
 cards. Tests 114 → 549, coverage 40% → 90%, selfcheck 6 → 8 checks, and every
 artefact the ecosystem produces now has a reader.
 

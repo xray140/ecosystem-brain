@@ -2,6 +2,50 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.8.0] — 2026-08-22
+
+**Ollama is out.** Not demoted — removed.
+
+v4.7.0 made it optional and kept the capability, which was the right call for
+the argument being had then. It was not the ask: the process was still the
+recommended path, `nomic-embed-text` was still the default, `OLLAMA_MODELS` was
+still in `.env.example`, and every health report still printed a line about it.
+
+Removed: `OllamaEmbedder`, the `nomic-embed-text` default, `--offline` (a flag
+that opts out of a backend that no longer exists is worse than no flag — it
+implies a choice), `OLLAMA_MODELS`, the `OPTIONAL_TOOLS` prerequisite list and
+its print branch, and the install section. `memory-search.py` imports no
+networking library at all now.
+
+`MAX_EMBED_CHARS` stays, and moves to the embedder that now enforces it. The
+500s that first forced the cap are gone with the backend, but the other reason
+outlived them: the head of a note — frontmatter, title, opening paragraphs —
+carries its topic, which is what recall matches on.
+
+**The cost, stated plainly.** Search matches wording, not meaning. The query
+*"why is the registry split between shared and machine-local"* scored 0.805 with
+Ollama, 0.545 without; re-measured after removal it returns the right note first
+at 0.538. Rank survived, margin did not. Nothing was added back to compensate —
+`sentence-transformers` means torch on Windows for a 42-note vault, and an API
+embedder means a key, a cost, and private notes leaving the machine. The honest
+upgrade, if recall ever gets bad enough to matter, is BM25 over the vault. Every
+doc that said "semantic search" now says "keyword search"; see
+`memory/decisions/no-ollama.md`.
+
+**`register-scheduled-tasks.ps1` announced a removal it had not performed.** The
+retire loop printed `[retired]` unconditionally, with `-ErrorAction
+SilentlyContinue` hiding the failure — while the registration loop ten lines
+below already handled the identical elevation failure honestly. Unregistering a
+task created in an elevated shell answers `Accès refusé`, which is exactly the
+state Verdun10 was in: the task retired in v4.7.0 was still registered and still
+failing three weeks later, and the script kept reporting success. It now
+re-queries after the removal, prints `[STUCK]` with the fix, and exits non-zero.
+
+`tests/test_ollama_is_optional.py` → `tests/test_ollama_is_gone.py`: no backend,
+no network imports, no flag, no env key, no prerequisite, and the retired task is
+*still* actively unregistered — removal is not the same as never having shipped
+it. Prose was tried; it lasted one release.
+
 ## [4.7.0] — 2026-08-21
 
 **Ollama was wired in like a dependency to power one optional feature.**

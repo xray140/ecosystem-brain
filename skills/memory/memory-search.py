@@ -1,35 +1,31 @@
 #!/usr/bin/env python3
-"""Local semantic search over the memory/ vault.
+"""Local keyword search over the memory/ vault.
 
-Embeds each note and answers natural-language queries by cosine similarity.
-Embeddings are cached in a local SQLite DB and only recomputed when a note's
-mtime changes. stdlib only (sqlite3 + urllib + math) — no numpy, no extra deps.
+Embeds each note as a hashed bag-of-words vector and ranks queries by cosine
+similarity. Embeddings are cached in a local SQLite DB and only recomputed when
+a note's mtime changes. stdlib only (sqlite3 + math) — no numpy, no extra deps,
+no server, no network.
 
-Backends:
-  * Ollama (default): POST to $OLLAMA_HOST/api/embeddings with --model
-    (e.g. nomic-embed-text). Fully local, zero API cost.
-  * Hash (--offline, or automatic fallback if Ollama is unreachable): a
-    deterministic bag-of-words embedder. Lower quality, but keeps search usable
-    offline and makes the storage/ranking logic testable without a model.
+What it matches: **wording, not meaning.** A query only finds a note if they
+share vocabulary. This used to have an Ollama/nomic-embed-text backend that
+matched meaning, removed in v4.8.0 — see [[decisions/no-ollama]]. Say "keyword
+search" when describing this; the vault has already been burned once by an
+index that advertised semantics it was not delivering.
 
 Usage:
-    python skills/memory-search.py index [--model nomic-embed-text] [--rebuild]
+    python skills/memory-search.py index [--rebuild]
     python skills/memory-search.py search "what did we decide about render settings" -k 5
-    python skills/memory-search.py index --offline      # no Ollama needed
+    python skills/memory-search.py status
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import math
-import os
 import re
 import sqlite3
 import sys
-import urllib.error
-import urllib.request
 from array import array
 from pathlib import Path
 
@@ -38,9 +34,17 @@ WORD_RE = re.compile(r"[a-z0-9]+")
 HASH_DIM = 256
 
 
-# --------------------------------------------------------------------- embedders
+# --------------------------------------------------------------------- embedder
+# The head of a note is the right thing to embed: frontmatter, title and opening
+# paragraphs carry its topic, which is what recall matches on. The cap outlived
+# the backend that forced it — nomic-embed-text answered 500 past ~2048 tokens,
+# and `roadmap.md` (14k) once took the whole index build down with it — but the
+# recall argument stands on its own, so the truncation stays.
+MAX_EMBED_CHARS = 6000
+
+
 class HashEmbedder:
-    """Deterministic offline embedder: hashed bag-of-words, L2-normalized."""
+    """Deterministic local embedder: hashed bag-of-words, L2-normalized."""
 
     name = "hash"
 
@@ -51,45 +55,10 @@ class HashEmbedder:
     def embed(self, text: str) -> list[float]:
         """Return a normalized vector for one text."""
         vec = [0.0] * self.dim
-        for tok in WORD_RE.findall(text.lower()):
+        for tok in WORD_RE.findall(text[:MAX_EMBED_CHARS].lower()):
             h = int(hashlib.md5(tok.encode()).hexdigest(), 16)  # noqa: S324 (not security)
             vec[h % self.dim] += 1.0
         return _normalize(vec)
-
-
-# nomic-embed-text tops out around 2048 tokens; past that Ollama answers 500
-# rather than truncating for you. Measured on this vault: 4k chars fine, 20k
-# fails, and `roadmap.md` (14k) failed — the single most important note in the
-# vault, which took the whole index build down with it.
-#
-# The head of a note is also the right thing to embed: frontmatter, title and
-# opening paragraphs carry its topic, which is what recall matches on.
-MAX_EMBED_CHARS = 6000
-
-
-class OllamaEmbedder:
-    """Calls a local Ollama server for embeddings (one note per request)."""
-
-    name = "ollama"
-
-    def __init__(self, model: str, host: str, timeout: float = 30.0) -> None:
-        self.model = model
-        self.host = host.rstrip("/")
-        self.timeout = timeout
-
-    def embed(self, text: str) -> list[float]:
-        """Return the embedding for one text via $OLLAMA_HOST/api/embeddings."""
-        payload = json.dumps(
-            {"model": self.model, "prompt": text[:MAX_EMBED_CHARS]}
-        ).encode()
-        req = urllib.request.Request(  # noqa: S310 (localhost Ollama)
-            f"{self.host}/api/embeddings",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310 (localhost)
-            data = json.loads(resp.read())
-        return _normalize([float(x) for x in data["embedding"]])
 
 
 def _normalize(vec: list[float]) -> list[float]:
@@ -147,33 +116,14 @@ def unpack(blob: bytes) -> list[float]:
 
 
 # --------------------------------------------------------------------- commands
-def _ollama_reachable(args) -> bool:
-    """Can this machine embed for real right now?
+def pick_embedder(args) -> HashEmbedder:
+    """The vault's embedder. One indirection, kept deliberately.
 
-    Separate from pick_embedder because status must ask the question without
-    the side effect of choosing — and without pick_embedder's `[warn]`, which
-    would be noise on a machine that is deliberately Ollama-free.
+    There is only one backend now, so this looks like a pointless wrapper. It
+    is the seam every caller and test goes through, and it is what a second
+    backend would slot into — the previous one was chosen here too.
     """
-    if getattr(args, "offline", False):
-        return False
-    try:
-        OllamaEmbedder(args.model, args.ollama_host).embed("ping")
-    except (urllib.error.URLError, OSError, KeyError):
-        return False
-    return True
-
-
-def pick_embedder(args) -> HashEmbedder | OllamaEmbedder:
-    """Choose Ollama if reachable, else fall back to the hash embedder."""
-    if args.offline:
-        return HashEmbedder()
-    emb = OllamaEmbedder(args.model, args.ollama_host)
-    try:
-        emb.embed("ping")
-    except (urllib.error.URLError, OSError, KeyError) as exc:
-        print(f"[warn] Ollama unavailable ({exc}); using offline hash embedder", file=sys.stderr)
-        return HashEmbedder()
-    return emb
+    return HashEmbedder()
 
 
 def cmd_index(args) -> int:
@@ -200,10 +150,11 @@ def cmd_index(args) -> int:
             continue
         try:
             vec = emb.embed(note_text(path))
-        except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
+        except (OSError, KeyError, ValueError) as exc:
             # One unembeddable note must not abort the whole build. It used to:
             # a single 500 left the index untouched and stale, so the vault kept
-            # answering from an old offline-hash cache that nobody knew was there.
+            # answering from an old cache that nobody knew was there. The hash
+            # embedder cannot fail that way, but an unreadable file still can.
             print(f"[warn] {rel}: {exc}", file=sys.stderr)
             failed.append(rel)
             continue
@@ -249,11 +200,10 @@ def cmd_search(args) -> int:
 def cmd_status(args) -> int:
     """Is the search index covering the vault, and with the intended embedder?
 
-    Both had rotted here without a sound. The index held 24 of 28 notes, all
-    embedded with the offline hash fallback, while the README advertised Ollama
-    semantic search — nothing rebuilt it, so it kept answering from a cache
-    built once, by hand, in offline mode. Degraded search returns *plausible*
-    results, which is precisely why nobody noticed.
+    Both had rotted here without a sound. The index held 24 of 28 notes while
+    the README advertised semantic search it was not doing — nothing rebuilt
+    it, so it kept answering from a cache built once, by hand. Degraded search
+    returns *plausible* results, which is precisely why nobody noticed.
     """
     con = connect(args.db)
     rows = list(con.execute("SELECT model, dim, COUNT(*) FROM vec GROUP BY model, dim"))
@@ -264,25 +214,10 @@ def cmd_status(args) -> int:
         print("  [!!] index is empty — run: memory-search.py index")
         return 1
 
-    # Ollama is optional. A hash-embedded index is a defect only when Ollama is
-    # actually reachable — then the index is worse than the machine can do, and
-    # a rebuild fixes it. On a machine without Ollama the fallback IS the
-    # intended state, and flagging it produced a permanent failure whose only
-    # remedy was installing software the user had chosen not to run.
-    ollama_up = _ollama_reachable(args)
-
     problems = 0
     for model, dim, count in rows:
-        offline = model.startswith("hash-")
-        tag = "offline hash fallback" if offline else f"{model} ({dim}d)"
         missing = notes - count
-        detail = f"{count} note(s), {tag}"
-        if offline and not args.offline:
-            if ollama_up:
-                detail += "  <- Ollama is up; rebuild for real embeddings"
-                problems += 1
-            else:
-                detail += " (Ollama not running — expected)"
+        detail = f"{count} note(s), {model} ({dim}d)"
         if missing > 0:
             detail += f", {missing} not indexed"
             problems += 1
@@ -302,9 +237,6 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--vault", default=Path("memory"), type=Path)
     ap.add_argument("--db", default=None, type=Path, help="cache DB (default: <vault>/.search-index.db)")
-    ap.add_argument("--model", default="nomic-embed-text")
-    ap.add_argument("--ollama-host", default=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
-    ap.add_argument("--offline", action="store_true", help="force the hash embedder")
     sub = ap.add_subparsers(dest="cmd", required=True)
     pi = sub.add_parser("index", help="build/update the embedding cache")
     pi.add_argument("--rebuild", action="store_true", help="discard the cache and re-embed all")

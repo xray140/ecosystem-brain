@@ -45,9 +45,11 @@ def test_the_note_records_this_clone():
 def test_missing_tools_are_reported_as_an_explanation(monkeypatch):
     """A check reporting 'skipped' on this machine is usually explained by a
     missing tool rather than a fault — the note should say so."""
-    monkeypatch.setattr(pm.shutil, "which", lambda t: None if t == "ollama" else "/usr/bin/" + t)
+    monkeypatch.setattr(
+        pm.shutil, "which", lambda t: None if t == "gitleaks" else "/usr/bin/" + t
+    )
     note = pm.compose()
-    assert "**missing**: ollama" in note
+    assert "**missing**: gitleaks" in note
     assert "skipped" in note
 
 

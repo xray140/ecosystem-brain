@@ -5,7 +5,7 @@ tags: [moc, vault]
 # Ecosystem-Brain Memory Vault
 
 Obsidian-style vault — the human window into the knowledge base Claude searches
-semantically. Each note has YAML frontmatter and wiki-style links to related notes.
+by keyword. Each note has YAML frontmatter and wiki-style links to related notes.
 
 ## Hubs
 - [[roadmap]] — current state & decisions (read this first)
@@ -28,7 +28,7 @@ semantically. Each note has YAML frontmatter and wiki-style links to related not
 - [[hook-format]] — correct Claude Code hook structure
 - [[windows-python-invocation]] — use `uv run python`, not bare `python`
 - [[windows-path-translation]] — `/d/` works as a CLI arg, not inside Python code
-- [[ollama-accented-path]] — OLLAMA_MODELS must be ASCII-safe
+- [[no-ollama]] — the local model server is gone; search is keyword-only
 - [[text-file-write-conventions]] — UTF-8 + LF in all `Path.write_text()` calls
 - [[powershell-utf8-bom]] — avoid Out-File `-Encoding utf8` (adds a BOM)
 - [[claude-best-practices]] — conventions grounded in Anthropic's guidance
@@ -41,16 +41,14 @@ so never hardcode an absolute one here.
 # Rebuild the structural manifest (index.json)
 uv run python skills/memory/memory-index.py
 
-# Semantic search (requires Ollama running with nomic-embed-text)
+# Keyword search (local, no server, no network)
 uv run python skills/memory/memory-search.py search "QUERY"
 
 # Is the index real and complete? (coverage + which embedder is actually cached)
 uv run python skills/memory/memory-search.py status
 
-# Offline fallback (hash embedder, no Ollama needed)
-# --offline is a global flag: it goes BEFORE the subcommand, not after
-uv run python skills/memory/memory-search.py --offline index
-uv run python skills/memory/memory-search.py --offline search "QUERY"
+# Rebuild after adding or editing notes
+uv run python skills/memory/memory-search.py index --rebuild
 ```
 
 ## Active hooks (global, ~/.claude/settings.json)
