@@ -1,0 +1,28 @@
+# Coverage config for the floor enforced by scripts/selfcheck.py.
+#
+# The floor is a ratchet, not a target. It sits just under the measured figure so
+# that adding a substantial untested module trips it, while ordinary churn does
+# not. A floor set above reality is bypassed within a week; one set far below it
+# is decoration — the failure mode decisions/verification-integrity is about.
+
+[run]
+branch = false
+omit =
+    # A mutation harness: it rewrites source files to prove each check's tests
+    # would go red for the defect they guard. Excluded on structural grounds,
+    # not to flatter the number — importing it under pytest would mutate the
+    # sources of the very run measuring them. It is deliberately not in CI for
+    # the same reason, and is invoked by hand after changing a check.
+    */mutate_checks.py
+    */__pycache__/*
+    */.venv/*
+
+[report]
+exclude_also =
+    # Entry-point guards run in a subprocess, never under the importing test.
+    if __name__ == .__main__.:
+    raise SystemExit\(main\(\)\)
+    # Typing-only imports are never executed at runtime.
+    if TYPE_CHECKING:
+show_missing = false
+skip_covered = false

@@ -250,8 +250,17 @@ def check_lint() -> None:
         ok(f"ruff clean across {', '.join(LINT_PATHS)}")
 
 
+#: Coverage floor, as a ratchet rather than a target. Measured 93% when set, so
+#: ~50 uncovered statements of headroom: ordinary churn passes, a new untested
+#: module of any size does not. A floor above reality gets bypassed within a
+#: week; one far below it is decoration. Raise it when the real figure moves up
+#: and stays there — never lower it to make a red run green.
+COVERAGE_FLOOR = 91
+COVERED = ("scripts", "hooks/scripts", "skills")
+
+
 def check_tests() -> None:
-    print("5. Unit tests (pytest)")
+    print(f"5. Unit tests (pytest) + coverage floor {COVERAGE_FLOOR}%")
     tests_dir = REPO / "tests"
     if not tests_dir.is_dir():
         ok("no tests/ dir — skipped")
@@ -262,22 +271,66 @@ def check_tests() -> None:
     # Nested uv run: pulls the PINNED pytest into an ephemeral env, ignores any
     # project. Pinned via requirements-dev.txt so this gate and CI can never
     # disagree about which pytest ran.
+    cov_args = [f"--cov={target}" for target in COVERED]
     r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
-        [*_uv_tool(), "pytest", "-q", "tests"],
+        [
+            *_uv_tool(),
+            "pytest",
+            "-q",
+            "tests",
+            *cov_args,
+            "--cov-report=term",
+            f"--cov-fail-under={COVERAGE_FLOOR}",
+        ],
         capture_output=True,
         text=True,
         cwd=str(REPO),
     )
+    out = r.stdout + r.stderr
     if r.returncode != 0:
-        out = r.stdout + r.stderr
         if _toolchain_unreachable(out):
             skip("pinned toolchain unreachable (offline) — pytest did NOT run")
             return
-        tail = "\n      ".join(out.strip().splitlines()[-12:])
-        fail(f"pytest failed:\n      {tail}")
+        # A coverage dip and a failing test are different problems with different
+        # fixes, and pytest-cov reports both as exit 1. Calling a coverage dip
+        # "pytest failed" is the same false accusation the offline case above
+        # exists to avoid: it sends you reading a green suite for a broken test.
+        floor_hit = next((ln for ln in out.splitlines() if "Required test coverage" in ln), None)
+        if floor_hit and "failed" not in _pytest_summary(out):
+            fail(
+                f"coverage below the floor — the suite passed:\n      {floor_hit.strip()}\n"
+                f"      Cover the new code, or justify an omit in .coveragerc."
+            )
+            return
+        fail(f"pytest failed:\n      {_failure_detail(out)}")
     else:
-        summary = (r.stdout.strip().splitlines() or ["passed"])[-1]
-        ok(f"pytest: {summary}")
+        total = next(
+            (ln.split()[-1] for ln in out.splitlines() if ln.startswith("TOTAL")), "?"
+        )
+        ok(f"pytest: {_pytest_summary(out)} — coverage {total}")
+
+
+def _pytest_summary(out: str) -> str:
+    """The `N passed, M skipped in Xs` line, wherever it landed in the output."""
+    for line in reversed(out.strip().splitlines()):
+        if " passed" in line or " failed" in line or " error" in line:
+            return line.strip()
+    return "passed"
+
+
+def _failure_detail(out: str) -> str:
+    """The lines naming what failed.
+
+    Not a plain tail any more: with --cov the coverage table prints AFTER the
+    failures, so the last dozen lines became table rows and the report said
+    "pytest failed" while showing nothing about which test did. pytest's own
+    "short test summary info" section is the part worth surfacing.
+    """
+    lines = out.strip().splitlines()
+    for i, line in enumerate(lines):
+        if "short test summary info" in line:
+            return "\n      ".join(x for x in lines[i + 1 :] if x.strip())[:1200]
+    return "\n      ".join(lines[-12:])
 
 
 KNOWN_MODELS = {"inherit", "fable", "opus", "sonnet", "haiku"}
