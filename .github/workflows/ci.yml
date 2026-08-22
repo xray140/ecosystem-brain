@@ -7,7 +7,27 @@ permissions:
   contents: read
 jobs:
   selfcheck:
-    runs-on: ubuntu-latest
+    # Windows is this ecosystem's primary platform — Git Bash, .bat files, Task
+    # Scheduler, an accented home directory, CRLF — and until v4.7.1 nothing
+    # tested it. Three defects shipped green through a Linux-only job:
+    #   * .bat files normalised to LF, which cmd.exe mis-parses (a .bat is inert
+    #     data on Linux, so no test could have failed there)
+    #   * hook commands interpolating an unquoted path, which only breaks when
+    #     the clone root contains a space — runners clone to /home/runner/work
+    #   * a permission rule that denied .env.example, Windows-only config
+    # Each is now covered by a byte-level test, but the runner is what makes the
+    # coverage real on the platform that has the problem.
+    strategy:
+      fail-fast: false          # a Windows failure must not hide the Linux result
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        # GitHub's Windows runners default to pwsh; every `run:` block here is
+        # POSIX. `bash` on windows-latest is Git Bash, which is also what this
+        # ecosystem targets locally, so the same shell runs in both places.
+        shell: bash
     steps:
       # Actions are pinned to commit SHAs, not tags. A tag is mutable: whoever
       # controls the action repo can repoint v4 at new code, which then runs
@@ -18,13 +38,25 @@ jobs:
         with:
           fetch-depth: 0          # full history so gitleaks can scan commits
 
+      # Linux only: gitleaks-action runs in a Docker container, which GitHub's
+      # Windows runners cannot execute. Scanning history once per commit is
+      # enough — the secrets are in the commits, not in the OS.
       - name: Secret scan (gitleaks)
+        if: runner.os == 'Linux'
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      # No dedicated line-endings step: tests/test_bat_files_are_ascii.py reads
+      # the .bat files off disk, and on a runner the disk *is* the checkout — so
+      # the pytest step below already asserts .gitattributes was honoured, on
+      # both platforms, once the matrix exists. A separate step would have had to
+      # shell out to `python`, which in Git Bash on Windows resolves to the
+      # Microsoft Store stub rather than an interpreter; see
+      # memory/decisions/windows-python-invocation.md.
 
       # Toolchain pinned in requirements-dev.txt — an unpinned `--with ruff`
       # resolves the newest release on every run, and ruff's default rule set
@@ -53,16 +85,24 @@ jobs:
       - name: Templates still scaffold into a green project
         run: uv run --no-project python scripts/verify_templates.py
 
-      # The flagship command, end to end for the first time. It used to write a
-      # memory card, a MOC line and a registry mutation into the repo no matter
-      # what, so running it once dirtied the checkout and it was never in CI —
-      # which is how a Windows crash in its own baseline step survived unnoticed.
-      # ECOSYSTEM_VAULT + --skip-agents make it leave nothing behind.
+      # The flagship command, end to end. It used to write a memory card, a MOC
+      # line and a registry mutation into the repo no matter what, so running it
+      # once dirtied the checkout and it was never in CI — which is how a Windows
+      # crash in its own baseline step survived unnoticed. ECOSYSTEM_VAULT +
+      # --skip-agents make it leave nothing behind.
+      #
+      # The paths are built inside the step rather than in `env:`, because
+      # ${{ runner.temp }} on Windows is a backslash path (D:\a\_temp) and
+      # backslash is an escape character in bash. `cygpath -m` converts to
+      # C:/Users/... — forward slashes, still Windows-native, so bash and Python
+      # both read it correctly. This is the same /d/ vs D:\ translation the
+      # ecosystem hits locally; see memory/decisions/windows-path-translation.md.
       - name: Init --apply, end to end (sandboxed vault, no agent installs)
-        env:
-          ECOSYSTEM_DEST_ROOT: ${{ runner.temp }}/eco-projects
-          ECOSYSTEM_VAULT: ${{ runner.temp }}/eco-vault
         run: |
+          root="$(mktemp -d)"
+          if [ "$RUNNER_OS" = "Windows" ]; then root="$(cygpath -m "$root")"; fi
+          export ECOSYSTEM_DEST_ROOT="$root/eco-projects"
+          export ECOSYSTEM_VAULT="$root/eco-vault"
           mkdir -p "$ECOSYSTEM_DEST_ROOT" "$ECOSYSTEM_VAULT"
           # A fresh runner has no git identity, and `scaffold --git` makes an
           # initial commit. Setting one here exercises the full path; the
