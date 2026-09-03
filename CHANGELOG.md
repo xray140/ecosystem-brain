@@ -62,6 +62,30 @@ descriptions, commands and skills to it. History is still free to say what
 semantic search was and what removing it cost; `CHANGELOG.md` and `memory/` are
 deliberately not scanned.
 
+**CI was red on master from two commits that touched only memory notes.** The
+step was `verify_templates.py`, failing on both platforms with `npm install`
+crashing inside arborist — *Cannot read properties of null (reading
+'edgesOut')* — while the same template scaffolded green locally on npm 11.16.0.
+Nothing in the repo had changed. Two things outside it had, and both were
+unpinned: `templates/typescript-project/package.json` carried five floating `^`
+ranges with no lockfile, and **CI installed no node at all**, so the typescript
+baseline ran on whatever the runner image shipped that morning.
+
+This is the unpinned-ruff incident of v4.3.x in the other language, five weeks
+later. Fixed the same way: exact versions in the template (biome 1.9.4,
+@types/node 22.20.1, tsx 4.23.13, typescript 5.9.3, vitest 4.1.11 — the
+resolution verified green locally), and `actions/setup-node` pinned by commit
+SHA to node **24.20.0**. The exact patch, not the major: npm ships *with* node,
+so `24` would leave the thing that actually broke free to drift.
+
+Three tests in `test_selfcheck.py` hold it: template dependency specs must be
+exact, `node-version` must be a full patch version, and every action in the
+workflow must be a 40-char SHA — the last one caught nothing today and exists
+because a tag is mutable and runs with a `GITHUB_TOKEN`. See
+`memory/decisions/toolchain-pinning.md`, which had claimed since 2026-07-31
+that the ecosystem "was pinning what it downloaded and floating what it ran".
+It was right, and it was describing Python only.
+
 **Two mutants had been unplantable since v4.8.0.** `mutate_checks.py` anchored
 on `args.offline` and on the Ollama request body, both removed with the backend,
 so it skipped them and exited 1 on every run — a harness that reports its own

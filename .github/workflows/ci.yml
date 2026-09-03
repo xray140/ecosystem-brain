@@ -50,6 +50,23 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
 
+      # Pinned node, therefore pinned npm. Nothing else here installs node: the
+      # typescript template's baseline ran on whatever the runner image happened
+      # to ship, and on 2026-09-03 that turned CI red on two commits that touched
+      # nothing but memory notes — `npm install` crashing in arborist with
+      # "Cannot read properties of null (reading 'edgesOut')" on both platforms,
+      # while the same template scaffolded green locally on npm 11.16.0.
+      #
+      # Same lesson as the unpinned ruff (see requirements-dev.txt and
+      # memory/decisions/toolchain-pinning.md): a toolchain that resolves itself
+      # on every run makes the build a function of the date. The exact patch is
+      # pinned, not the major, because npm ships *with* node — `24` would let the
+      # thing that broke drift again.
+      - name: Set up node (pins npm for the template baseline)
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+
       # No dedicated line-endings step: tests/test_bat_files_are_ascii.py reads
       # the .bat files off disk, and on a runner the disk *is* the checkout — so
       # the pytest step below already asserts .gitattributes was honoured, on

@@ -43,6 +43,32 @@ means without anyone deciding it should.
 
 The ecosystem was pinning what it downloaded and floating what it ran.
 
+## The same lesson, unlearned in the other language (2026-09-03)
+
+Two commits that touched nothing but memory notes turned CI red on both
+platforms. `verify_templates.py` failed with `npm install` crashing inside
+arborist — *Cannot read properties of null (reading 'edgesOut')* — while the
+same template scaffolded green locally. Nothing in the repo had changed. Two
+things outside it had, and both were unpinned:
+
+1. `templates/typescript-project/package.json` carried five floating `^` ranges
+   and shipped no lockfile, so `npm install` re-resolved to whatever was newest
+   that morning.
+2. **CI installed no node at all.** The typescript baseline ran on whatever the
+   runner image happened to ship, and runner images are replaced without notice.
+
+Fixed the same way as ruff: exact `==`-equivalent pins in the template, and
+`actions/setup-node` pinned to node **24.20.0** — the exact patch, not the
+major, because npm ships *with* node and pinning `24` would leave the thing that
+actually broke free to drift. Enforced by `tests/test_selfcheck.py`: template
+dependency specs must be exact, `node-version` must be a full patch version, and
+every action must be a 40-char commit SHA.
+
+This note claimed in 2026-07-31 that the ecosystem "was pinning what it
+downloaded and floating what it ran". That was true of Python and stayed true of
+TypeScript for five more weeks. The pin belongs at every toolchain the repo has,
+not the one that broke first.
+
 ## Consequences
 
 - Bumping a tool is a deliberate commit: change the pin, run `selfcheck.py`,
@@ -53,4 +79,4 @@ The ecosystem was pinning what it downloaded and floating what it ran.
   build when one goes stale, so the exception list cannot rot.
 
 Related: [[agent-pinning]] · [[claude-best-practices]] ·
-[[text-file-write-conventions]]
+[[text-file-write-conventions]] · [[encoding-discipline]]

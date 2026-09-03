@@ -179,6 +179,27 @@ MUTATIONS = [
         "        elif False:",
         "tests/test_selfcheck_checks.py",
     ),
+    (
+        "template: let a dependency float again",
+        "templates/typescript-project/package.json",
+        '"typescript": "5.9.3"',
+        '"typescript": "^5.9.3"',
+        "tests/test_selfcheck.py",
+    ),
+    (
+        "ci: pin node by major, so npm keeps drifting",
+        ".github/workflows/ci.yml",
+        "node-version: 24.20.0",
+        "node-version: 24",
+        "tests/test_selfcheck.py",
+    ),
+    (
+        "ci: pin an action to a mutable tag",
+        ".github/workflows/ci.yml",
+        "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "actions/setup-node@v7",
+        "tests/test_selfcheck.py",
+    ),
 ]
 
 PYTEST = [

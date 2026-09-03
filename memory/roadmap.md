@@ -33,9 +33,12 @@ Read this first in a fresh session (after CLAUDE.md). Run
   since v4.7.1 — Windows is the platform this ecosystem actually runs on, and
   three defects had shipped green through a Linux-only job. Green on ubuntu
   since 2026-08-01 (it had been red on every push for weeks on an unpinned
-  ruff — 57 findings no commit introduced). Toolchain pinned in
-  `requirements-dev.txt`, rule set in `ruff.toml`, Actions pinned to commit
-  SHAs with Dependabot — see [[decisions/toolchain-pinning]].
+  ruff — 57 findings no commit introduced). **Both** toolchains are pinned:
+  ruff/pytest in `requirements-dev.txt`, the rule set in `ruff.toml`, the
+  template's npm dependencies to exact versions, node to an exact patch via
+  `actions/setup-node`, and every Action to a commit SHA with Dependabot. The
+  TypeScript half was added 2026-09-03, after an unpinned npm turned master red
+  on two docs-only commits — see [[decisions/toolchain-pinning]].
 - **Gates**: `selfcheck.py` = 9 checks (JSON, agent scan, init-engine, memory
   index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter,
   **this note**). Lint runs the *same* invocation and the same pinned binary
