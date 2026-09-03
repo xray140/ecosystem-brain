@@ -9,7 +9,6 @@ Every project scaffolded via `/ecosystem-brain:init`. Each card also links back 
 
 - [[viral-videos-sm]] — cli · python
 - [[ipe-pipeline]] — data-pipeline · python · Verdun10
-- [[plan-action-energie-environnement]] — cli · python · Verdun10
 - [[metrologie-usine]] — data-pipeline · python · Verdun10
 - [[bet-tracker]] — cli · python
 - [[liberty]] — data-pipeline · python · Verdun10
@@ -19,5 +18,6 @@ Every project scaffolded via `/ecosystem-brain:init`. Each card also links back 
 Directory deleted; the card stays because decisions and links still point at it.
 
 - [[betting-tracker]] — web · typescript
+- [[plan-action-energie-environnement]] — cli · python (code sur GitHub)
 - [[my-first-tool]] — cli · python
 - [[betting-stats-analysis]] — cli · python
