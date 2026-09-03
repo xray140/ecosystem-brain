@@ -183,11 +183,15 @@ def test_main_runs_every_check_even_after_one_fails(monkeypatch):
         "check_paths",
         "check_lint",
         "check_frontmatter",
+        "check_roadmap",
     ):
         monkeypatch.setattr(sc, name, (lambda n: lambda: ran.append(n))(name))
     monkeypatch.setattr(sc, "check_json", lambda: (ran.append("check_json"), sc.fail("x"))[0])
     sc.main()
-    assert len(ran) == 8
+    # Counted, not hardcoded: a check added to main() but forgotten here would
+    # otherwise leave this test passing while running one check fewer than it
+    # claims to cover.
+    assert len(ran) == sc._selfcheck_step_count()
 
 
 # --- the two subprocess gates ---------------------------------------------
@@ -329,3 +333,71 @@ def test_skip_does_not_claim_the_check_passed(capsys):
     out = capsys.readouterr().out
     assert "[ok]" not in out
     assert sc.fails == []
+
+
+# --- 9. the orientation note ----------------------------------------------
+def _roadmap_repo(root, text):
+    (root / "memory").mkdir(parents=True, exist_ok=True)
+    (root / "memory" / "roadmap.md").write_text(text, encoding="utf-8")
+
+
+def test_roadmap_check_passes_on_the_real_note():
+    """The standing gate: whatever memory/roadmap.md claims today must be true
+    today. This is the assertion that would have gone red for four releases."""
+    sc.check_roadmap()
+    assert sc.fails == []
+
+
+def test_roadmap_check_fails_on_a_stale_number(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(
+        sc, "roadmap_claims", lambda: [("commands", r"- \*\*(\d+) commands\*\*", "17")]
+    )
+    _roadmap_repo(tmp_path, "# note\n- **12 commands** (global): ...\n")
+    monkeypatch.setattr(sc, "ROADMAP", tmp_path / "memory" / "roadmap.md")
+    sc.check_roadmap()
+    assert sc.fails
+    out = capsys.readouterr().out
+    assert "roadmap says commands = 12" in out
+    assert "repo says 17" in out
+
+
+def test_roadmap_check_fails_when_a_claim_is_deleted(tmp_path, monkeypatch, capsys):
+    """Deleting the sentence must not be the way to silence the gate.
+
+    Matching nothing is the failure mode that lets a note drift with no reader —
+    which is the whole reason this check exists.
+    """
+    monkeypatch.setattr(
+        sc, "roadmap_claims", lambda: [("commands", r"- \*\*(\d+) commands\*\*", "17")]
+    )
+    _roadmap_repo(tmp_path, "# note\nno claims here at all\n")
+    monkeypatch.setattr(sc, "ROADMAP", tmp_path / "memory" / "roadmap.md")
+    sc.check_roadmap()
+    assert sc.fails
+    assert "the 'commands' claim is gone" in capsys.readouterr().out
+
+
+def test_every_claim_pattern_matches_the_real_note():
+    """A pattern that no longer matches is reported as a deleted claim, which is
+    right — but failing on the pattern itself keeps a typo in the regex from
+    being mistaken for a missing sentence in the note."""
+    import re
+
+    text = sc.ROADMAP.read_text(encoding="utf-8")
+    for label, pattern, _actual in sc.roadmap_claims():
+        assert re.search(pattern, text, re.M), f"pattern for '{label}' matches nothing"
+
+
+def test_the_claims_cover_the_facts_that_rot():
+    """Named individually: dropping one from the table would silently shrink the
+    gate, and a count alone would not say which one went."""
+    labels = {label for label, _p, _a in sc.roadmap_claims()}
+    assert labels == {
+        "version",
+        "commands",
+        "build types",
+        "first-party agents",
+        "selfcheck checks",
+        "heartbeat checks",
+        "coverage floor",
+    }

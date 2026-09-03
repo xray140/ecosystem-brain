@@ -97,7 +97,7 @@ def test_secrets_doctor_agrees_with_project_doctor(tmp_path, env_body, expect_cl
     p = _project(tmp_path, env_body)
     (p / ".gitignore").write_text(".env\n", encoding="utf-8")
     r = subprocess.run(
-        [BASH, DOCTOR_SH.as_posix()], cwd=p, capture_output=True, text=True, timeout=120
+        [BASH, DOCTOR_SH.as_posix()], cwd=p, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120
     )
     marker = "- .env vs .env.example"
     assert marker in r.stdout, f"secrets-doctor produced no key-diff section:\n{r.stdout!r}"

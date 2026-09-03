@@ -53,7 +53,7 @@ def _run(hook: str, stdin: str = "", path: str | None = None, timeout: int = 60)
         input=stdin,
         cwd=REPO,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         env=env,
         timeout=timeout,
     )
@@ -83,7 +83,7 @@ def test_hook_is_executable_in_git(hook):
     out = subprocess.run(
         ["git", "-C", str(REPO), "ls-files", "-s", f"hooks/git/{hook}"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
     ).stdout
     assert out.strip(), f"hooks/git/{hook} is not tracked"
     mode = out.split()[0]
@@ -100,7 +100,7 @@ def test_bootstrap_points_git_at_the_tracked_hook_dir():
     configured = subprocess.run(
         ["git", "-C", str(REPO), "config", "--get", "core.hooksPath"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
     ).stdout.strip()
     assert configured, "core.hooksPath is not set — run scripts/bootstrap.py"
     assert Path(configured).resolve() == HOOK_DIR.resolve()

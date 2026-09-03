@@ -404,7 +404,11 @@ def print_summary(
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
     # check=False: every caller reads .returncode and reports it itself.
-    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", check=False)
+    # errors=replace: npm and git on Windows do not promise UTF-8, and a
+    # decode error must not abort a baseline that otherwise ran.
+    return subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False
+    )
 
 
 def apply(

@@ -96,7 +96,7 @@ def register(content: str, name: str) -> int:
                 "--name",
                 name,
             ],
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
         )
         return r.returncode
     finally:

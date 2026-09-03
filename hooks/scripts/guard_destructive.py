@@ -24,6 +24,9 @@ import re
 import shlex
 import sys
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+
 # Deleting any of these recursively is unrecoverable. Compared exactly, after
 # normalization — `/etc` is here, `/etc/myapp/cache` is ordinary work.
 CATASTROPHIC = {

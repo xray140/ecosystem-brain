@@ -140,7 +140,7 @@ def test_the_seed_is_committed_and_the_live_catalog_is_not():
     tracked = subprocess.run(
         ["git", "-C", str(REPO), "ls-files", "registry/catalog.json", "registry/catalog.seed.json"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         check=False,
     ).stdout.split()
     assert "registry/catalog.seed.json" in tracked

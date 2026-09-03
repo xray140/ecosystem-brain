@@ -56,17 +56,26 @@ MUTATIONS = [
         "tests/test_agent_usage.py",
     ),
     (
-        "memory-search: stop noticing the offline fallback",
+        # Was "stop noticing the offline fallback", anchored on `args.offline`.
+        # That flag went with Ollama in v4.8.0, so the mutation stopped applying
+        # and the harness has exited 1 on a skip ever since — a mutant that
+        # cannot be planted proves nothing about the test that should catch it.
+        # The property it guarded survives the backend: a status check that
+        # cannot report a degraded index.
+        "memory-search: report an under-covered index as healthy",
         "skills/memory/memory-search.py",
-        "        if offline and not args.offline:",
+        "        if missing > 0:",
         "        if False:",
         "tests/test_memory_search.py",
     ),
     (
-        "memory-search: drop the truncation that fixed the 500",
+        # Anchored on the Ollama request body until v4.8.0. MAX_EMBED_CHARS
+        # outlived the backend that forced it — the head of a note carries its
+        # topic — so the cap moved into HashEmbedder and the mutation follows it.
+        "memory-search: drop the truncation, so a long note drowns its own topic",
         "skills/memory/memory-search.py",
-        '            {"model": self.model, "prompt": text[:MAX_EMBED_CHARS]}',
-        '            {"model": self.model, "prompt": text}',
+        "        for tok in WORD_RE.findall(text[:MAX_EMBED_CHARS].lower()):",
+        "        for tok in WORD_RE.findall(text.lower()):",
         "tests/test_memory_search.py",
     ),
     (
@@ -149,6 +158,27 @@ MUTATIONS = [
         "    if False:",
         "tests/test_selfcheck.py",
     ),
+    (
+        "maintenance: capture the children in the locale encoding again",
+        "scripts/maintenance.py",
+        '        encoding="utf-8",\n        errors="replace",\n',
+        "",
+        "tests/test_maintenance.py",
+    ),
+    (
+        "selfcheck: let a deleted roadmap claim pass as nothing to check",
+        "scripts/selfcheck.py",
+        '            fail(f"roadmap: the \'{label}\' claim is gone — nothing left to check")',
+        "            pass",
+        "tests/test_selfcheck_checks.py",
+    ),
+    (
+        "selfcheck: stop comparing the roadmap claim to the repo",
+        "scripts/selfcheck.py",
+        "        elif m.group(1) != actual:",
+        "        elif False:",
+        "tests/test_selfcheck_checks.py",
+    ),
 ]
 
 PYTEST = [
@@ -173,7 +203,7 @@ for label, src, find, repl, tests in MUTATIONS:
         continue
     p.write_text(original.replace(find, repl), encoding="utf-8", newline="\n")
     try:
-        r = subprocess.run([*PYTEST, tests], capture_output=True, text=True, check=False)
+        r = subprocess.run([*PYTEST, tests], capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
     finally:
         p.write_text(original, encoding="utf-8", newline="\n")
     if r.returncode != 0:

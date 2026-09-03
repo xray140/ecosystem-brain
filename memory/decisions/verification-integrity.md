@@ -56,14 +56,17 @@ code.
 
 ## Consequences
 
-- `selfcheck` = 8 checks, including ruff and a hardcoded-path check, using the
+- `selfcheck` = 9 checks, including ruff and a hardcoded-path check, using the
   pinned toolchain CI uses. See [[toolchain-pinning]].
 - Every artefact the ecosystem produces now has a reader: `project_doctor` for
   vault cards, `task_doctor` for the scheduler, `memory-search status` for the
-  embedding index, `agent_usage` for the installed roster.
+  embedding index, `agent_usage` for the installed roster, and — since
+  2026-09-03, four releases after this note claimed the set was complete —
+  `selfcheck` check 9 for `roadmap.md`, the note a fresh session opens first.
 - The heartbeat is three-state (`ok` / `warn` / `FAIL`); *advisory* means "does
   not turn the run red", never "did not happen".
 - Tests assert gates go **red** when their subject breaks. A check that cannot
   fail is decoration — see `tests/test_selfcheck_checks.py`.
 
-Related: [[toolchain-pinning]] · [[agent-pinning]] · [[claude-best-practices]]
+Related: [[toolchain-pinning]] · [[agent-pinning]] · [[claude-best-practices]] ·
+[[encoding-discipline]] — the same rule pointed at what a gate *writes*

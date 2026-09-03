@@ -168,7 +168,7 @@ def ci_status(project: Path) -> str | None:
             cwd=str(project),
             capture_output=True,
             text=True,
-            encoding="utf-8",
+            encoding="utf-8", errors="replace",
             timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):

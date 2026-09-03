@@ -2,6 +2,74 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.8.1] — 2026-09-03
+
+**Eight weeks of heartbeat reports were mojibake, and every run exited 0.**
+`maintenance.run()` captured its children with `text=True` and no `encoding=`,
+so their UTF-8 came back decoded through the locale codepage: every em dash a
+check printed (bytes E2 80 94) was written into `memory/maintenance/<date>.md`
+as three cp1252 characters, and `update --check` filed its tick as `âœ“`. The
+corruption grew with the report — 1 occurrence on 2026-07-15, 15 by 2026-08-31 —
+while doctor, selfcheck, project-doctor and task-doctor all passed, because
+nothing was broken in the sense a check measures. The run was fine. The artefact
+was not. That is the failure `memory/decisions/verification-integrity.md` names,
+and the line at fault was the only uncovered line in the file.
+
+Fixed at the site, then generalised: `tests/test_subprocess_encoding.py` walks
+every `.py` under `scripts/`, `hooks/`, `skills/` and `tests/` with `ast` and
+requires each text-mode subprocess call to name `encoding="utf-8"` and an
+explicit `errors=`. Sixteen call sites already did; eleven did not.
+
+Fixing the capture side surfaced the other half of the boundary. With the parent
+finally decoding UTF-8, `memory-search.py status` still arrived as
+`memory search index � vault has 51 note(s)`: a child whose stdout is a pipe
+*encodes* with the locale codepage unless it says otherwise. Seven entry points
+never reconfigured stdout, and `selfcheck.py` was getting it right only by
+accident — it imports `scan_agent`, which reconfigures at import time, and
+reconfiguring is process-global. Both halves are now enforced, and the decision
+is written down in `memory/decisions/encoding-discipline.md`.
+
+`errors=` earned its place within the hour. Fixing the encoding alone made
+`mutate_checks.py` decode strictly, and its next run died in a subprocess reader
+*thread* on byte 0x97 — a cp1252 em dash from a French-locale child — reporting
+all 20 mutants caught and exiting 1 anyway, with the captured output truncated
+and nothing to say why. Not every child is ours: `git`, `gh`, `npm` and cmd.exe
+all speak the console codepage on occasion.
+
+**`memory/roadmap.md` had gone four releases stale, and nothing read it.** It is
+the note a fresh session opens first, and it opened with *Current state
+(v4.4.3)* against a repo at v4.8.0, citing 619 tests at 89% coverage against 756
+at 93%, `memory-search.py` "lowest at 70%" when it is at 100%, an 8-check
+selfcheck, and a CI job on ubuntu alone — the Windows runner added in v4.7.1 was
+missing from the one document that orients someone to the platform this
+ecosystem runs on.
+
+`selfcheck` check 9 now reads seven derivable claims back against the repo:
+version, command count, build types, first-party agent count, selfcheck's own
+step count (counted from the calls in `main()`, not the definitions), heartbeat
+check count, and the coverage floor. A claim that no longer *matches* fails; so
+does a claim that has been *deleted*, because deleting the sentence must not be
+the way to silence the gate. The volatile numbers are gone from the note on
+purpose: test count and coverage percentage move with every commit, so the note
+cites the floor, which moves only when a person raises it.
+
+**`plugin.json` was still advertising "local semantic search".** v4.8.0 said
+every doc that claimed semantic search now says keyword search. README did.
+`plugin.json` — the marketplace description, the one line someone reads before
+installing any of this — did not, for eleven days, because nothing reads it
+either. Corrected, and `test_ollama_is_gone.py` now holds the shipped
+descriptions, commands and skills to it. History is still free to say what
+semantic search was and what removing it cost; `CHANGELOG.md` and `memory/` are
+deliberately not scanned.
+
+**Two mutants had been unplantable since v4.8.0.** `mutate_checks.py` anchored
+on `args.offline` and on the Ollama request body, both removed with the backend,
+so it skipped them and exited 1 on every run — a harness that reports its own
+red is one nobody runs twice. Retargeted onto the properties that outlived the
+backend: a status check that cannot report an under-covered index, and a
+truncation that no longer stops a long note drowning its own topic. With three
+new mutants for the fixes above, the harness is 20 caught, 0 missed, 0 skipped.
+
 ## [4.8.0] — 2026-08-22
 
 **Ollama is out.** Not demoted — removed.

@@ -26,7 +26,11 @@ from __future__ import annotations
 
 import json
 import platform
+import sys
 from pathlib import Path
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 REGISTRY_DIR = Path(__file__).resolve().parent.parent / "registry"
 SHARED_FILE = REGISTRY_DIR / "installed.json"
