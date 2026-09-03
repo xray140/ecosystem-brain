@@ -187,6 +187,13 @@ MUTATIONS = [
         "tests/test_selfcheck.py",
     ),
     (
+        "verify_templates: stop following the log npm points at",
+        "scripts/verify_templates.py",
+        "            deeper = follow_debug_log(output)",
+        '            deeper = ""',
+        "tests/test_verify_templates.py",
+    ),
+    (
         "verify_templates: stop printing the runtime on a green run",
         "scripts/verify_templates.py",
         '                print(f"  [--] {template:22s} runtime: {runtime_versions(tool)}")',
@@ -199,8 +206,8 @@ MUTATIONS = [
         # nag: the pin and the test that guards it move together.
         "ci: pin node by major, so npm keeps drifting",
         ".github/workflows/ci.yml",
-        "node-version: 22.23.2",
-        "node-version: 22",
+        "node-version: 24.20.0",
+        "node-version: 24",
         "tests/test_selfcheck.py",
     ),
     (

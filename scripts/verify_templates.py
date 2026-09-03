@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -101,6 +102,34 @@ def runtime_versions(tool: str) -> str:
     return ", ".join(parts) or "no version probe for this runtime"
 
 
+# npm answers a crash with one line and a path: "A complete log of this run
+# can be found in: /home/runner/.npm/_logs/...-debug-0.log". On a runner that
+# file is unreachable by the time anyone reads the report, so the useful half
+# of the diagnosis — which package, which edge — is thrown away at the moment
+# it is produced, and the report keeps the one line that says least. Follow
+# the path while the file still exists.
+DEBUG_LOG_RE = re.compile(
+    r"complete log of this run can be found in:\s*(\S.*?)\s*$", re.M
+)
+
+
+def follow_debug_log(output: str, lines: int = 30) -> str:
+    """The tail of whatever log file `output` points at, or "" if there is none."""
+    m = DEBUG_LOG_RE.search(output)
+    if not m:
+        return ""
+    path = Path(m.group(1).strip())
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as e:
+        # A log that cannot be read is worth saying out loud: silence here would
+        # read as 'npm said nothing more', which is the opposite of the truth.
+        return f"      (could not read {path.name}: {e.__class__.__name__})"
+    tail = text.strip().splitlines()[-lines:]
+    head = f"      --- {path.name} (last {len(tail)} lines) ---"
+    return "\n".join([head, *(f"      {ln}" for ln in tail)])
+
+
 def verify(template: str, workdir: Path) -> tuple[bool, str]:
     """(ok, detail) for one template, scaffolded fresh under workdir."""
     tool = RUNTIME.get(template)
@@ -133,8 +162,11 @@ def verify(template: str, workdir: Path) -> tuple[bool, str]:
     for cmd in ip.verify_commands(template):
         c = _run(cmd, cwd=dest)
         if c.returncode != 0:
-            tail = "\n      ".join((c.stdout + c.stderr).strip().splitlines()[-10:])
-            return False, f"`{' '.join(cmd)}` failed:\n      {tail}"
+            output = c.stdout + c.stderr
+            tail = "\n      ".join(output.strip().splitlines()[-10:])
+            detail = f"`{' '.join(cmd)}` failed:\n      {tail}"
+            deeper = follow_debug_log(output)
+            return False, f"{detail}\n{deeper}" if deeper else detail
     return True, "scaffolded and its baseline is green"
 
 

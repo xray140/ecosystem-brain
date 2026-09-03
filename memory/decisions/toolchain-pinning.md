@@ -64,20 +64,41 @@ actually broke free to drift. Enforced by `tests/test_selfcheck.py`: template
 dependency specs must be exact, `node-version` must be a full patch version, and
 every action must be a 40-char commit SHA.
 
-**What the pin actually established.** Pinning node 24.20.0 (npm 11.19.0) split
-the platforms: windows went green, ubuntu failed identically. That is the useful
-half of a failed fix — it rules out the npm *version* as the whole story and
-leaves the platform. The template's tree carries libc-tagged optional packages
-(`@biomejs/cli-linux-x64` declares `libc: ["glibc"]`, `@biomejs/cli-linux-x64-musl`
-declares `["musl"]`), and libc is only evaluated on linux, which is the one
-platform still failing. The pin moved to **22.23.2 (npm 10.9.8)**, which
-predates that resolution path — and node 22 matches the template's own pinned
-`@types/node` 22.20.1, so it is the more coherent pin either way.
+**What the pins established, including the one that was wrong.** Three runs,
+two platforms, one error:
 
-Neither run said what it ran on. `verify_templates.py` now prints
-`runtime: node vX, npm Y` for every template, pass or fail — the npm version
-above had to be inferred from the workflow file, and a green run that records
-nothing gives a red one nothing to be compared against.
+| npm | windows | ubuntu |
+|---|---|---|
+| the runner image's own | red | red |
+| 11.19.0 (node 24.20.0) | **green** | red |
+| 10.9.8 (node 22.23.2) | red | red |
+
+The first reading of row two was that libc-tagged optional packages explained
+it: `@biomejs/cli-linux-x64` declares `libc: ["glibc"]` and
+`@biomejs/cli-linux-x64-musl` declares `["musl"]`, libc is evaluated only on
+linux, and linux was the platform still failing. npm's own source supported it —
+the platform check moved from `arborist/reify.js` in 10.9.8 to
+`arborist/build-ideal-tree.js` in 11.19.0, which is exactly where a rejected
+optional package could leave the null node that something then reads `edgesOut`
+from.
+
+Row three refuted it. Windows does not evaluate libc and windows failed anyway
+under 10.9.8. The theory is written down here as refuted rather than quietly
+dropped: it was the reason for a pin change that made things worse, and the next
+person reading this file would otherwise re-derive it from the same evidence.
+
+The pin stays at 24.20.0, which is the best measured outcome rather than the
+best argument. What is actually established is narrower and more useful: the
+failure is not a function of the npm version alone.
+
+**The diagnosis was impossible on purpose, and now is not.** Three runs produced
+the same seven words — `Cannot read properties of null (reading 'edgesOut')` —
+and a path to a debug log on a machine nobody can reach, and none of them said
+which node or npm produced it. `verify_templates.py` now prints
+`runtime: node vX, npm Y` for every template on every run, pass or fail, and
+follows the log path npm prints while the file still exists. A green run that
+records nothing gives a red one nothing to be compared against, and that
+comparison is the diagnosis.
 
 This note claimed in 2026-07-31 that the ecosystem "was pinning what it
 downloaded and floating what it ran". That was true of Python and stayed true of

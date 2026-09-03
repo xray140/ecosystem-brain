@@ -199,3 +199,74 @@ def test_the_versions_are_printed_on_a_green_run_too(capsys, monkeypatch):
     out = capsys.readouterr().out
     assert "runtime: <npm versions>" in out
     assert "green" in out
+
+
+# --- following npm's debug log --------------------------------------------
+# npm reports an arborist crash as one line plus a path. On a CI runner that
+# file is gone by the time anyone reads the report, so three runs across two
+# platforms produced the same seven-word error and nothing that named a package.
+# The log is right there while the step is still running.
+
+# The real thing, copied from run 33807018438 (ubuntu-latest, npm 10.9.8).
+NPM_CRASH_OUTPUT = """npm error Cannot read properties of null (reading 'edgesOut')
+npm error A complete log of this run can be found in: {path}
+"""
+
+
+def test_the_log_path_is_followed_and_its_tail_returned(tmp_path):
+    log = tmp_path / "2026-09-03T21_16_38_362Z-debug-0.log"
+    log.write_text("\n".join(f"line {i}" for i in range(1, 51)), encoding="utf-8")
+    out = vt.follow_debug_log(NPM_CRASH_OUTPUT.format(path=log), lines=5)
+    assert log.name in out
+    assert "line 50" in out, "the tail is the interesting end"
+    assert "line 46" in out, "the whole tail, not just the last line"
+    assert "line 45" not in out, "asked for 5 lines, got more"
+
+
+def test_output_with_no_log_path_yields_nothing_rather_than_noise():
+    """A command that failed for an ordinary reason must not gain a puzzling
+    empty section in the report."""
+    assert vt.follow_debug_log("npm error code E404\nnpm error 404 Not Found") == ""
+
+
+def test_an_unreadable_log_says_so_instead_of_going_quiet(tmp_path):
+    """Silence here would read as "npm had nothing more to say", which is the
+    opposite of the truth and the exact habit this whole change is against."""
+    missing = tmp_path / "gone-debug-0.log"
+    out = vt.follow_debug_log(NPM_CRASH_OUTPUT.format(path=missing))
+    assert "could not read" in out
+    assert missing.name in out
+
+
+def test_a_windows_log_path_survives_the_regex(tmp_path):
+    """The path npm prints on windows is drive-lettered and separated by
+    backslashes, and the regex must not mangle or truncate it — the crash of
+    2026-09-03 reported one of each across the two runners.
+    """
+    log = tmp_path / "win-debug-0.log"
+    log.write_text("arborist stack", encoding="utf-8")
+    windows_style = str(log).replace("/", chr(92))
+    out = vt.follow_debug_log(NPM_CRASH_OUTPUT.format(path=windows_style))
+    assert "arborist stack" in out, f"the windows path was not followed: {out!r}"
+
+
+def test_the_failure_detail_carries_the_log_when_there_is_one(tmp_path, monkeypatch):
+    """End to end: the report a human reads must contain the deeper output, not
+    just the line that points at it."""
+    log = tmp_path / "deep-debug-0.log"
+    log.write_text("verbose stack naming the package", encoding="utf-8")
+
+    def fake_run(cmd, cwd):
+        if "scaffold.py" in " ".join(cmd):
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+        return subprocess.CompletedProcess(
+            cmd, 1, NPM_CRASH_OUTPUT.format(path=log), ""
+        )
+
+    monkeypatch.setattr(vt, "_run", fake_run)
+    monkeypatch.setattr(vt.ip, "verify_commands", lambda t: [["npm", "install"]])
+    monkeypatch.setattr(vt.shutil, "which", lambda tool: "/usr/bin/npm")
+    ok, detail = vt.verify("typescript-project", tmp_path)
+    assert not ok
+    assert "edgesOut" in detail
+    assert "verbose stack naming the package" in detail
