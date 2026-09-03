@@ -12,6 +12,7 @@ Every project scaffolded via `/ecosystem-brain:init`. Each card also links back 
 - [[plan-action-energie-environnement]] — cli · python · Verdun10
 - [[metrologie-usine]] — data-pipeline · python · Verdun10
 - [[bet-tracker]] — cli · python
+- [[liberty]] — data-pipeline · python · Verdun10
 
 ## Archived
 
