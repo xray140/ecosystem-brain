@@ -9,7 +9,7 @@ tags: [project, python, iso50001, energie]
 # ipe-pipeline
 
 Renommé depuis `sensor-csv-pipeline` le 2026-07-20 (paquet `ipe_pipeline`,
-branche `ipe-pipeline`) — le projet n'est pas un pipeline CSV générique mais
+branche `main`, dossier renommé le 2026-09-03) — le projet n'est pas un pipeline CSV générique mais
 l'outil de suivi des IPE ISO 50001 de l'usine LSF Verdun.
 
 ## Stack
@@ -22,7 +22,8 @@ les compteurs SCADA et les compare aux TDB officiels.
 data-engineer, python-pro, test-writer, security-auditor
 
 ## Paths
-- Project: `C:\Users\Verdun-10\sensor-csv-pipeline` (renommage dossier -> `ipe-pipeline` en attente : verrou processus 2026-07-20 ; repo/paquet déjà renommés)
+- Project: `C:\Users\Verdun-10\ipe-pipeline` (renommage dossier achevé le 2026-09-03 ; le verrou de 2026-07-20 était Excel tenant `data/IPE_LIVE.xlsx`)
+- Repo: `https://github.com/xray140/ipe-pipeline` (privé, créé le 2026-09-03, branche `main`)
 
 ## Links
 - [[projects-moc]]

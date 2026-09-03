@@ -15,6 +15,7 @@ compteurs (gaz/eau/vapeur/élec…), indicateurs IPE / Tableau de Bord NRJ.
 
 ## Paths
 - Project: `C:\Users\Verdun-10\metrologie-usine` (pas de D: sur cette machine)
+- Repo: `https://github.com/xray140/metrologie-usine` (privé, créé le 2026-09-03, branche `main`)
 - Package: `metrologie_usine`
 - Sources: `U:` = `\\NASBEC01.fr.lactadom.ad\COMVEN` — voir `docs/sources.md` du projet
   - `MAINTENANCE\1_Methode\3. Metrologie_ DEIV` (métrologie)

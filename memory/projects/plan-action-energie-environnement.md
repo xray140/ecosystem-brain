@@ -19,6 +19,7 @@ cli-developer, python-pro, test-writer
 
 ## Paths
 - Project: `C:\Users\Verdun-10\plan-action-energie-environnement`
+- Repo: `https://github.com/xray140/plan-action-energie-environnement` (privé, créé le 2026-09-03, branche `main`)
 
 ## Links
 - [[projects-moc]]
