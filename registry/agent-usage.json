@@ -10,11 +10,11 @@
       "agents": {
         "claude-code-guide": "2026-08-30",
         "memory-curator": "2026-08-30",
-        "security-auditor": "2026-08-30",
-        "test-writer": "2026-08-21"
+        "security-auditor": "2026-09-01",
+        "test-writer": "2026-08-25"
       },
       "since": "2026-08-21",
-      "updated": "2026-08-31"
+      "updated": "2026-09-03"
     }
   }
 }
