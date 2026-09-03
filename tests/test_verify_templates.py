@@ -12,6 +12,7 @@ is what CI does.
 
 from __future__ import annotations
 
+import re
 import subprocess
 
 import init_project as ip
@@ -148,3 +149,53 @@ def test_nothing_is_written_inside_the_repo(monkeypatch):
 def test_every_shipped_template_declares_a_baseline(template):
     """A template with no verify commands would be silently unverifiable."""
     assert ip.verify_commands(template), f"{template} has no baseline commands"
+
+
+# --- the run records what it ran on ---------------------------------------
+# Added 2026-09-03: this step went red on ubuntu and green on windows for the
+# same commit, and neither run named its toolchain. The npm version had to be
+# inferred from the workflow file, which is exactly the kind of inference a
+# report exists to make unnecessary.
+def test_runtime_versions_names_both_node_and_npm():
+    """npm is the version that matters and node is the version that decides it,
+    so the npm runtime reports both."""
+    line = vt.runtime_versions("npm")
+    assert "node" in line, line
+    assert "npm" in line, line
+    # A version, not a word: "node v22.23.2, npm 10.9.8"
+    assert re.search(r"node v?\d+\.\d+\.\d+", line), line
+    assert re.search(r"npm v?\d+\.\d+\.\d+", line), line
+
+
+def test_runtime_versions_drops_build_metadata():
+    """`uv --version` answers "uv 0.11.23 (3cdf50e0 2026-06-19 x86_64-...)".
+    The build hash is noise in a line meant to be compared between two runs."""
+    line = vt.runtime_versions("uv")
+    assert line.startswith("uv "), line
+    assert "(" not in line, line
+    assert line.count("uv") == 1, f"the tool name is printed twice: {line}"
+
+
+def test_an_unprobed_runtime_says_so_rather_than_returning_nothing():
+    """An empty string in a diagnostic line reads as "nothing to report", which
+    is the failure this whole addition is about."""
+    assert vt.runtime_versions("cargo") == "no version probe for this runtime"
+
+
+def test_every_runtime_a_template_needs_has_a_version_probe():
+    """A template whose runtime has no probe would report its baseline result
+    without saying what produced it."""
+    missing = [tool for tool in set(vt.RUNTIME.values()) if tool not in vt.VERSION_PROBES]
+    assert not missing, f"runtimes with no version probe: {missing}"
+
+
+def test_the_versions_are_printed_on_a_green_run_too(capsys, monkeypatch):
+    """Recording the toolchain only on failure means there is never a green run
+    to compare a red one against — and the comparison is the diagnosis."""
+    monkeypatch.setattr(vt, "templates", lambda: ["typescript-project"])
+    monkeypatch.setattr(vt, "verify", lambda template, workdir: (True, "green"))
+    monkeypatch.setattr(vt, "runtime_versions", lambda tool: f"<{tool} versions>")
+    assert vt.main([]) == 0
+    out = capsys.readouterr().out
+    assert "runtime: <npm versions>" in out
+    assert "green" in out

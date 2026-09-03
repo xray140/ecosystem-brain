@@ -66,6 +66,41 @@ def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
     )
 
 
+# What to ask each runtime for its version. Printed on EVERY run, pass or fail.
+#
+# On 2026-09-03 this step went red on ubuntu and stayed green on windows with
+# the same commit, and neither run recorded the toolchain it used — so "the same
+# code failed there and passed here" had nothing to attach to, and the npm
+# version had to be inferred from the node version in the workflow file. A
+# report that names the error but not the thing that produced it cannot be
+# compared against the last green run, which is the only comparison that
+# identifies an environment fault. See decisions/verification-integrity.
+VERSION_PROBES: dict[str, tuple[list[str], ...]] = {
+    "npm": (["node", "--version"], ["npm", "--version"]),
+    "uv": (["uv", "--version"],),
+}
+
+
+def runtime_versions(tool: str) -> str:
+    """One line naming the versions `tool`'s baseline will run on."""
+    parts: list[str] = []
+    for probe in VERSION_PROBES.get(tool, ()):
+        try:
+            r = _run(probe, cwd=REPO)
+        except OSError as e:  # pragma: no cover — probe absent is reported, not raised
+            parts.append(f"{probe[0]}: unavailable ({e.__class__.__name__})")
+            continue
+        out = (r.stdout or r.stderr).strip().splitlines()
+        if not out:
+            parts.append(f"{probe[0]}: no output")
+            continue
+        # `uv --version` answers "uv 0.11.23 (3cdf50e0 2026-06-19 x86_64-...)":
+        # drop the build metadata, and don't print the tool's name twice.
+        ver = out[0].split("(")[0].strip()
+        parts.append(ver if ver.startswith(probe[0]) else f"{probe[0]} {ver}")
+    return ", ".join(parts) or "no version probe for this runtime"
+
+
 def verify(template: str, workdir: Path) -> tuple[bool, str]:
     """(ok, detail) for one template, scaffolded fresh under workdir."""
     tool = RUNTIME.get(template)
@@ -126,6 +161,9 @@ def main(argv: list[str] | None = None) -> int:
     with tempfile.TemporaryDirectory(prefix="eco-templates-") as tmp:
         workdir = Path(tmp)
         for template in names:
+            tool = RUNTIME.get(template)
+            if tool:
+                print(f"  [--] {template:22s} runtime: {runtime_versions(tool)}")
             ok, detail = verify(template, workdir)
             print(f"  [{'ok' if ok else '!!'}] {template:22s} {detail}")
             failed += not ok

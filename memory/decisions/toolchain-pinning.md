@@ -64,6 +64,21 @@ actually broke free to drift. Enforced by `tests/test_selfcheck.py`: template
 dependency specs must be exact, `node-version` must be a full patch version, and
 every action must be a 40-char commit SHA.
 
+**What the pin actually established.** Pinning node 24.20.0 (npm 11.19.0) split
+the platforms: windows went green, ubuntu failed identically. That is the useful
+half of a failed fix — it rules out the npm *version* as the whole story and
+leaves the platform. The template's tree carries libc-tagged optional packages
+(`@biomejs/cli-linux-x64` declares `libc: ["glibc"]`, `@biomejs/cli-linux-x64-musl`
+declares `["musl"]`), and libc is only evaluated on linux, which is the one
+platform still failing. The pin moved to **22.23.2 (npm 10.9.8)**, which
+predates that resolution path — and node 22 matches the template's own pinned
+`@types/node` 22.20.1, so it is the more coherent pin either way.
+
+Neither run said what it ran on. `verify_templates.py` now prints
+`runtime: node vX, npm Y` for every template, pass or fail — the npm version
+above had to be inferred from the workflow file, and a green run that records
+nothing gives a red one nothing to be compared against.
+
 This note claimed in 2026-07-31 that the ecosystem "was pinning what it
 downloaded and floating what it ran". That was true of Python and stayed true of
 TypeScript for five more weeks. The pin belongs at every toolchain the repo has,

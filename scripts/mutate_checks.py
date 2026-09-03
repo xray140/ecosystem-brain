@@ -187,10 +187,20 @@ MUTATIONS = [
         "tests/test_selfcheck.py",
     ),
     (
+        "verify_templates: stop printing the runtime on a green run",
+        "scripts/verify_templates.py",
+        '                print(f"  [--] {template:22s} runtime: {runtime_versions(tool)}")',
+        "                pass",
+        "tests/test_verify_templates.py",
+    ),
+    (
+        # This anchor tracks the pin on purpose. Bumping node without revisiting
+        # the mutant makes the harness skip it and exit 1, which is the intended
+        # nag: the pin and the test that guards it move together.
         "ci: pin node by major, so npm keeps drifting",
         ".github/workflows/ci.yml",
-        "node-version: 24.20.0",
-        "node-version: 24",
+        "node-version: 22.23.2",
+        "node-version: 22",
         "tests/test_selfcheck.py",
     ),
     (
