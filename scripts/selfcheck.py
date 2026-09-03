@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scan_agent import scan, worst
+from scan_agent import RULES, scan, worst
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
@@ -426,6 +426,10 @@ def roadmap_claims() -> list[tuple[str, str, str]]:
         ("selfcheck checks", r"`selfcheck\.py` = (\d+) checks", str(_selfcheck_step_count())),
         ("heartbeat checks", r"heartbeat = (\d+) checks", str(len(maintenance.CHECKS))),
         ("coverage floor", r"coverage floor \*\*(\d+)%\*\*", str(COVERAGE_FLOOR)),
+        # The note has advertised a rule count since v4.3.x. Now that every rule
+        # has a probe and a mutant (tests/test_scan_agent_rules.py), the number
+        # means something — so it gets read back like the rest.
+        ("scanner rules", r"`scan_agent\.py` \((\d+) rules\)", str(len(RULES))),
     ]
 
 

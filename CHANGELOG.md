@@ -86,6 +86,38 @@ because a tag is mutable and runs with a `GITHUB_TOKEN`. See
 that the ecosystem "was pinning what it downloaded and floating what it ran".
 It was right, and it was describing Python only.
 
+**The supply-chain gate had 20 rules and no evidence that 20 of them worked.**
+`scan_agent.py` sat at 100% line coverage, which proves the loop over `RULES`
+ran and nothing else. It could not say that a rule matched what its label
+claimed, that it still matched after someone tightened its regex, or that it was
+doing any work at all — a rule whose every example was also caught by a
+neighbour could be deleted with the suite still green.
+
+`tests/test_scan_agent_rules.py` is a corpus instead of a set of examples. Each
+of the 20 rules gets a probe it must flag with an exact label and severity, and
+a near-miss — benign text that looks like the attack — it must not. Two tests
+keep the corpus honest as the table grows: one fails when a rule is added
+without a probe, the other requires probes and rules to be the same number and
+every probe's label to be one a rule actually defines.
+
+`test_no_rule_is_dead_weight` is the part that matters. It deletes each rule in
+turn and requires one of that rule's own probes to stop being flagged — 20
+mutations of a data table, run in the normal suite. All 20 rules survive it, so
+the number is now 20 rules that each catch something nothing else catches. The
+tool-grant heuristic is checked separately, since it is a function rather than a
+row and the loop cannot reach it.
+
+Verified against the corpus itself: a duplicated rule, a rule with no probe, and
+a neutered regex each turn the file red. Three matching entries are registered
+in `mutate_checks.py` (26 caught, 0 missed, 0 skipped), and `selfcheck` check 9
+now reads the roadmap's advertised rule count back against `len(RULES)` — the
+count means something now, so it gets checked like the other claims.
+
+One characteristic is pinned as deliberate rather than fixed: prose *about* an
+attack trips the same rule as the attack. A prose exemption would be a bypass —
+an attacker need only phrase the payload as documentation — so the gate fails
+closed and a human reads the quarantined file.
+
 **Two mutants had been unplantable since v4.8.0.** `mutate_checks.py` anchored
 on `args.offline` and on the Ollama request body, both removed with the backend,
 so it skipped them and exited 1 on every run — a harness that reports its own

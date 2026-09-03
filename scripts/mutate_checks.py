@@ -194,6 +194,29 @@ MUTATIONS = [
         "tests/test_selfcheck.py",
     ),
     (
+        # The rules table is 20 regexes and one gate; line coverage proves only
+        # that the loop ran. These three ask the harder question.
+        "scan_agent: apply only the first rule in the table",
+        "scripts/scan_agent.py",
+        "    for severity, label, pattern, why in RULES:",
+        "    for severity, label, pattern, why in RULES[:1]:",
+        "tests/test_scan_agent_rules.py",
+    ),
+    (
+        "scan_agent: neuter one rule's regex, leaving its label in place",
+        "scripts/scan_agent.py",
+        r'        re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions", re.I),',
+        r'        re.compile(r"^(?!x)x_never_matches", re.I),',
+        "tests/test_scan_agent_rules.py",
+    ),
+    (
+        "scan_agent: stop running the tool-grant check (the one detection that is code)",
+        "scripts/scan_agent.py",
+        "    findings.extend(_check_tool_grants(content))",
+        "    pass",
+        "tests/test_scan_agent_rules.py",
+    ),
+    (
         "ci: pin an action to a mutable tag",
         ".github/workflows/ci.yml",
         "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",

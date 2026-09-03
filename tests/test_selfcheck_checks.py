@@ -400,4 +400,5 @@ def test_the_claims_cover_the_facts_that_rot():
         "selfcheck checks",
         "heartbeat checks",
         "coverage floor",
+        "scanner rules",
     }

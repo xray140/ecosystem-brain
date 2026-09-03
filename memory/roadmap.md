@@ -57,6 +57,12 @@ Read this first in a fresh session (after CLAUDE.md). Run
 - **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
   curl|bash, PowerShell cradles (iwr|iex, WebClient, -enc), base64-exec,
   eval/exec, rm -rf, TLS-off (incl. flag-first `curl -k`), exfil, hidden chars.
+  Every rule has a probe it must catch, a near-miss it must not, and a
+  mutant: `test_no_rule_is_dead_weight` deletes each rule in turn and
+  requires one of its own probes to go quiet, so the count is 20 rules that
+  each catch something nothing else catches — not 20 rows and one regex
+  doing the work. Prose *about* an attack is flagged too, deliberately: a
+  prose exemption would be a bypass.
 - **Dogfood**: the repo's own `CLAUDE.md` imports `@AGENTS.md` — same cross-tool
   pattern it ships in templates.
 - **Doctor**: `/ecosystem-brain:doctor` (`doctor.py`) = live-hooks + repo↔~/.claude
