@@ -238,16 +238,19 @@ def test_an_unreadable_log_says_so_instead_of_going_quiet(tmp_path):
     assert missing.name in out
 
 
-def test_a_windows_log_path_survives_the_regex(tmp_path):
-    """The path npm prints on windows is drive-lettered and separated by
-    backslashes, and the regex must not mangle or truncate it — the crash of
-    2026-09-03 reported one of each across the two runners.
+def test_a_windows_log_path_is_captured_whole():
+    r"""The path npm prints on windows is drive-lettered and backslashed:
+    C:\npm\cache\_logs\2026-09-03T21_17_07_901Z-debug-0.log
+
+    Only the capture is asserted, not the read — following a backslash path
+    needs a filesystem that treats backslashes as separators, so asserting
+    the read made this test pass on windows and fail on ubuntu. Which is the
+    same platform assumption the rest of this change set is about.
     """
-    log = tmp_path / "win-debug-0.log"
-    log.write_text("arborist stack", encoding="utf-8")
-    windows_style = str(log).replace("/", chr(92))
-    out = vt.follow_debug_log(NPM_CRASH_OUTPUT.format(path=windows_style))
-    assert "arborist stack" in out, f"the windows path was not followed: {out!r}"
+    path = r"C:\npm\cache\_logs\2026-09-03T21_17_07_901Z-debug-0.log"
+    m = vt.DEBUG_LOG_RE.search(NPM_CRASH_OUTPUT.format(path=path))
+    assert m, "the windows path was not matched at all"
+    assert m.group(1) == path, f"captured {m.group(1)!r}, not the whole path"
 
 
 def test_the_failure_detail_carries_the_log_when_there_is_one(tmp_path, monkeypatch):
