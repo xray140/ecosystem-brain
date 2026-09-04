@@ -64,6 +64,12 @@ def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
         text=True,
         encoding="utf-8",
         errors="replace",
+        # tool_env: resolving npm is not enough on its own. npm's shebang is
+        # `#!/usr/bin/env node`, so a correctly-chosen npm still picks up
+        # whatever node PATH offers — and inside a `uv run` child that is the
+        # interpreter's bin directory, which on GitHub's ubuntu image ships its
+        # own node. The chosen tools have to lead PATH for grandchildren.
+        env=ip.tool_env(),
     )
 
 

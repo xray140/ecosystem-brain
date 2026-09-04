@@ -64,41 +64,61 @@ actually broke free to drift. Enforced by `tests/test_selfcheck.py`: template
 dependency specs must be exact, `node-version` must be a full patch version, and
 every action must be a 40-char commit SHA.
 
-**What the pins established, including the one that was wrong.** Three runs,
-two platforms, one error:
+**The pin was installed and then not used.** Every ubuntu row of the matrix
+below measured the same unpinned npm, so three of its four cells said nothing:
 
-| npm | windows | ubuntu |
-|---|---|---|
-| the runner image's own | red | red |
-| 11.19.0 (node 24.20.0) | **green** | red |
-| 10.9.8 (node 22.23.2) | red | red |
+| pinned npm | windows | ubuntu | what ubuntu actually ran |
+|---|---|---|---|
+| the runner image's own | red | red | 10.9.8 |
+| 11.19.0 (node 24.20.0) | **green** | red | 10.9.8 |
+| 10.9.8 (node 22.23.2) | red | red | 10.9.8 |
 
-The first reading of row two was that libc-tagged optional packages explained
-it: `@biomejs/cli-linux-x64` declares `libc: ["glibc"]` and
-`@biomejs/cli-linux-x64-musl` declares `["musl"]`, libc is evaluated only on
-linux, and linux was the platform still failing. npm's own source supported it —
-the platform check moved from `arborist/reify.js` in 10.9.8 to
-`arborist/build-ideal-tree.js` in 11.19.0, which is exactly where a rejected
-optional package could leave the null node that something then reads `edgesOut`
-from.
+`actions/setup-node` installs the pin and reports `node: v24.20.0`. The shell in
+the next step agrees — `which -a node` lists the tool cache first and
+`node --version` answers v24.20.0. The template baseline three steps later
+resolved `/usr/local/bin/node` v22.23.2 with npm 10.9.8. Same job, same
+GITHUB_PATH, opposite answers.
 
-Row three refuted it. Windows does not evaluate libc and windows failed anyway
-under 10.9.8. The theory is written down here as refuted rather than quietly
-dropped: it was the reason for a pin change that made things worse, and the next
-person reading this file would otherwise re-derive it from the same evidence.
+The cause is one line of PATH ordering:
 
-The pin stays at 24.20.0, which is the best measured outcome rather than the
-best argument. What is actually established is narrower and more useful: the
-failure is not a function of the npm version alone.
+    shell            /opt/hostedtoolcache/node/24.20.0/x64/bin : ... : /usr/local/bin : ...
+    uv run's python  /usr/local/bin : /opt/hostedtoolcache/node/24.20.0/x64/bin : ...
 
-**The diagnosis was impossible on purpose, and now is not.** Three runs produced
-the same seven words — `Cannot read properties of null (reading 'edgesOut')` —
-and a path to a debug log on a machine nobody can reach, and none of them said
-which node or npm produced it. `verify_templates.py` now prints
-`runtime: node vX, npm Y` for every template on every run, pass or fail, and
-follows the log path npm prints while the file still exists. A green run that
-records nothing gives a red one nothing to be compared against, and that
-comparison is the diagnosis.
+**`uv run` prepends the interpreter's bin directory to PATH.** On this image
+that is `/usr/local/bin`, which also ships node and npm — so anything the
+ecosystem resolves inside a `uv run` child gets the system copy, and the pin is
+shadowed by the very wrapper the ecosystem standardises on. This is not a CI
+quirk: nvm, fnm and volta shadow exactly the same way, so `init --apply` has
+been verifying scaffolded projects against whichever node the interpreter's
+directory happened to hold rather than the one the user chose.
+
+Two theories died on the way here, and both are kept rather than tidied away.
+The first blamed libc-tagged optional packages, with npm's own source in
+support — the platform check moved from `arborist/reify.js` in 10.9.8 to
+`arborist/build-ideal-tree.js` in 11.19.0, exactly where a rejected optional
+package leaves a null node. Row three refuted it: windows does not evaluate libc
+and failed anyway. The second blamed vitest's undeclared `vite` peer, which the
+stack supported — the crash is four frames deep in `#loadPeerSet`. It is still
+untested, because ubuntu never ran the pinned npm.
+
+The lesson is not about npm. **A pin nobody checks is decoration**, and this one
+went unchecked for four runs while being cited as evidence in this very note.
+
+## Consequences of that, in code
+
+- `ECOSYSTEM_TOOL_<NAME>` names a binary explicitly and beats PATH
+  (`init_project.tool_override`). The caller's shell is the only participant
+  whose PATH is intact, so the caller is who settles it.
+- `tool_env()` puts the chosen binary's directory at the head of the child's
+  PATH, because resolving npm is not enough on its own: npm's shebang is
+  `#!/usr/bin/env node`, so a correctly-chosen npm still finds the wrong node.
+- CI names both tools with `command -v`, run in the shell, for the two steps
+  that shell out to a template's toolchain.
+- A step asserts the pin is in effect and prints `PATH` and `which -a node npm`
+  when it is not, so the next failure of this shape is one log away rather than
+  four runs away.
+- `verify_templates.py` reports the resolved path next to the version. The
+  version alone had been agreeing with itself for four runs.
 
 This note claimed in 2026-07-31 that the ecosystem "was pinning what it
 downloaded and floating what it ran". That was true of Python and stayed true of

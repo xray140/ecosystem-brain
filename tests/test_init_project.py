@@ -7,8 +7,13 @@ just "doesn't raise".
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import init_project as ip
 import pytest
+
+REPO = Path(__file__).resolve().parent.parent
 
 
 @pytest.fixture(scope="module")
@@ -174,3 +179,59 @@ def test_all_build_types_resolve_and_compose(profiles):
         _resolved, dropped = ip.classify_agents(cfg["agents"], profiles)
         assert dropped == [], f"build {build} maps to unknown agents: {dropped}"
         assert ip.compose_agents_md(f"demo-{build}", cfg)
+
+
+# --- naming the toolchain explicitly --------------------------------------
+# `uv run` prepends the interpreter's bin directory to PATH. On GitHub's ubuntu
+# image that is /usr/local/bin, which ships node and npm — so a node pinned by
+# actions/setup-node was shadowed inside every uv-run child, and four CI runs
+# measured a toolchain nobody had chosen while the shell one step earlier
+# resolved it correctly. nvm, fnm and volta shadow the same way.
+
+
+def test_an_override_wins_over_path(tmp_path, monkeypatch):
+    chosen = tmp_path / "npm"
+    chosen.write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(chosen))
+    monkeypatch.setattr(ip.shutil, "which", lambda name: "/usr/local/bin/npm")
+    assert ip.resolve_exe(["npm", "install"]) == [str(chosen), "install"]
+
+
+def test_path_is_used_when_no_override_is_set(monkeypatch):
+    monkeypatch.delenv("ECOSYSTEM_TOOL_NPM", raising=False)
+    monkeypatch.setattr(ip.shutil, "which", lambda name: "/usr/local/bin/npm")
+    assert ip.resolve_exe(["npm", "install"]) == ["/usr/local/bin/npm", "install"]
+
+
+def test_an_override_naming_a_missing_file_is_ignored(tmp_path, monkeypatch):
+    """A stale override must fall back to PATH, not point the baseline at
+    nothing — the caller would get a bare FileNotFoundError instead of the
+    'tool is missing' report resolve_exe exists to preserve."""
+    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(tmp_path / "not-here"))
+    monkeypatch.setattr(ip.shutil, "which", lambda name: "/usr/local/bin/npm")
+    assert ip.resolve_exe(["npm", "install"]) == ["/usr/local/bin/npm", "install"]
+
+
+def test_the_override_directory_leads_path_for_grandchildren(tmp_path, monkeypatch):
+    """npm's shebang is `#!/usr/bin/env node`, so a correctly-resolved npm still
+    finds the wrong node unless PATH agrees."""
+    chosen = tmp_path / "bin"
+    chosen.mkdir()
+    (chosen / "npm").write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(chosen / "npm"))
+    env = ip.tool_env()
+    assert env["PATH"].split(os.pathsep)[0] == str(chosen)
+
+
+def test_tool_env_is_unchanged_without_overrides(monkeypatch):
+    monkeypatch.delenv("ECOSYSTEM_TOOL_NPM", raising=False)
+    monkeypatch.setenv("PATH", "/only/this")
+    assert ip.tool_env()["PATH"] == "/only/this"
+
+
+def test_ci_names_the_toolchain_for_the_template_step():
+    """The shell is the only participant whose PATH is intact, so it is the one
+    that must say which npm. Without this the pin is installed and ignored."""
+    ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "ECOSYSTEM_TOOL_NPM" in ci, "CI does not name the npm it pinned"
+    assert "ECOSYSTEM_TOOL_NODE" in ci, "CI does not name the node it pinned"
