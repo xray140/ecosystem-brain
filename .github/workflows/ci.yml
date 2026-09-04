@@ -91,6 +91,25 @@ jobs:
       # Toolchain pinned in requirements-dev.txt — an unpinned `--with ruff`
       # resolves the newest release on every run, and ruff's default rule set
       # moving once turned this job red with findings no commit introduced.
+      # setup-node reported `node: v24.20.0` and the template baseline three
+      # steps later ran /usr/local/bin/node v22.23.2 with npm 10.9.8 — the runner
+      # image's own. The pin was being installed and then not used, so every
+      # ubuntu failure attributed to a pinned npm was measured on an unpinned
+      # one. A pin nobody checks is decoration; this fails loudly instead, and
+      # prints what it saw so the next person does not have to infer it.
+      - name: The node pin is actually in effect
+        run: |
+          echo "PATH=$PATH"
+          echo "--- every node/npm on PATH ---"
+          which -a node npm || true
+          echo "--- what answers ---"
+          node --version
+          npm --version
+          test "$(node --version)" = "v24.20.0" || {
+            echo "::error::node pin not in effect: $(node --version) != v24.20.0"
+            exit 1
+          }
+
       - name: Lint (ruff)
         run: uv run --with-requirements requirements-dev.txt --no-project ruff check scripts tests hooks skills
 
