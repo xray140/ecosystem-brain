@@ -283,6 +283,20 @@ MUTATIONS = [
         'tests/test_guard_destructive.py',
     ),
     (
+        "update-agents: stop normalising upstream CRLF on the way in",
+        "scripts/update-agents.py",
+        'repo_file.write_text(content.replace("\\r\\n", "\\n"), encoding="utf-8", newline="\\n")',
+        'repo_file.write_text(content, encoding="utf-8")',
+        "tests/test_update_agents.py",
+    ),
+    (
+        "selfcheck: let a build map to agents that do not exist",
+        "scripts/selfcheck.py",
+        'fail(f"build \'{b}\' maps to unknown agents: {dropped}")',
+        "pass",
+        "tests/test_selfcheck_checks.py",
+    ),
+    (
         "ci: pin an action to a mutable tag",
         ".github/workflows/ci.yml",
         "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",

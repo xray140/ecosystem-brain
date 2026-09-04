@@ -458,3 +458,47 @@ def test_proof_of_execution_beats_the_network_signature():
     ran_and_failed = DNS_ERROR + "\n1 failed, 800 passed in 31.2s"
     assert sc._toolchain_unreachable(offline, sc.PYTEST_RAN) is True
     assert sc._toolchain_unreachable(ran_and_failed, sc.PYTEST_RAN) is False
+
+
+# --- 3. init profile engine ------------------------------------------------
+# The one check in this file with no test asserting it can fail. Its only
+# failure branch was deletable with the whole suite green:
+#
+#   mutating: fail(f"build '{b}' maps to unknown agents: {dropped}")
+#   verdict: SURVIVED — nothing covers this branch
+#   902 passed, 2 skipped
+#
+# What it guards is real: project-profiles.json names agents by string, and a
+# renamed or removed catalog entry means `/ecosystem-brain:init` scaffolds a
+# project whose agent roster silently loses members.
+
+
+def test_profiles_check_fails_when_a_build_maps_to_an_unknown_agent(monkeypatch, capsys):
+    import init_project as ip
+
+    monkeypatch.setattr(ip, "classify_agents", lambda names, profiles: ([], ["ghost-agent"]))
+    sc.check_profiles()
+    assert sc.fails, "an unresolvable agent did not fail the check"
+    out = capsys.readouterr().out
+    assert "ghost-agent" in out, "the report must name the agent that could not be resolved"
+
+
+def test_profiles_check_passes_when_every_agent_resolves(capsys):
+    """The standing assertion, against the real profiles and the real catalog."""
+    sc.check_profiles()
+    assert sc.fails == []
+    assert "build types resolve" in capsys.readouterr().out
+
+
+def test_profiles_check_fails_when_composing_agents_md_raises(monkeypatch):
+    """The compose call is there so a template break is caught before a user
+    meets it. An exception escaping selfcheck is a crash, not a finding — but
+    it must not be silence either."""
+    import init_project as ip
+
+    def boom(name, cfg):
+        raise KeyError("stack_blurb")
+
+    monkeypatch.setattr(ip, "compose_agents_md", boom)
+    with pytest.raises(KeyError):
+        sc.check_profiles()

@@ -86,6 +86,28 @@ because a tag is mutable and runs with a `GITHUB_TOKEN`. See
 that the ecosystem "was pinning what it downloaded and floating what it ran".
 It was right, and it was describing Python only.
 
+**All three unverified audit leads turned out to be real.** Seven of the audit
+workflow's verify agents died on a session limit and its script counted a null
+verdict as "not refuted", so three findings were reported as having survived
+both skeptics when they had never been judged — the same defect this release is
+about, in the harness written to find it. Each was then checked by hand, by
+planting the mutation and running the whole suite:
+
+    [SURVIVED] guard_destructive: block becomes allow          889 passed
+    [SURVIVED] update-agents: drop the upstream CRLF handling  898 passed
+    [SURVIVED] selfcheck: check_profiles cannot report a build
+               that maps to agents which do not exist          902 passed
+
+ is stubbed by both fixtures that touch it, so the body v4.3.4 was
+an entire release about — killing upstream  and Windows text-mode translation —
+never executed under pytest.  was the one selfcheck check with
+no test asserting it can fail, and what it guards is real: profiles name agents
+by string, so a renamed catalog entry means  scaffolds a project whose
+agent roster silently loses members.
+
+Ten tests added across the three, each verified to catch the mutant it exists
+for. Table 32 -> 36, still 0 missed and 0 skipped.
+
 **The destructive guard's entry point had no test, and two mutants proved it.**
 Every test called `check()` directly. `hooks.json` wires the *process* —
 `{"if": "Bash(rm *)", "command": "uv run ... guard_destructive.py"}` — so

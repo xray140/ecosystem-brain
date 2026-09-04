@@ -142,3 +142,52 @@ def test_a_github_entry_whose_file_exists_still_checks_upstream(tmp_path, monkey
     monkeypatch.setattr(ua.gh, "md5", lambda content: "same")
     entry = {"name": "present", "source": "github:o/r/present.md", "hash": "same", "ref": "main"}
     assert ua.update_item(entry, "agent", check_only=True) == "up-to-date"
+
+
+# --- the write path itself -------------------------------------------------
+# Both fixtures in this file and in test_rollback.py stub _write_agent, so its
+# body never ran under pytest. Removing the CRLF handling entirely left the
+# suite green:
+#
+#   anchor matches: 1
+#   verdict: SURVIVED — nothing exercises the write path
+#   898 passed, 2 skipped
+#
+# v4.3.4 was an entire release about write sites that ignored .gitattributes,
+# and this one kills two distinct CRLF sources: upstream content that already
+# ships \r\n, and text mode translating \n on Windows. Either one dirties
+# `git status` for everyone who pulls the agent.
+
+
+def test_upstream_crlf_is_normalised_on_the_way_in(tmp_path, monkeypatch):
+    repo_file = tmp_path / "repo" / "demo.md"
+    global_file = tmp_path / "live" / "demo.md"
+    monkeypatch.setattr(ua.layout, "target_paths", lambda kind, name: (repo_file, global_file))
+
+    ua._write_agent("demo", "agents", "---\nname: demo\r\n---\r\nbody\r\n")
+
+    raw = repo_file.read_bytes()
+    assert b"\r\n" not in raw, "upstream CRLF survived into the repo file"
+    assert raw.endswith(b"body\n")
+
+
+def test_the_live_copy_matches_the_repo_file_byte_for_byte(tmp_path, monkeypatch):
+    """`doctor` compares the two; a difference here is drift on arrival."""
+    repo_file = tmp_path / "repo" / "demo.md"
+    global_file = tmp_path / "live" / "demo.md"
+    monkeypatch.setattr(ua.layout, "target_paths", lambda kind, name: (repo_file, global_file))
+
+    ua._write_agent("demo", "agents", "line one\r\nline two\n")
+
+    assert global_file.read_bytes() == repo_file.read_bytes()
+
+
+def test_missing_parent_directories_are_created(tmp_path, monkeypatch):
+    """A first install writes into directories that do not exist yet."""
+    repo_file = tmp_path / "deep" / "repo" / "demo.md"
+    global_file = tmp_path / "deep" / "live" / "demo.md"
+    monkeypatch.setattr(ua.layout, "target_paths", lambda kind, name: (repo_file, global_file))
+
+    ua._write_agent("demo", "agents", "body\n")
+
+    assert repo_file.exists() and global_file.exists()
