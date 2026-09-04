@@ -149,7 +149,26 @@ LINT_PATHS = ("scripts", "tests", "hooks", "skills")
 NETWORK_ERRORS = ("Failed to fetch", "dns error", "error sending request", "Request failed after")
 
 
-def _toolchain_unreachable(output: str) -> bool:
+# Evidence the tool actually RAN. The network signatures alone cannot separate
+# "uv could not fetch the toolchain" from "the toolchain ran and the suite went
+# red quoting a network error" — and the second is not hypothetical: the phrases
+# live in this repo's own corpus (tests/test_selfcheck_checks.py, DNS_ERROR), so
+# a failure in the very test guarding this branch would silence the branch. A
+# red run reported as "did NOT run" exits 0, and the git pre-push hook, CI and
+# the weekly heartbeat all gate on that exit code.
+PYTEST_RAN = re.compile(r"\b\d+ (?:passed|failed|error|errors|xfailed|deselected)\b")
+RUFF_RAN = re.compile(r"(?m)^(?:.+:\d+:\d+: \w+|All checks passed|Found \d+ error)")
+
+
+def _toolchain_unreachable(output: str, ran: re.Pattern[str] | None = None) -> bool:
+    """True only when the toolchain could not be fetched AND the tool never ran.
+
+    `ran` is the proof-of-execution pattern for the tool in question. Passing
+    None keeps the old, weaker meaning and is only for callers that have no such
+    proof — there are none today.
+    """
+    if ran is not None and ran.search(output):
+        return False
     return any(sig in output for sig in NETWORK_ERRORS)
 
 
@@ -246,7 +265,7 @@ def check_lint() -> None:
     )
     if r.returncode != 0:
         out = r.stdout + r.stderr
-        if _toolchain_unreachable(out):
+        if _toolchain_unreachable(out, RUFF_RAN):
             skip("pinned toolchain unreachable (offline) — ruff did NOT run")
             return
         tail = "\n      ".join(out.strip().splitlines()[-12:])
@@ -293,7 +312,7 @@ def check_tests() -> None:
     )
     out = r.stdout + r.stderr
     if r.returncode != 0:
-        if _toolchain_unreachable(out):
+        if _toolchain_unreachable(out, PYTEST_RAN):
             skip("pinned toolchain unreachable (offline) — pytest did NOT run")
             return
         # A coverage dip and a failing test are different problems with different

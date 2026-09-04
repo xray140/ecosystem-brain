@@ -36,8 +36,18 @@ def make_entry(**kw) -> dict:
 
 
 @pytest.fixture
-def patched(monkeypatch):
-    """No disk writes, no quarantine side effects; tests set fetch/resolve."""
+def patched(monkeypatch, tmp_path):
+    """No disk writes, no quarantine side effects; tests set fetch/resolve.
+
+    The agent's file is made to exist. Updating an entry whose file is gone is
+    a different case with its own tests below — and until 2026-09-04 these tests
+    passed without the file, because update_item never looked for it.
+    """
+    installed = tmp_path / "demo.md"
+    installed.write_text("installed\n", encoding="utf-8")
+    monkeypatch.setattr(
+        ua.layout, "target_paths", lambda kind, name: (installed, tmp_path / "live.md")
+    )
     monkeypatch.setattr(
         ua,
         "_write_agent",
@@ -96,3 +106,39 @@ def test_check_only_reports_diff_and_compare_url(patched):
     assert "compare/oldsha1111...newsha9999" in status
     assert entry["commit"] == "oldsha1111"  # check mode never mutates
     assert not ua.__dict__["_writes"]
+
+
+# --- a github entry whose file is gone -------------------------------------
+def test_a_github_entry_with_no_local_file_is_not_up_to_date(tmp_path, monkeypatch):
+    """It compared the fetched upstream against the hash stored in the REGISTRY
+    and never opened the local file, so a deleted agent reported "up-to-date" —
+    certifying the freshness of something it had not looked at. sync_local has
+    had this guard since it was written; the github path had none.
+
+    The consequence in the other direction is worse: `--all` would silently
+    materialise a deleted agent back into agents/ and ~/.claude from a pin
+    nobody re-approved.
+    """
+    monkeypatch.setattr(
+        ua.layout, "target_paths", lambda kind, name: (tmp_path / f"{name}.md", tmp_path / "live.md")
+    )
+
+    def explode(*a, **k):
+        raise AssertionError("the network must not be touched for a file that is gone")
+
+    monkeypatch.setattr(ua.gh, "resolve_commit", explode)
+    entry = {"name": "ghost", "source": "github:o/r/ghost.md", "hash": "abc", "ref": "main"}
+    assert ua.update_item(entry, "agent", check_only=True) == "missing-in-repo"
+
+
+def test_a_github_entry_whose_file_exists_still_checks_upstream(tmp_path, monkeypatch):
+    """The guard must not swallow the real path: a present file still resolves
+    the tip and compares hashes."""
+    agent = tmp_path / "present.md"
+    agent.write_text("body\n", encoding="utf-8")
+    monkeypatch.setattr(ua.layout, "target_paths", lambda kind, name: (agent, tmp_path / "live.md"))
+    monkeypatch.setattr(ua.gh, "resolve_commit", lambda repo, ref: "deadbeef" * 5)
+    monkeypatch.setattr(ua.gh, "fetch_url", lambda url: "body\n")
+    monkeypatch.setattr(ua.gh, "md5", lambda content: "same")
+    entry = {"name": "present", "source": "github:o/r/present.md", "hash": "same", "ref": "main"}
+    assert ua.update_item(entry, "agent", check_only=True) == "up-to-date"

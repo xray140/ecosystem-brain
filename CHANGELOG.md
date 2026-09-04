@@ -86,6 +86,67 @@ because a tag is mutable and runs with a `GITHUB_TOKEN`. See
 that the ecosystem "was pinning what it downloaded and floating what it ran".
 It was right, and it was describing Python only.
 
+**selfcheck reported a red suite as "did NOT run".** The offline branch — added
+so a machine with no DNS is not accused of having broken tests — matched a
+network phrase anywhere in the child's output. A genuinely failing run whose own
+message quoted one was filed as `[skip] pinned toolchain unreachable (offline) —
+pytest did NOT run`, with `fails == []` and exit 0. Demonstrated, not theorised:
+
+    5. Unit tests (pytest) + coverage floor 91%
+      [skip] pinned toolchain unreachable (offline) - pytest did NOT run
+    fails recorded: []
+
+That exit code is what the git pre-push hook, CI and the weekly heartbeat all
+gate on. Worse, the phrases live in this repo's own corpus
+(`tests/test_selfcheck_checks.py`, `DNS_ERROR`), so the test most likely to emit
+them is `test_an_unreachable_toolchain_is_not_reported_as_a_finding` — the one
+guarding this branch. It would have silenced itself.
+
+The branch now also requires proof the tool never ran: a pytest run summary or
+ruff's own findings mean it started, whatever else the output quotes. The
+legitimate offline skip is unchanged, which is asserted in both directions.
+
+**`registry/installed.json` listed an agent that exists nowhere, and everything
+agreed it was fine.** 14 entries, 13 files. `cli-developer` had no file in the
+repo and none in `~/.claude`, and:
+
+- `update-agents.py --check` said **up-to-date** — it compares the fetched
+  upstream against the hash stored in the registry and never opens the local
+  file, so its green tick certified the freshness of something it had not looked
+  at. `sync_local` has had `if not repo_file.exists()` since it was written; the
+  github path never got one.
+- `doctor.py` said **healthy, nothing orphaned** — it walks repo-files → live,
+  and live → manifest. Nothing walked registry → repo-files.
+- the SessionStart hook advertised `cli-developer` to **every session**, so the
+  agent roster offered each time included one that could never be invoked.
+
+Fixed in all three places: the entry is gone, `doctor` grew section 4 (registry
+→ repo, with skills checked by their `SKILL.md` rather than an empty directory),
+and `update_item` refuses a github entry whose file is absent — which also
+closes the other direction, where `--all` would have silently materialised a
+deleted agent back into `agents/` and `~/.claude` from a pin nobody re-approved.
+
+Two existing fixtures had to state a premise they were relying on silently:
+`test_update_agents.patched` and `test_rollback.wired` never created the agent's
+file, because nothing had ever looked for it.
+
+**The mutation harness left a live mutant in the working tree.** Its restore
+write failed with EINVAL — a concurrent reader had the file open — the exception
+escaped the `finally`, and `elif False:` sat inside `check_roadmap` in
+`selfcheck.py` until `git status` showed it. The docstring had promised since the
+file was written that the source is "restored either way, including on failure";
+it was describing the `finally` around a failing *test* and said nothing about a
+failing *restore*.
+
+The restore is now retried and verified by reading the file back; a failure names
+the file, prints the `git checkout --` that undoes it, and fails the run. The
+harness is also importable at last — it executed its whole table at import time,
+which is why the tool this repo verifies itself with had never been tested.
+Twelve tests cover it now, including a write that returns cleanly and leaves
+different bytes, which is exactly the failure it exists to catch elsewhere.
+
+Mutation table: 20 → 32, still 0 missed and 0 skipped.
+
 **The supply-chain gate had 20 rules and no evidence that 20 of them worked.**
 `scan_agent.py` sat at 100% line coverage, which proves the loop over `RULES`
 ran and nothing else. It could not say that a rule matched what its label

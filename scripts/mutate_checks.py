@@ -248,6 +248,27 @@ MUTATIONS = [
         "tests/test_scan_agent_rules.py",
     ),
     (
+        "selfcheck: let a network phrase in a RED run mean 'never ran' again",
+        'scripts/selfcheck.py',
+        '        if _toolchain_unreachable(out, PYTEST_RAN):',
+        '        if _toolchain_unreachable(out):',
+        'tests/test_selfcheck_checks.py',
+    ),
+    (
+        'doctor: stop reading the registry back against the repo',
+        'scripts/doctor.py',
+        '            if not (directory / pattern.format(name=name)).exists():',
+        '            if False:',
+        'tests/test_doctor.py',
+    ),
+    (
+        'update-agents: certify a github entry whose file is gone',
+        'scripts/update-agents.py',
+        '    if not repo_file.exists():\n        return "missing-in-repo"\n\n    repo, path = parsed',
+        '    repo, path = parsed',
+        'tests/test_update_agents.py',
+    ),
+    (
         "ci: pin an action to a mutable tag",
         ".github/workflows/ci.yml",
         "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",

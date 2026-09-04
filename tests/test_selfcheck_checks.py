@@ -402,3 +402,59 @@ def test_the_claims_cover_the_facts_that_rot():
         "coverage floor",
         "scanner rules",
     }
+
+
+# --- offline vs merely mentioning the network ------------------------------
+# The skip branch above exists so a machine with no DNS is not accused of having
+# broken tests. It was matched on the presence of a network phrase ANYWHERE in
+# the child's output, so a genuinely failing suite whose own message quoted one
+# was reported as "did NOT run" and selfcheck exited 0 — through the git
+# pre-push hook, CI, and the weekly heartbeat.
+#
+# The phrases are in this repo's corpus (DNS_ERROR above), so the test most
+# likely to emit them is the one guarding this branch: it would have silenced
+# itself. The branch now also requires that the tool produced no run summary.
+
+RED_QUOTING_A_NETWORK_ERROR = """FAILED tests/test_selfcheck_checks.py::test_offline_is_not_a_finding
+ - AssertionError: assert ["ruff found problems: error: Request failed after 3 retries"] == []
+1 failed, 800 passed in 31.2s"""
+
+RED_RUFF_QUOTING_A_NETWORK_ERROR = """scripts/selfcheck.py:1:1: E402 module level import not at top
+tests/test_x.py:9:1: F401 `dns error` imported but unused
+Found 2 errors."""
+
+
+def test_a_failing_suite_that_quotes_a_network_error_is_still_a_failure(monkeypatch, capsys):
+    monkeypatch.setattr(
+        sc.subprocess, "run", lambda *a, **k: _Result(1, stdout=RED_QUOTING_A_NETWORK_ERROR)
+    )
+    sc.check_tests()
+    assert sc.fails, "a red suite was reported as skipped"
+    assert "did NOT run" not in capsys.readouterr().out
+
+
+def test_failing_ruff_output_that_quotes_a_network_error_is_still_a_failure(monkeypatch, capsys):
+    monkeypatch.setattr(sc.shutil, "which", lambda x: "/usr/bin/uv")
+    monkeypatch.setattr(
+        sc.subprocess, "run", lambda *a, **k: _Result(1, stdout=RED_RUFF_QUOTING_A_NETWORK_ERROR)
+    )
+    sc.check_lint()
+    assert sc.fails, "a red lint run was reported as skipped"
+    assert "did NOT run" not in capsys.readouterr().out
+
+
+def test_a_genuinely_offline_run_is_still_skipped_not_failed(_offline, capsys):
+    """The branch must keep doing the job it was added for: no run summary in
+    the output means the tool never started, and accusing the code then is the
+    false accusation that turned the 2026-08-20 heartbeat red."""
+    sc.check_tests()
+    assert sc.fails == []
+    assert "did NOT run" in capsys.readouterr().out
+
+
+def test_proof_of_execution_beats_the_network_signature():
+    """The unit of the fix, stated directly."""
+    offline = DNS_ERROR
+    ran_and_failed = DNS_ERROR + "\n1 failed, 800 passed in 31.2s"
+    assert sc._toolchain_unreachable(offline, sc.PYTEST_RAN) is True
+    assert sc._toolchain_unreachable(ran_and_failed, sc.PYTEST_RAN) is False
