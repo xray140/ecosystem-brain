@@ -98,12 +98,12 @@ planting the mutation and running the whole suite:
     [SURVIVED] selfcheck: check_profiles cannot report a build
                that maps to agents which do not exist          902 passed
 
- is stubbed by both fixtures that touch it, so the body v4.3.4 was
-an entire release about — killing upstream  and Windows text-mode translation —
-never executed under pytest.  was the one selfcheck check with
-no test asserting it can fail, and what it guards is real: profiles name agents
-by string, so a renamed catalog entry means  scaffolds a project whose
-agent roster silently loses members.
+`_write_agent` is stubbed by both fixtures that touch it, so the body v4.3.4 was
+an entire release about — killing upstream `\r\n` and Windows text-mode
+translation — never executed under pytest. `check_profiles` was the one selfcheck
+check with no test asserting it can fail, and what it guards is real: profiles name
+agents by string, so a renamed catalog entry means `/ecosystem-brain:init` scaffolds a
+project whose agent roster silently loses members.
 
 Ten tests added across the three, each verified to catch the mutant it exists
 for. Table 32 -> 36, still 0 missed and 0 skipped.
