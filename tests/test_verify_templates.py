@@ -167,13 +167,32 @@ def test_runtime_versions_names_both_node_and_npm():
     assert re.search(r"npm v?\d+\.\d+\.\d+", line), line
 
 
-def test_runtime_versions_drops_build_metadata():
+def test_runtime_versions_drops_build_metadata_and_names_the_binary():
     """`uv --version` answers "uv 0.11.23 (3cdf50e0 2026-06-19 x86_64-...)".
-    The build hash is noise in a line meant to be compared between two runs."""
-    line = vt.runtime_versions("uv")
-    assert line.startswith("uv "), line
-    assert "(" not in line, line
-    assert line.count("uv") == 1, f"the tool name is printed twice: {line}"
+    The build hash is noise in a line meant to be compared between two runs;
+    the resolved path is the opposite of noise. CI installed node 24.20.0 and
+    the baseline ran 22.23.2 — only the path could have said so.
+    """
+    version, sep, path = vt.runtime_versions("uv").partition(" [")
+    assert version.startswith("uv "), version
+    assert "(" not in version, f"build metadata survived: {version}"
+    assert version.count("uv") == 1, f"the tool name is printed twice: {version}"
+    assert sep, "no resolved path reported"
+    assert path.rstrip().endswith("]"), path
+
+
+def test_a_tool_that_is_not_on_path_is_reported_as_such():
+    """A blank where the path should be would read as "resolved to nothing in
+    particular", which is the ambiguity this line exists to remove."""
+    import shutil as _shutil
+
+    real = _shutil.which
+    try:
+        _shutil.which = lambda name, *a, **k: None
+        line = vt.runtime_versions("uv")
+    finally:
+        _shutil.which = real
+    assert "not on PATH" in line, line
 
 
 def test_an_unprobed_runtime_says_so_rather_than_returning_nothing():

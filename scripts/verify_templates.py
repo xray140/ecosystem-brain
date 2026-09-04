@@ -83,22 +83,32 @@ VERSION_PROBES: dict[str, tuple[list[str], ...]] = {
 
 
 def runtime_versions(tool: str) -> str:
-    """One line naming the versions `tool`'s baseline will run on."""
+    """One line naming the versions `tool`'s baseline will run on, and where
+    each came from.
+
+    The path is not decoration. CI installs node with actions/setup-node and
+    the 2026-09-04 run reported node v22.23.2 for a job that had just
+    downloaded 24.20.0 — the pin was being applied and then not used. A
+    version can only say what answered; the path says which one did.
+    """
     parts: list[str] = []
     for probe in VERSION_PROBES.get(tool, ()):
+        name = probe[0]
+        where = shutil.which(name)
         try:
             r = _run(probe, cwd=REPO)
-        except OSError as e:  # pragma: no cover — probe absent is reported, not raised
-            parts.append(f"{probe[0]}: unavailable ({e.__class__.__name__})")
+        except OSError as e:  # pragma: no cover — a probe that will not run
+            parts.append(f"{name}: unavailable ({e.__class__.__name__})")
             continue
         out = (r.stdout or r.stderr).strip().splitlines()
         if not out:
-            parts.append(f"{probe[0]}: no output")
+            parts.append(f"{name}: no output")
             continue
         # `uv --version` answers "uv 0.11.23 (3cdf50e0 2026-06-19 x86_64-...)":
-        # drop the build metadata, and don't print the tool's name twice.
+        # drop the build metadata, and do not print the tool's name twice.
         ver = out[0].split("(")[0].strip()
-        parts.append(ver if ver.startswith(probe[0]) else f"{probe[0]} {ver}")
+        ver = ver if ver.startswith(name) else f"{name} {ver}"
+        parts.append(f"{ver} [{where or 'not on PATH'}]")
     return ", ".join(parts) or "no version probe for this runtime"
 
 
