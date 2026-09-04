@@ -105,6 +105,9 @@ jobs:
           echo "--- what answers ---"
           node --version
           npm --version
+          echo "--- what uv run's python resolves, which is what the"
+          echo "    template baseline actually uses ---"
+          uv run --no-project python -c "import os, shutil, sys; print('node ->', shutil.which('node')); print('npm  ->', shutil.which('npm')); print('sys.executable ->', sys.executable); print('PATH[:4] ->'); [print('   ', e) for e in os.environ['PATH'].split(os.pathsep)[:4]]"
           test "$(node --version)" = "v24.20.0" || {
             echo "::error::node pin not in effect: $(node --version) != v24.20.0"
             exit 1
