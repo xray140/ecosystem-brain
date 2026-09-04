@@ -123,3 +123,44 @@ def test_the_removal_is_verified_before_it_is_announced():
         "the removal has to be re-queried, not assumed"
     )
     assert "exit 1" in ps1, "a stuck task must make the script exit non-zero"
+
+
+# --- what the ecosystem tells the world it does ----------------------------
+
+
+# Files a stranger reads before running anything. Their claims are the product
+# description; history and rationale belong in CHANGELOG.md and memory/, which
+# are deliberately not scanned — no-ollama.md has to be free to explain what
+# semantic search was and what removing it cost.
+SHIPPED_DESCRIPTIONS = (
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "README.md",
+    "INSTALL.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+)
+
+
+def test_no_shipped_description_still_advertises_semantic_search():
+    """README was corrected the day the backend was removed. `plugin.json` was
+    not, and went on advertising "local semantic search" for eleven days —
+    because nothing reads it. It is the marketplace description: the one line
+    someone sees before they install any of this.
+    """
+    for name in SHIPPED_DESCRIPTIONS:
+        path = REPO / name
+        assert path.exists(), f"{name} is listed here but does not exist"
+        text = path.read_text(encoding="utf-8", errors="replace").lower()
+        assert "semantic search" not in text, (
+            f"{name} advertises semantic search; the vault has matched wording, "
+            "not meaning, since v4.8.0"
+        )
+
+
+def test_the_commands_and_skills_do_not_promise_it_either():
+    """Same claim, one layer in: these load into a session and set expectations
+    about what recall can do."""
+    for path in [*(REPO / "commands").glob("*.md"), *(REPO / "skills").glob("*/SKILL.md")]:
+        text = path.read_text(encoding="utf-8", errors="replace").lower()
+        assert "semantic search" not in text, f"{path.name} advertises semantic search"

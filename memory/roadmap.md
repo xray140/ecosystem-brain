@@ -9,7 +9,7 @@ tags: [moc, roadmap, state]
 Read this first in a fresh session (after CLAUDE.md). Run
 `/ecosystem-brain:context-sync` to pull the decisions below.
 
-## Current state (v4.4.3)
+## Current state (v4.8.1)
 - **17 commands** (global): init, scaffold, search, install, catalog, update,
   agents, new-agent, health-check, doctor, **project-doctor**, **agent-usage**,
   security-audit, write-tests, fix-bug, context-sync, memory-gc
@@ -24,27 +24,45 @@ Read this first in a fresh session (after CLAUDE.md). Run
   installed+catalog → update (re-resolves tip via `gh`, shows oldsha→newsha +
   compare URL, re-scans, quarantines HIGH, advances pin) -> **rollback**
   (`--rollback <name>` re-fetches at the previous SHA, re-scans, swaps pins;
-  itself undoable). Shared helpers in `github_util.py`. Catalog = 158 agents, cached. See [[decisions/agent-pinning]].
-- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` (619
-  tests, ~16s) + `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each
-  blueprint for real and runs its baseline) + gitleaks. **Green on the ubuntu
-  runner** since 2026-08-01 (it had been red on every push for weeks on an
-  unpinned ruff — 57 findings no commit introduced). Toolchain pinned in
-  `requirements-dev.txt`, rule set in `ruff.toml`, Actions pinned to commit
-  SHAs with Dependabot — see [[decisions/toolchain-pinning]].
-- **Gates**: `selfcheck.py` = 8 checks (JSON, agent scan, init-engine, memory
-  index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter). Lint
-  runs the *same* invocation and the same pinned binary as CI, so local-green
-  and CI-green are the same claim; tests assert the two configs can't drift.
-- **Tests**: `tests/` (619, **89%** coverage; `memory-search.py` lowest at 70%) covers scan_agent, init_project,
+  itself undoable). Shared helpers in `github_util.py`. The catalog is cached and refreshed
+  weekly, with `catalog.seed.json` as the committed floor. See
+  [[decisions/agent-pinning]].
+- **CI**: `.github/workflows/ci.yml` runs ruff lint + `pytest -q tests` +
+  `scripts/selfcheck.py` + `verify_templates.py` (scaffolds each blueprint for
+  real and runs its baseline) + gitleaks, on an **ubuntu + windows matrix**
+  since v4.7.1 — Windows is the platform this ecosystem actually runs on, and
+  three defects had shipped green through a Linux-only job. Green on ubuntu
+  since 2026-08-01 (it had been red on every push for weeks on an unpinned
+  ruff — 57 findings no commit introduced). **Both** toolchains are pinned:
+  ruff/pytest in `requirements-dev.txt`, the rule set in `ruff.toml`, the
+  template's npm dependencies to exact versions, node to an exact patch via
+  `actions/setup-node`, and every Action to a commit SHA with Dependabot. The
+  TypeScript half was added 2026-09-03, after an unpinned npm turned master red
+  on two docs-only commits — see [[decisions/toolchain-pinning]].
+- **Gates**: `selfcheck.py` = 9 checks (JSON, agent scan, init-engine, memory
+  index, pytest, **hardcoded-path check**, **ruff**, agent frontmatter,
+  **this note**). Lint runs the *same* invocation and the same pinned binary
+  as CI, so local-green and CI-green are the same claim; tests assert the two
+  configs can't drift. Check 9 reads the numbers below back against the repo:
+  the section had gone four releases out of date, and an orientation note
+  nobody verifies is the one artefact that misleads every fresh session.
+- **Tests**: `tests/`, held above a coverage floor **91%** by selfcheck — a
+  floor rather than a headline number, because the headline moves with every
+  commit and would make a gate on it noise. Covers scan_agent, init_project,
   bootstrap, github_util (fetch allowlist), update-agents (pinning), doctor
   (drift + hook wiring + skills), catalog, install-agent (naming, target
   paths, traversal, the security gate end-to-end), scaffold (rmtree guard),
-  the destructive guard, suggest-agents, search_agents, maintenance, and the
-  {{ECOSYSTEM_ROOT}} substitution.
+  the destructive guard, suggest-agents, search_agents, maintenance, the
+  subprocess-encoding rule, and the {{ECOSYSTEM_ROOT}} substitution.
 - **Scanner**: `scan_agent.py` (20 rules) — prompt-injection, secret/SSH reads,
   curl|bash, PowerShell cradles (iwr|iex, WebClient, -enc), base64-exec,
   eval/exec, rm -rf, TLS-off (incl. flag-first `curl -k`), exfil, hidden chars.
+  Every rule has a probe it must catch, a near-miss it must not, and a
+  mutant: `test_no_rule_is_dead_weight` deletes each rule in turn and
+  requires one of its own probes to go quiet, so the count is 20 rules that
+  each catch something nothing else catches — not 20 rows and one regex
+  doing the work. Prose *about* an attack is flagged too, deliberately: a
+  prose exemption would be a bypass.
 - **Dogfood**: the repo's own `CLAUDE.md` imports `@AGENTS.md` — same cross-tool
   pattern it ships in templates.
 - **Doctor**: `/ecosystem-brain:doctor` (`doctor.py`) = live-hooks + repo↔~/.claude
@@ -55,8 +73,11 @@ Read this first in a fresh session (after CLAUDE.md). Run
   CI conclusion (advisory). Reports, never repairs: fix the card's
   `- Project: ` line, or set `status: archived`. Non-gating in the heartbeat
   until the current backlog is triaged.
-- Both are wired into health-check and the weekly maintenance heartbeat, whose
-  status is three-state: `ok` / `warn` (advisory check failed) / `FAIL`.
+- Both are wired into health-check and the weekly maintenance
+  heartbeat = 11 checks, whose status is three-state: `ok` / `warn`
+  (advisory check failed) / `FAIL`. It captures each child as UTF-8. For eight
+  weeks it captured them in the locale encoding instead: every report on disk
+  was mojibake, and every exit code was 0. See [[decisions/encoding-discipline]].
 - **First-party squad** (6): security-auditor, convention-keeper, script-smith,
   test-writer, bug-fixer, memory-curator. The SessionStart suggester surfaces them
   every session *with trigger moments* so they actually get delegated to.

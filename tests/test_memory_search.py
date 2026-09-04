@@ -404,7 +404,7 @@ def test_main_index_builds_a_real_cache_file(tmp_path):
     result = subprocess.run(
         [sys.executable, str(SKILL), "--vault", str(vault), "index"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         timeout=30,
     )
     assert result.returncode == 0
@@ -419,14 +419,14 @@ def test_main_status_reports_a_healthy_index(tmp_path):
     subprocess.run(
         [sys.executable, str(SKILL), "--vault", str(vault), "index"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         timeout=30,
         check=True,
     )
     status = subprocess.run(
         [sys.executable, str(SKILL), "--vault", str(vault), "status"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         timeout=30,
     )
     assert status.returncode == 0
@@ -440,7 +440,7 @@ def test_main_search_finds_the_indexed_note(tmp_path):
     subprocess.run(
         [sys.executable, str(SKILL), "--vault", str(vault), "index"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         timeout=30,
         check=True,
     )
@@ -456,7 +456,7 @@ def test_main_search_finds_the_indexed_note(tmp_path):
             "1",
         ],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         timeout=30,
     )
     assert result.returncode == 0

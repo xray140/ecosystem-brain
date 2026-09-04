@@ -150,3 +150,67 @@ def test_wiring_path_rewrite_is_not_drift(tmp_path, monkeypatch):
     }
     _wire(tmp_path, monkeypatch, repo_hooks, live_hooks)
     assert doctor.hooks_wiring_drift("/c/clone/eco") is False
+
+
+# --- 4. the registry describes things that exist --------------------------
+# installed.json listed 14 agents while agents/ held 13. `cli-developer` had no
+# file in the repo and none in ~/.claude, and every gate was green about it:
+# `update --check` said "up-to-date" (it compares upstream to the hash stored in
+# the registry, never to the artefact), doctor said "nothing orphaned", and the
+# SessionStart hook advertised the agent to every session. Two directions were
+# already walked — repo-files -> live, and live -> manifest. This is the third.
+
+
+def _registry(root, agents=(), commands=(), skills=()):
+    (root / "registry").mkdir(parents=True, exist_ok=True)
+    (root / "registry" / "installed.json").write_text(
+        json.dumps(
+            {
+                "agents": [{"name": n} for n in agents],
+                "commands": [{"name": n} for n in commands],
+                "skills": [{"name": n} for n in skills],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_an_entry_with_no_file_is_reported(tmp_path, monkeypatch):
+    monkeypatch.setattr(doctor, "REPO", tmp_path)
+    (tmp_path / "agents").mkdir()
+    (tmp_path / "agents" / "real.md").write_text("x", encoding="utf-8")
+    _registry(tmp_path, agents=["real", "ghost"])
+    missing, tracked = doctor.registry_orphans()
+    assert missing == ["agents/ghost"]
+    assert tracked == 2
+
+
+def test_a_registry_matching_the_repo_is_clean(tmp_path, monkeypatch):
+    monkeypatch.setattr(doctor, "REPO", tmp_path)
+    (tmp_path / "agents").mkdir()
+    (tmp_path / "agents" / "real.md").write_text("x", encoding="utf-8")
+    _registry(tmp_path, agents=["real"])
+    assert doctor.registry_orphans() == ([], 1)
+
+
+def test_skills_are_checked_by_their_skill_md_not_the_directory(tmp_path, monkeypatch):
+    """A skill is its SKILL.md; an empty directory is not an installed skill."""
+    monkeypatch.setattr(doctor, "REPO", tmp_path)
+    (tmp_path / "skills" / "hollow").mkdir(parents=True)
+    _registry(tmp_path, skills=["hollow"])
+    missing, _ = doctor.registry_orphans()
+    assert missing == ["skills/hollow"]
+
+
+def test_a_missing_registry_is_not_a_finding(tmp_path, monkeypatch):
+    """A fresh clone has no installed.json. Reporting ghosts there would be
+    noise, and noise is what trains people to stop reading this report."""
+    monkeypatch.setattr(doctor, "REPO", tmp_path)
+    assert doctor.registry_orphans() == ([], 0)
+
+
+def test_the_real_repo_has_no_ghosts():
+    """The standing assertion. This is what went unnoticed."""
+    missing, tracked = doctor.registry_orphans()
+    assert missing == [], f"registry entries with no file: {missing}"
+    assert tracked >= 10, "the walk found suspiciously few entries"

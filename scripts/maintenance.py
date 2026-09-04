@@ -104,7 +104,7 @@ CHECKS: list[tuple[str, list[str], bool]] = [
     ("memory index status", search("status"), True),
     # The OTHER index. `index.json` is the frontmatter manifest the memory skill
     # loads at session start instead of reading the whole vault; the two above
-    # are the semantic search database. Only the semantic one was ever
+    # are the keyword search database. Only the search one was ever
     # refreshed here, so the manifest sat frozen for 18 days listing a note that
     # no longer existed and missing three that did — and every check said the
     # vault was healthy, because none of them opened it.
@@ -128,7 +128,27 @@ CHECKS: list[tuple[str, list[str], bool]] = [
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
     # check=False: a failing check is the signal this heartbeat exists to record,
     # not an exception to raise.
-    return subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO), check=False)
+    #
+    # encoding: every child here writes UTF-8, but `text=True` alone decodes with
+    # the LOCALE encoding, which is cp1252 on this machine. Each em dash a child
+    # printed (bytes E2 80 94) came back as three cp1252 characters and was
+    # written into the report as those, and eight consecutive weekly reports in
+    # memory/maintenance/ carry the wreckage. Nothing caught it because nothing
+    # was broken in the sense a check measures: every exit code was 0 and only
+    # the artefact was degraded. tests/test_subprocess_encoding.py now holds the
+    # rule for the whole repo.
+    #
+    # errors=replace: a child that emits something other than UTF-8 must cost one
+    # garbled line, not raise here and take the whole heartbeat with it.
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        cwd=str(REPO),
+        check=False,
+    )
 
 
 def main() -> int:

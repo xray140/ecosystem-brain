@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -63,7 +64,91 @@ def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
         text=True,
         encoding="utf-8",
         errors="replace",
+        # tool_env: resolving npm is not enough on its own. npm's shebang is
+        # `#!/usr/bin/env node`, so a correctly-chosen npm still picks up
+        # whatever node PATH offers — and inside a `uv run` child that is the
+        # interpreter's bin directory, which on GitHub's ubuntu image ships its
+        # own node. The chosen tools have to lead PATH for grandchildren.
+        env=ip.tool_env(),
     )
+
+
+# What to ask each runtime for its version. Printed on EVERY run, pass or fail.
+#
+# On 2026-09-03 this step went red on ubuntu and stayed green on windows with
+# the same commit, and neither run recorded the toolchain it used — so "the same
+# code failed there and passed here" had nothing to attach to, and the npm
+# version had to be inferred from the node version in the workflow file. A
+# report that names the error but not the thing that produced it cannot be
+# compared against the last green run, which is the only comparison that
+# identifies an environment fault. See decisions/verification-integrity.
+VERSION_PROBES: dict[str, tuple[list[str], ...]] = {
+    "npm": (["node", "--version"], ["npm", "--version"]),
+    "uv": (["uv", "--version"],),
+}
+
+
+def runtime_versions(tool: str) -> str:
+    """One line naming the versions `tool`'s baseline will run on, and where
+    each came from.
+
+    The path is not decoration. CI installs node with actions/setup-node and
+    the 2026-09-04 run reported node v22.23.2 for a job that had just
+    downloaded 24.20.0 — the pin was being applied and then not used. A
+    version can only say what answered; the path says which one did.
+    """
+    parts: list[str] = []
+    for probe in VERSION_PROBES.get(tool, ()):
+        name = probe[0]
+        # The path actually used, not what PATH would have offered: an
+        # override changes which binary runs, and a diagnostic that reports
+        # one while running the other is how ubuntu printed
+        # `node v24.20.0 [/usr/local/bin/node]` — two facts, one of them false.
+        where = ip.resolve_exe([name])[0]
+        where = where if where != name else None
+        try:
+            r = _run(probe, cwd=REPO)
+        except OSError as e:  # pragma: no cover — a probe that will not run
+            parts.append(f"{name}: unavailable ({e.__class__.__name__})")
+            continue
+        out = (r.stdout or r.stderr).strip().splitlines()
+        if not out:
+            parts.append(f"{name}: no output")
+            continue
+        # `uv --version` answers "uv 0.11.23 (3cdf50e0 2026-06-19 x86_64-...)":
+        # drop the build metadata, and do not print the tool's name twice.
+        ver = out[0].split("(")[0].strip()
+        ver = ver if ver.startswith(name) else f"{name} {ver}"
+        parts.append(f"{ver} [{where or 'not on PATH'}]")
+    return ", ".join(parts) or "no version probe for this runtime"
+
+
+# npm answers a crash with one line and a path: "A complete log of this run
+# can be found in: /home/runner/.npm/_logs/...-debug-0.log". On a runner that
+# file is unreachable by the time anyone reads the report, so the useful half
+# of the diagnosis — which package, which edge — is thrown away at the moment
+# it is produced, and the report keeps the one line that says least. Follow
+# the path while the file still exists.
+DEBUG_LOG_RE = re.compile(
+    r"complete log of this run can be found in:\s*(\S.*?)\s*$", re.M
+)
+
+
+def follow_debug_log(output: str, lines: int = 30) -> str:
+    """The tail of whatever log file `output` points at, or "" if there is none."""
+    m = DEBUG_LOG_RE.search(output)
+    if not m:
+        return ""
+    path = Path(m.group(1).strip())
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as e:
+        # A log that cannot be read is worth saying out loud: silence here would
+        # read as 'npm said nothing more', which is the opposite of the truth.
+        return f"      (could not read {path.name}: {e.__class__.__name__})"
+    tail = text.strip().splitlines()[-lines:]
+    head = f"      --- {path.name} (last {len(tail)} lines) ---"
+    return "\n".join([head, *(f"      {ln}" for ln in tail)])
 
 
 def verify(template: str, workdir: Path) -> tuple[bool, str]:
@@ -98,8 +183,11 @@ def verify(template: str, workdir: Path) -> tuple[bool, str]:
     for cmd in ip.verify_commands(template):
         c = _run(cmd, cwd=dest)
         if c.returncode != 0:
-            tail = "\n      ".join((c.stdout + c.stderr).strip().splitlines()[-10:])
-            return False, f"`{' '.join(cmd)}` failed:\n      {tail}"
+            output = c.stdout + c.stderr
+            tail = "\n      ".join(output.strip().splitlines()[-10:])
+            detail = f"`{' '.join(cmd)}` failed:\n      {tail}"
+            deeper = follow_debug_log(output)
+            return False, f"{detail}\n{deeper}" if deeper else detail
     return True, "scaffolded and its baseline is green"
 
 
@@ -126,6 +214,9 @@ def main(argv: list[str] | None = None) -> int:
     with tempfile.TemporaryDirectory(prefix="eco-templates-") as tmp:
         workdir = Path(tmp)
         for template in names:
+            tool = RUNTIME.get(template)
+            if tool:
+                print(f"  [--] {template:22s} runtime: {runtime_versions(tool)}")
             ok, detail = verify(template, workdir)
             print(f"  [{'ok' if ok else '!!'}] {template:22s} {detail}")
             failed += not ok

@@ -21,6 +21,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+
 TOKEN = "pkgname"  # noqa: S105 — a template placeholder, not a credential
 
 # Where projects land when --dest-root is omitted. Mirrors init_project.py:
@@ -95,7 +98,7 @@ def git_init(dest: Path, name: str) -> bool:
     for cmd in steps:
         try:
             r = subprocess.run(  # noqa: PLW1510 — returncode is inspected here
-                cmd, cwd=dest, capture_output=True, text=True, errors="replace"
+                cmd, cwd=dest, capture_output=True, text=True, encoding="utf-8", errors="replace"
             )
         except OSError:
             return False

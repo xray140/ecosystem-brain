@@ -29,6 +29,9 @@ import sys
 from array import array
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+
 FM_RE = re.compile(r"^---\s*\n.*?\n---\s*\n", re.DOTALL)
 WORD_RE = re.compile(r"[a-z0-9]+")
 HASH_DIM = 256

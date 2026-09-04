@@ -72,7 +72,7 @@ def resolve_commit(repo: str, ref: str = "main") -> str | None:
             capture_output=True,
             text=True,
             check=True,
-            encoding="utf-8",
+            encoding="utf-8", errors="replace",
         )
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None

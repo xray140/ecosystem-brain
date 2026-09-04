@@ -79,13 +79,6 @@
       "hash": "06ad241de505c99b3e166cfad17934a2",
       "ref": "main",
       "commit": "c9e51ec0b3d43f5dcdd0b558a6cd28ba6ada97c1"
-    },
-    {
-      "name": "cli-developer",
-      "source": "github:VoltAgent/awesome-claude-code-subagents/categories/06-developer-experience/cli-developer.md",
-      "hash": "db66bd6cb4ea0dc463b996c5b7dffa84",
-      "ref": "main",
-      "commit": "c9e51ec0b3d43f5dcdd0b558a6cd28ba6ada97c1"
     }
   ],
   "commands": [],

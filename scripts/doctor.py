@@ -108,6 +108,36 @@ def orphans_live() -> tuple[list[str] | None, int]:
     stale = [r for r in recorded if r not in expected and (bs.CLAUDE_DIR / r).is_file()]
     return sorted(stale), len(recorded)
 
+def registry_orphans() -> tuple[list[str], int]:
+    """(names listed in installed.json with no file in the repo, total listed).
+
+    The third direction, and the one nothing walked: repo-files -> live, and
+    live -> manifest, both existed; registry -> repo-files did not. So an entry
+    could name an agent that exists nowhere while `update --check` called it
+    up-to-date — it compares upstream to the hash stored in the registry, never
+    to the artefact. On 2026-09-04 exactly one entry was in that state.
+    """
+    reg = REPO / "registry" / "installed.json"
+    if not reg.exists():
+        return [], 0
+    data = json.loads(reg.read_text(encoding="utf-8"))
+    missing: list[str] = []
+    total = 0
+    for kind, directory, pattern in (
+        ("agents", REPO / "agents", "{name}.md"),
+        ("commands", REPO / "commands", "{name}.md"),
+        ("skills", REPO / "skills", "{name}/SKILL.md"),
+    ):
+        for entry in data.get(kind, []):
+            total += 1
+            name = entry.get("name")
+            if not name:
+                continue
+            if not (directory / pattern.format(name=name)).exists():
+                missing.append(f"{kind}/{name}")
+    return missing, total
+
+
 def main() -> int:
     bash_root = bs.to_bash_path(REPO)
     print("ecosystem-brain doctor")
@@ -162,7 +192,18 @@ def main() -> int:
     else:
         print(f"  [ok] nothing orphaned ({recorded} installed path(s) tracked)")
 
-    # 4. prerequisites (advisory — never fails the run)
+    # 4. the registry describes things that exist
+    print("\n4. Registry (installed.json -> repo)")
+    missing, tracked = registry_orphans()
+    if missing:
+        for name in missing:
+            print(f"  [ghost] {name} — listed in installed.json, no file in the repo")
+        print("    fix: drop the entry, or re-install it with scripts/install-agent.py")
+        fails.append("registry-ghosts")
+    else:
+        print(f"  [ok] all {tracked} registry entries have a file")
+
+    # 5. prerequisites (advisory — never fails the run)
     bs.check_prereqs()
 
     print()

@@ -10,6 +10,7 @@ Checks, in order (fails fast with a non-zero exit on any problem):
   6. No installable file hardcodes an absolute path (they use {{ECOSYSTEM_ROOT}}).
   7. Ruff is clean — the same invocation CI runs, so local and CI cannot diverge.
   8. Local agent frontmatter meets the standard (name/description/tools/model).
+  9. memory/roadmap.md still describes this repo.
 
 Both pytest and ruff come from requirements-dev.txt, the pinned dev toolchain.
 
@@ -19,6 +20,7 @@ Usage:
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import shutil
@@ -27,7 +29,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scan_agent import scan, worst
+from scan_agent import RULES, scan, worst
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 REPO = Path(__file__).resolve().parent.parent
 fails: list[str] = []
@@ -124,7 +129,7 @@ def check_memory() -> None:
         # every build. Freshness is the heartbeat's job: it refreshes, then gates.
         [sys.executable, str(REPO / "skills/memory/memory-index.py"), "--dry-run"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
     )
     if r.returncode != 0:
         fail(f"memory-index failed: {r.stderr.strip()[:80]}")
@@ -144,7 +149,26 @@ LINT_PATHS = ("scripts", "tests", "hooks", "skills")
 NETWORK_ERRORS = ("Failed to fetch", "dns error", "error sending request", "Request failed after")
 
 
-def _toolchain_unreachable(output: str) -> bool:
+# Evidence the tool actually RAN. The network signatures alone cannot separate
+# "uv could not fetch the toolchain" from "the toolchain ran and the suite went
+# red quoting a network error" — and the second is not hypothetical: the phrases
+# live in this repo's own corpus (tests/test_selfcheck_checks.py, DNS_ERROR), so
+# a failure in the very test guarding this branch would silence the branch. A
+# red run reported as "did NOT run" exits 0, and the git pre-push hook, CI and
+# the weekly heartbeat all gate on that exit code.
+PYTEST_RAN = re.compile(r"\b\d+ (?:passed|failed|error|errors|xfailed|deselected)\b")
+RUFF_RAN = re.compile(r"(?m)^(?:.+:\d+:\d+: \w+|All checks passed|Found \d+ error)")
+
+
+def _toolchain_unreachable(output: str, ran: re.Pattern[str] | None = None) -> bool:
+    """True only when the toolchain could not be fetched AND the tool never ran.
+
+    `ran` is the proof-of-execution pattern for the tool in question. Passing
+    None keeps the old, weaker meaning and is only for callers that have no such
+    proof — there are none today.
+    """
+    if ran is not None and ran.search(output):
+        return False
     return any(sig in output for sig in NETWORK_ERRORS)
 
 
@@ -236,12 +260,12 @@ def check_lint() -> None:
     r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
         [*_uv_tool(), "ruff", "check", *LINT_PATHS, "--output-format", "concise"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         cwd=str(REPO),
     )
     if r.returncode != 0:
         out = r.stdout + r.stderr
-        if _toolchain_unreachable(out):
+        if _toolchain_unreachable(out, RUFF_RAN):
             skip("pinned toolchain unreachable (offline) — ruff did NOT run")
             return
         tail = "\n      ".join(out.strip().splitlines()[-12:])
@@ -283,12 +307,12 @@ def check_tests() -> None:
             f"--cov-fail-under={COVERAGE_FLOOR}",
         ],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         cwd=str(REPO),
     )
     out = r.stdout + r.stderr
     if r.returncode != 0:
-        if _toolchain_unreachable(out):
+        if _toolchain_unreachable(out, PYTEST_RAN):
             skip("pinned toolchain unreachable (offline) — pytest did NOT run")
             return
         # A coverage dip and a failing test are different problems with different
@@ -374,6 +398,86 @@ def check_frontmatter() -> None:
         ok(f"{checked} local agents conform (name/description/tools/model)")
 
 
+
+# --- 9. the note a fresh session reads first --------------------------------
+
+ROADMAP = REPO / "memory" / "roadmap.md"
+
+
+def _selfcheck_step_count() -> int:
+    """How many checks main() CALLS — not how many are defined.
+
+    A check that exists but is never called is exactly the sort of thing this
+    file is supposed to notice.
+    """
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+    return sum(
+        1
+        for n in ast.walk(fn)
+        if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Name)
+        and n.func.id.startswith("check_")
+    )
+
+
+def roadmap_claims() -> list[tuple[str, str, str]]:
+    """(label, pattern capturing the claim, what the repo actually says).
+
+    Only facts that change DELIBERATELY are listed. Test count and coverage
+    percentage move with almost every commit, so a gate on those would cry wolf
+    until someone deleted it — which is why the note cites the coverage floor,
+    a number that only moves when a person raises it.
+    """
+    # Imported here, not at module scope: the heartbeat is a consumer of this
+    # file, and a top-level import would make the two mutually dependent.
+    import maintenance
+
+    profiles = json.loads((REPO / "registry" / "project-profiles.json").read_text(encoding="utf-8"))
+    installed = json.loads((REPO / "registry" / "installed.json").read_text(encoding="utf-8"))
+    plugin = json.loads((REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    local = [a for a in installed.get("agents", []) if a.get("source") == "local"]
+    return [
+        ("version", r"^## Current state \(v([0-9]+\.[0-9]+\.[0-9]+)\)", plugin["version"]),
+        ("commands", r"- \*\*(\d+) commands\*\*", str(len(list((REPO / "commands").glob("*.md"))))),
+        ("build types", r"- \*\*(\d+) build types\*\*", str(len(profiles["build_types"]))),
+        ("first-party agents", r"\*\*First-party squad\*\* \((\d+)\)", str(len(local))),
+        ("selfcheck checks", r"`selfcheck\.py` = (\d+) checks", str(_selfcheck_step_count())),
+        ("heartbeat checks", r"heartbeat = (\d+) checks", str(len(maintenance.CHECKS))),
+        ("coverage floor", r"coverage floor \*\*(\d+)%\*\*", str(COVERAGE_FLOOR)),
+        # The note has advertised a rule count since v4.3.x. Now that every rule
+        # has a probe and a mutant (tests/test_scan_agent_rules.py), the number
+        # means something — so it gets read back like the rest.
+        ("scanner rules", r"`scan_agent\.py` \((\d+) rules\)", str(len(RULES))),
+    ]
+
+
+def check_roadmap() -> None:
+    """The orientation note is an artefact like any other, and until now it was
+    the only one with no reader.
+
+    On 2026-09-03 it opened with "Current state (v4.4.3)" and cited 619 tests at
+    89% coverage; the repo was at v4.8.0 with 756 at 93%. Nothing was broken —
+    it had simply been written once and believed ever since, which is what every
+    other check in this file exists to prevent.
+    """
+    print(f"9. {ROADMAP.name} describes this repo")
+    text = ROADMAP.read_text(encoding="utf-8")
+    checked = 0
+    for label, pattern, actual in roadmap_claims():
+        m = re.search(pattern, text, re.M)
+        if m is None:
+            # A vanished claim is worse than a wrong one: the gate goes quiet
+            # and the note is free to drift again with nothing to say so.
+            fail(f"roadmap: the '{label}' claim is gone — nothing left to check")
+        elif m.group(1) != actual:
+            fail(f"roadmap says {label} = {m.group(1)}, the repo says {actual}")
+        else:
+            checked += 1
+    if not any(m.startswith("roadmap") for m in fails):
+        ok(f"{checked} claims in memory/roadmap.md match the repo")
+
+
 def main() -> int:
     print("ecosystem-brain selfcheck\n")
     check_json()
@@ -384,6 +488,7 @@ def main() -> int:
     check_paths()
     check_lint()
     check_frontmatter()
+    check_roadmap()
     print()
     if fails:
         print(f"[!] {len(fails)} failure(s)")

@@ -183,11 +183,15 @@ def test_main_runs_every_check_even_after_one_fails(monkeypatch):
         "check_paths",
         "check_lint",
         "check_frontmatter",
+        "check_roadmap",
     ):
         monkeypatch.setattr(sc, name, (lambda n: lambda: ran.append(n))(name))
     monkeypatch.setattr(sc, "check_json", lambda: (ran.append("check_json"), sc.fail("x"))[0])
     sc.main()
-    assert len(ran) == 8
+    # Counted, not hardcoded: a check added to main() but forgotten here would
+    # otherwise leave this test passing while running one check fewer than it
+    # claims to cover.
+    assert len(ran) == sc._selfcheck_step_count()
 
 
 # --- the two subprocess gates ---------------------------------------------
@@ -329,3 +333,172 @@ def test_skip_does_not_claim_the_check_passed(capsys):
     out = capsys.readouterr().out
     assert "[ok]" not in out
     assert sc.fails == []
+
+
+# --- 9. the orientation note ----------------------------------------------
+def _roadmap_repo(root, text):
+    (root / "memory").mkdir(parents=True, exist_ok=True)
+    (root / "memory" / "roadmap.md").write_text(text, encoding="utf-8")
+
+
+def test_roadmap_check_passes_on_the_real_note():
+    """The standing gate: whatever memory/roadmap.md claims today must be true
+    today. This is the assertion that would have gone red for four releases."""
+    sc.check_roadmap()
+    assert sc.fails == []
+
+
+def test_roadmap_check_fails_on_a_stale_number(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(
+        sc, "roadmap_claims", lambda: [("commands", r"- \*\*(\d+) commands\*\*", "17")]
+    )
+    _roadmap_repo(tmp_path, "# note\n- **12 commands** (global): ...\n")
+    monkeypatch.setattr(sc, "ROADMAP", tmp_path / "memory" / "roadmap.md")
+    sc.check_roadmap()
+    assert sc.fails
+    out = capsys.readouterr().out
+    assert "roadmap says commands = 12" in out
+    assert "repo says 17" in out
+
+
+def test_roadmap_check_fails_when_a_claim_is_deleted(tmp_path, monkeypatch, capsys):
+    """Deleting the sentence must not be the way to silence the gate.
+
+    Matching nothing is the failure mode that lets a note drift with no reader —
+    which is the whole reason this check exists.
+    """
+    monkeypatch.setattr(
+        sc, "roadmap_claims", lambda: [("commands", r"- \*\*(\d+) commands\*\*", "17")]
+    )
+    _roadmap_repo(tmp_path, "# note\nno claims here at all\n")
+    monkeypatch.setattr(sc, "ROADMAP", tmp_path / "memory" / "roadmap.md")
+    sc.check_roadmap()
+    assert sc.fails
+    assert "the 'commands' claim is gone" in capsys.readouterr().out
+
+
+def test_every_claim_pattern_matches_the_real_note():
+    """A pattern that no longer matches is reported as a deleted claim, which is
+    right — but failing on the pattern itself keeps a typo in the regex from
+    being mistaken for a missing sentence in the note."""
+    import re
+
+    text = sc.ROADMAP.read_text(encoding="utf-8")
+    for label, pattern, _actual in sc.roadmap_claims():
+        assert re.search(pattern, text, re.M), f"pattern for '{label}' matches nothing"
+
+
+def test_the_claims_cover_the_facts_that_rot():
+    """Named individually: dropping one from the table would silently shrink the
+    gate, and a count alone would not say which one went."""
+    labels = {label for label, _p, _a in sc.roadmap_claims()}
+    assert labels == {
+        "version",
+        "commands",
+        "build types",
+        "first-party agents",
+        "selfcheck checks",
+        "heartbeat checks",
+        "coverage floor",
+        "scanner rules",
+    }
+
+
+# --- offline vs merely mentioning the network ------------------------------
+# The skip branch above exists so a machine with no DNS is not accused of having
+# broken tests. It was matched on the presence of a network phrase ANYWHERE in
+# the child's output, so a genuinely failing suite whose own message quoted one
+# was reported as "did NOT run" and selfcheck exited 0 — through the git
+# pre-push hook, CI, and the weekly heartbeat.
+#
+# The phrases are in this repo's corpus (DNS_ERROR above), so the test most
+# likely to emit them is the one guarding this branch: it would have silenced
+# itself. The branch now also requires that the tool produced no run summary.
+
+RED_QUOTING_A_NETWORK_ERROR = """FAILED tests/test_selfcheck_checks.py::test_offline_is_not_a_finding
+ - AssertionError: assert ["ruff found problems: error: Request failed after 3 retries"] == []
+1 failed, 800 passed in 31.2s"""
+
+RED_RUFF_QUOTING_A_NETWORK_ERROR = """scripts/selfcheck.py:1:1: E402 module level import not at top
+tests/test_x.py:9:1: F401 `dns error` imported but unused
+Found 2 errors."""
+
+
+def test_a_failing_suite_that_quotes_a_network_error_is_still_a_failure(monkeypatch, capsys):
+    monkeypatch.setattr(
+        sc.subprocess, "run", lambda *a, **k: _Result(1, stdout=RED_QUOTING_A_NETWORK_ERROR)
+    )
+    sc.check_tests()
+    assert sc.fails, "a red suite was reported as skipped"
+    assert "did NOT run" not in capsys.readouterr().out
+
+
+def test_failing_ruff_output_that_quotes_a_network_error_is_still_a_failure(monkeypatch, capsys):
+    monkeypatch.setattr(sc.shutil, "which", lambda x: "/usr/bin/uv")
+    monkeypatch.setattr(
+        sc.subprocess, "run", lambda *a, **k: _Result(1, stdout=RED_RUFF_QUOTING_A_NETWORK_ERROR)
+    )
+    sc.check_lint()
+    assert sc.fails, "a red lint run was reported as skipped"
+    assert "did NOT run" not in capsys.readouterr().out
+
+
+def test_a_genuinely_offline_run_is_still_skipped_not_failed(_offline, capsys):
+    """The branch must keep doing the job it was added for: no run summary in
+    the output means the tool never started, and accusing the code then is the
+    false accusation that turned the 2026-08-20 heartbeat red."""
+    sc.check_tests()
+    assert sc.fails == []
+    assert "did NOT run" in capsys.readouterr().out
+
+
+def test_proof_of_execution_beats_the_network_signature():
+    """The unit of the fix, stated directly."""
+    offline = DNS_ERROR
+    ran_and_failed = DNS_ERROR + "\n1 failed, 800 passed in 31.2s"
+    assert sc._toolchain_unreachable(offline, sc.PYTEST_RAN) is True
+    assert sc._toolchain_unreachable(ran_and_failed, sc.PYTEST_RAN) is False
+
+
+# --- 3. init profile engine ------------------------------------------------
+# The one check in this file with no test asserting it can fail. Its only
+# failure branch was deletable with the whole suite green:
+#
+#   mutating: fail(f"build '{b}' maps to unknown agents: {dropped}")
+#   verdict: SURVIVED — nothing covers this branch
+#   902 passed, 2 skipped
+#
+# What it guards is real: project-profiles.json names agents by string, and a
+# renamed or removed catalog entry means `/ecosystem-brain:init` scaffolds a
+# project whose agent roster silently loses members.
+
+
+def test_profiles_check_fails_when_a_build_maps_to_an_unknown_agent(monkeypatch, capsys):
+    import init_project as ip
+
+    monkeypatch.setattr(ip, "classify_agents", lambda names, profiles: ([], ["ghost-agent"]))
+    sc.check_profiles()
+    assert sc.fails, "an unresolvable agent did not fail the check"
+    out = capsys.readouterr().out
+    assert "ghost-agent" in out, "the report must name the agent that could not be resolved"
+
+
+def test_profiles_check_passes_when_every_agent_resolves(capsys):
+    """The standing assertion, against the real profiles and the real catalog."""
+    sc.check_profiles()
+    assert sc.fails == []
+    assert "build types resolve" in capsys.readouterr().out
+
+
+def test_profiles_check_fails_when_composing_agents_md_raises(monkeypatch):
+    """The compose call is there so a template break is caught before a user
+    meets it. An exception escaping selfcheck is a crash, not a finding — but
+    it must not be silence either."""
+    import init_project as ip
+
+    def boom(name, cfg):
+        raise KeyError("stack_blurb")
+
+    monkeypatch.setattr(ip, "compose_agents_md", boom)
+    with pytest.raises(KeyError):
+        sc.check_profiles()

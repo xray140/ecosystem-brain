@@ -2,6 +2,234 @@
 
 All notable changes to ecosystem-brain. Dates are ISO-8601.
 
+## [4.8.1] — 2026-09-03
+
+**Eight weeks of heartbeat reports were mojibake, and every run exited 0.**
+`maintenance.run()` captured its children with `text=True` and no `encoding=`,
+so their UTF-8 came back decoded through the locale codepage: every em dash a
+check printed (bytes E2 80 94) was written into `memory/maintenance/<date>.md`
+as three cp1252 characters, and `update --check` filed its tick as `âœ“`. The
+corruption grew with the report — 1 occurrence on 2026-07-15, 15 by 2026-08-31 —
+while doctor, selfcheck, project-doctor and task-doctor all passed, because
+nothing was broken in the sense a check measures. The run was fine. The artefact
+was not. That is the failure `memory/decisions/verification-integrity.md` names,
+and the line at fault was the only uncovered line in the file.
+
+Fixed at the site, then generalised: `tests/test_subprocess_encoding.py` walks
+every `.py` under `scripts/`, `hooks/`, `skills/` and `tests/` with `ast` and
+requires each text-mode subprocess call to name `encoding="utf-8"` and an
+explicit `errors=`. Sixteen call sites already did; eleven did not.
+
+Fixing the capture side surfaced the other half of the boundary. With the parent
+finally decoding UTF-8, `memory-search.py status` still arrived as
+`memory search index � vault has 51 note(s)`: a child whose stdout is a pipe
+*encodes* with the locale codepage unless it says otherwise. Seven entry points
+never reconfigured stdout, and `selfcheck.py` was getting it right only by
+accident — it imports `scan_agent`, which reconfigures at import time, and
+reconfiguring is process-global. Both halves are now enforced, and the decision
+is written down in `memory/decisions/encoding-discipline.md`.
+
+`errors=` earned its place within the hour. Fixing the encoding alone made
+`mutate_checks.py` decode strictly, and its next run died in a subprocess reader
+*thread* on byte 0x97 — a cp1252 em dash from a French-locale child — reporting
+all 20 mutants caught and exiting 1 anyway, with the captured output truncated
+and nothing to say why. Not every child is ours: `git`, `gh`, `npm` and cmd.exe
+all speak the console codepage on occasion.
+
+**`memory/roadmap.md` had gone four releases stale, and nothing read it.** It is
+the note a fresh session opens first, and it opened with *Current state
+(v4.4.3)* against a repo at v4.8.0, citing 619 tests at 89% coverage against 756
+at 93%, `memory-search.py` "lowest at 70%" when it is at 100%, an 8-check
+selfcheck, and a CI job on ubuntu alone — the Windows runner added in v4.7.1 was
+missing from the one document that orients someone to the platform this
+ecosystem runs on.
+
+`selfcheck` check 9 now reads seven derivable claims back against the repo:
+version, command count, build types, first-party agent count, selfcheck's own
+step count (counted from the calls in `main()`, not the definitions), heartbeat
+check count, and the coverage floor. A claim that no longer *matches* fails; so
+does a claim that has been *deleted*, because deleting the sentence must not be
+the way to silence the gate. The volatile numbers are gone from the note on
+purpose: test count and coverage percentage move with every commit, so the note
+cites the floor, which moves only when a person raises it.
+
+**`plugin.json` was still advertising "local semantic search".** v4.8.0 said
+every doc that claimed semantic search now says keyword search. README did.
+`plugin.json` — the marketplace description, the one line someone reads before
+installing any of this — did not, for eleven days, because nothing reads it
+either. Corrected, and `test_ollama_is_gone.py` now holds the shipped
+descriptions, commands and skills to it. History is still free to say what
+semantic search was and what removing it cost; `CHANGELOG.md` and `memory/` are
+deliberately not scanned.
+
+**CI was red on master from two commits that touched only memory notes.** The
+step was `verify_templates.py`, failing on both platforms with `npm install`
+crashing inside arborist — *Cannot read properties of null (reading
+'edgesOut')* — while the same template scaffolded green locally on npm 11.16.0.
+Nothing in the repo had changed. Two things outside it had, and both were
+unpinned: `templates/typescript-project/package.json` carried five floating `^`
+ranges with no lockfile, and **CI installed no node at all**, so the typescript
+baseline ran on whatever the runner image shipped that morning.
+
+This is the unpinned-ruff incident of v4.3.x in the other language, five weeks
+later. Fixed the same way: exact versions in the template (biome 1.9.4,
+@types/node 22.20.1, tsx 4.23.13, typescript 5.9.3, vitest 4.1.11 — the
+resolution verified green locally), and `actions/setup-node` pinned by commit
+SHA to node **24.20.0**. The exact patch, not the major: npm ships *with* node,
+so `24` would leave the thing that actually broke free to drift.
+
+Three tests in `test_selfcheck.py` hold it: template dependency specs must be
+exact, `node-version` must be a full patch version, and every action in the
+workflow must be a 40-char SHA — the last one caught nothing today and exists
+because a tag is mutable and runs with a `GITHUB_TOKEN`. See
+`memory/decisions/toolchain-pinning.md`, which had claimed since 2026-07-31
+that the ecosystem "was pinning what it downloaded and floating what it ran".
+It was right, and it was describing Python only.
+
+**All three unverified audit leads turned out to be real.** Seven of the audit
+workflow's verify agents died on a session limit and its script counted a null
+verdict as "not refuted", so three findings were reported as having survived
+both skeptics when they had never been judged — the same defect this release is
+about, in the harness written to find it. Each was then checked by hand, by
+planting the mutation and running the whole suite:
+
+    [SURVIVED] guard_destructive: block becomes allow          889 passed
+    [SURVIVED] update-agents: drop the upstream CRLF handling  898 passed
+    [SURVIVED] selfcheck: check_profiles cannot report a build
+               that maps to agents which do not exist          902 passed
+
+`_write_agent` is stubbed by both fixtures that touch it, so the body v4.3.4 was
+an entire release about — killing upstream `\r\n` and Windows text-mode
+translation — never executed under pytest. `check_profiles` was the one selfcheck
+check with no test asserting it can fail, and what it guards is real: profiles name
+agents by string, so a renamed catalog entry means `/ecosystem-brain:init` scaffolds a
+project whose agent roster silently loses members.
+
+Ten tests added across the three, each verified to catch the mutant it exists
+for. Table 32 -> 36, still 0 missed and 0 skipped.
+
+**The destructive guard's entry point had no test, and two mutants proved it.**
+Every test called `check()` directly. `hooks.json` wires the *process* —
+`{"if": "Bash(rm *)", "command": "uv run ... guard_destructive.py"}` — so
+everything between stdin and the exit code was the part Claude Code depends on
+and the one part with nothing asserted about it. Both of these survived the full
+889-test suite:
+
+    [SURVIVED] block becomes allow                  889 passed, 2 skipped
+    [SURVIVED] read a key the payload never sends   889 passed, 2 skipped
+
+`rm -rf /` could stop being refused with every gate green, including the
+mutation harness — its only guard_destructive mutant flips a flag inside
+`check_rm`, measuring the parser rather than the guard.
+
+Seven tests now drive `main()` over real stdin: the block decision and exit 2,
+the silent allow, the exact `tool_input.command` key, unparseable stdin
+deliberately not blocking, and one end-to-end case per guarded family. Plus one
+asserting `hooks.json` still points at the script, because a rename would leave
+the tests green and the guard unwired. Both mutants are registered; the table is
+34, still 0 missed and 0 skipped.
+
+**selfcheck reported a red suite as "did NOT run".** The offline branch — added
+so a machine with no DNS is not accused of having broken tests — matched a
+network phrase anywhere in the child's output. A genuinely failing run whose own
+message quoted one was filed as `[skip] pinned toolchain unreachable (offline) —
+pytest did NOT run`, with `fails == []` and exit 0. Demonstrated, not theorised:
+
+    5. Unit tests (pytest) + coverage floor 91%
+      [skip] pinned toolchain unreachable (offline) - pytest did NOT run
+    fails recorded: []
+
+That exit code is what the git pre-push hook, CI and the weekly heartbeat all
+gate on. Worse, the phrases live in this repo's own corpus
+(`tests/test_selfcheck_checks.py`, `DNS_ERROR`), so the test most likely to emit
+them is `test_an_unreachable_toolchain_is_not_reported_as_a_finding` — the one
+guarding this branch. It would have silenced itself.
+
+The branch now also requires proof the tool never ran: a pytest run summary or
+ruff's own findings mean it started, whatever else the output quotes. The
+legitimate offline skip is unchanged, which is asserted in both directions.
+
+**`registry/installed.json` listed an agent that exists nowhere, and everything
+agreed it was fine.** 14 entries, 13 files. `cli-developer` had no file in the
+repo and none in `~/.claude`, and:
+
+- `update-agents.py --check` said **up-to-date** — it compares the fetched
+  upstream against the hash stored in the registry and never opens the local
+  file, so its green tick certified the freshness of something it had not looked
+  at. `sync_local` has had `if not repo_file.exists()` since it was written; the
+  github path never got one.
+- `doctor.py` said **healthy, nothing orphaned** — it walks repo-files → live,
+  and live → manifest. Nothing walked registry → repo-files.
+- the SessionStart hook advertised `cli-developer` to **every session**, so the
+  agent roster offered each time included one that could never be invoked.
+
+Fixed in all three places: the entry is gone, `doctor` grew section 4 (registry
+→ repo, with skills checked by their `SKILL.md` rather than an empty directory),
+and `update_item` refuses a github entry whose file is absent — which also
+closes the other direction, where `--all` would have silently materialised a
+deleted agent back into `agents/` and `~/.claude` from a pin nobody re-approved.
+
+Two existing fixtures had to state a premise they were relying on silently:
+`test_update_agents.patched` and `test_rollback.wired` never created the agent's
+file, because nothing had ever looked for it.
+
+**The mutation harness left a live mutant in the working tree.** Its restore
+write failed with EINVAL — a concurrent reader had the file open — the exception
+escaped the `finally`, and `elif False:` sat inside `check_roadmap` in
+`selfcheck.py` until `git status` showed it. The docstring had promised since the
+file was written that the source is "restored either way, including on failure";
+it was describing the `finally` around a failing *test* and said nothing about a
+failing *restore*.
+
+The restore is now retried and verified by reading the file back; a failure names
+the file, prints the `git checkout --` that undoes it, and fails the run. The
+harness is also importable at last — it executed its whole table at import time,
+which is why the tool this repo verifies itself with had never been tested.
+Twelve tests cover it now, including a write that returns cleanly and leaves
+different bytes, which is exactly the failure it exists to catch elsewhere.
+
+Mutation table: 20 → 32, still 0 missed and 0 skipped.
+
+**The supply-chain gate had 20 rules and no evidence that 20 of them worked.**
+`scan_agent.py` sat at 100% line coverage, which proves the loop over `RULES`
+ran and nothing else. It could not say that a rule matched what its label
+claimed, that it still matched after someone tightened its regex, or that it was
+doing any work at all — a rule whose every example was also caught by a
+neighbour could be deleted with the suite still green.
+
+`tests/test_scan_agent_rules.py` is a corpus instead of a set of examples. Each
+of the 20 rules gets a probe it must flag with an exact label and severity, and
+a near-miss — benign text that looks like the attack — it must not. Two tests
+keep the corpus honest as the table grows: one fails when a rule is added
+without a probe, the other requires probes and rules to be the same number and
+every probe's label to be one a rule actually defines.
+
+`test_no_rule_is_dead_weight` is the part that matters. It deletes each rule in
+turn and requires one of that rule's own probes to stop being flagged — 20
+mutations of a data table, run in the normal suite. All 20 rules survive it, so
+the number is now 20 rules that each catch something nothing else catches. The
+tool-grant heuristic is checked separately, since it is a function rather than a
+row and the loop cannot reach it.
+
+Verified against the corpus itself: a duplicated rule, a rule with no probe, and
+a neutered regex each turn the file red. Three matching entries are registered
+in `mutate_checks.py` (26 caught, 0 missed, 0 skipped), and `selfcheck` check 9
+now reads the roadmap's advertised rule count back against `len(RULES)` — the
+count means something now, so it gets checked like the other claims.
+
+One characteristic is pinned as deliberate rather than fixed: prose *about* an
+attack trips the same rule as the attack. A prose exemption would be a bypass —
+an attacker need only phrase the payload as documentation — so the gate fails
+closed and a human reads the quarantined file.
+
+**Two mutants had been unplantable since v4.8.0.** `mutate_checks.py` anchored
+on `args.offline` and on the Ollama request body, both removed with the backend,
+so it skipped them and exited 1 on every run — a harness that reports its own
+red is one nobody runs twice. Retargeted onto the properties that outlived the
+backend: a status check that cannot report an under-covered index, and a
+truncation that no longer stops a long note drowning its own topic. With three
+new mutants for the fixes above, the harness is 20 caught, 0 missed, 0 skipped.
+
 ## [4.8.0] — 2026-08-22
 
 **Ollama is out.** Not demoted — removed.

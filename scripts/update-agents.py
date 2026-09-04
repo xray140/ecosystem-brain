@@ -73,6 +73,15 @@ def update_item(entry: dict, kind: str, check_only: bool) -> str:
             return "local"
         return sync_local(name, kind)[0]
 
+    # The same guard sync_local has had all along, on the path that lacked it.
+    # Without it the comparison is upstream-vs-registry-hash, so a deleted agent
+    # reports "up-to-date" and `--all` would silently materialise it back into
+    # agents/ and ~/.claude from a pin nobody re-approved. doctor's section 4
+    # catches the state; this stops the updater from asserting it is fine.
+    repo_file, _global_file = layout.target_paths(kind, name)
+    if not repo_file.exists():
+        return "missing-in-repo"
+
     repo, path = parsed
     ref = entry.get("ref", "main")
     pinned = entry.get("commit")

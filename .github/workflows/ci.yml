@@ -50,6 +50,36 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
 
+      # Pinned node, therefore pinned npm. Nothing else here installs node: the
+      # typescript template's baseline ran on whatever the runner image happened
+      # to ship, and on 2026-09-03 that turned CI red on two commits that touched
+      # nothing but memory notes — `npm install` crashing in arborist with
+      # "Cannot read properties of null (reading 'edgesOut')" on both platforms,
+      # while the same template scaffolded green locally.
+      #
+      # Same lesson as the unpinned ruff (see requirements-dev.txt and
+      # memory/decisions/toolchain-pinning.md): a toolchain that resolves itself
+      # on every run makes the build a function of the date. The exact patch is
+      # pinned, not the major, because npm ships *with* node — `24` would let the
+      # thing that broke drift again.
+      #
+      # Which npm, decided by experiment rather than by argument. The step
+      # fails identically on both platforms with the runner's own npm; pinning
+      # 24.20.0 (npm 11.19.0) turned windows green and left ubuntu failing;
+      # 22.23.2 (npm 10.9.8) turned windows red again. So 11.19.0 is the best
+      # known pin and the remaining ubuntu failure is not a version the pin can
+      # reach. A first reading blamed libc-tagged optional packages
+      # (@biomejs/cli-linux-x64-musl declares libc ["musl"]) because libc is
+      # evaluated only on linux — but that cannot explain windows failing under
+      # 10.9.8, so it is not the whole story and is recorded as refuted rather
+      # than quietly dropped. verify_templates.py now prints the runtime and
+      # follows npm's own debug log, so the next run reports a stack instead of
+      # seven words.
+      - name: Set up node (pins npm for the template baseline)
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+
       # No dedicated line-endings step: tests/test_bat_files_are_ascii.py reads
       # the .bat files off disk, and on a runner the disk *is* the checkout — so
       # the pytest step below already asserts .gitattributes was honoured, on
@@ -61,6 +91,28 @@ jobs:
       # Toolchain pinned in requirements-dev.txt — an unpinned `--with ruff`
       # resolves the newest release on every run, and ruff's default rule set
       # moving once turned this job red with findings no commit introduced.
+      # setup-node reported `node: v24.20.0` and the template baseline three
+      # steps later ran /usr/local/bin/node v22.23.2 with npm 10.9.8 — the runner
+      # image's own. The pin was being installed and then not used, so every
+      # ubuntu failure attributed to a pinned npm was measured on an unpinned
+      # one. A pin nobody checks is decoration; this fails loudly instead, and
+      # prints what it saw so the next person does not have to infer it.
+      - name: The node pin is actually in effect
+        run: |
+          echo "PATH=$PATH"
+          echo "--- every node/npm on PATH ---"
+          which -a node npm || true
+          echo "--- what answers ---"
+          node --version
+          npm --version
+          echo "--- what uv run's python resolves, which is what the"
+          echo "    template baseline actually uses ---"
+          uv run --no-project python -c "import os, shutil, sys; print('node ->', shutil.which('node')); print('npm  ->', shutil.which('npm')); print('sys.executable ->', sys.executable); print('PATH[:4] ->'); [print('   ', e) for e in os.environ['PATH'].split(os.pathsep)[:4]]"
+          test "$(node --version)" = "v24.20.0" || {
+            echo "::error::node pin not in effect: $(node --version) != v24.20.0"
+            exit 1
+          }
+
       - name: Lint (ruff)
         run: uv run --with-requirements requirements-dev.txt --no-project ruff check scripts tests hooks skills
 
@@ -82,8 +134,18 @@ jobs:
       # real into a temp dir and runs its own build+test — the "verified green
       # baseline" rule the ecosystem applies to projects it creates, applied to
       # the blueprints those projects are made from.
+      #
+      # The shell is the only participant here whose PATH is intact. `uv run`
+      # prepends the interpreter's bin directory, which on this image is
+      # /usr/local/bin — and that ships its own node and npm, so the pinned
+      # toolchain was shadowed inside every uv-run child while the shell one
+      # step earlier resolved it correctly. `command -v` runs in the shell and
+      # settles it; ECOSYSTEM_TOOL_* is honoured by init_project.resolve_exe.
       - name: Templates still scaffold into a green project
-        run: uv run --no-project python scripts/verify_templates.py
+        run: |
+          ECOSYSTEM_TOOL_NODE="$(command -v node)" \
+          ECOSYSTEM_TOOL_NPM="$(command -v npm)" \
+          uv run --no-project python scripts/verify_templates.py
 
       # The flagship command, end to end. It used to write a memory card, a MOC
       # line and a registry mutation into the repo no matter what, so running it
@@ -109,6 +171,8 @@ jobs:
           # missing-identity path is covered by tests instead.
           git config --global user.name  "ecosystem-brain ci"
           git config --global user.email "ci@example.invalid"
+          ECOSYSTEM_TOOL_NODE="$(command -v node)" \
+          ECOSYSTEM_TOOL_NPM="$(command -v npm)" \
           uv run --no-project python scripts/init_project.py --apply \
             --build cli --rigor prototype --touches none --name ci-apply --skip-agents
           test -f "$ECOSYSTEM_VAULT/projects/ci-apply.md"

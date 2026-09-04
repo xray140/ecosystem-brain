@@ -3,8 +3,8 @@
 The defect: `--check` built a fresh index, printed its counts, and returned 0
 whatever it found. It could not fail, so nothing ever noticed the manifest going
 stale — and nothing else looked at it either. `memory-search status` counts .md
-files against the semantic database and never opens `index.json`, and the weekly
-heartbeat refreshed only the semantic index.
+files against the keyword search database and never opens `index.json`, and the
+weekly heartbeat refreshed only that one.
 
 So on 2026-08-21 the manifest had been frozen for 18 days: it listed a note that
 no longer existed, missed three that did, and five more had changed underneath

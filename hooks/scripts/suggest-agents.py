@@ -15,6 +15,9 @@ import os
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+
 # Drive-letter <-> Git-Bash-mount translation applies on Windows ONLY. Off
 # Windows, `/d/projects/app` is a real posix path, not a mounted drive, and
 # rewriting it to `D:/projects/app` points the hook at nothing — so it detects

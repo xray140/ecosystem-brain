@@ -8,6 +8,7 @@ in the report — and that a non-gating check (network flakiness) does not.
 from __future__ import annotations
 
 import subprocess
+import sys
 
 import maintenance as mt
 import pytest
@@ -147,3 +148,34 @@ def test_checks_invoke_scripts_that_exist():
         from pathlib import Path
 
         assert Path(script).exists(), f"{script} referenced by the heartbeat does not exist"
+
+
+# --- the report is the artefact, and it is the thing that was broken ----------
+# For eight weeks every check in this file passed while the reports on disk were
+# corrupted, because each one stubs `run`. These two exercise the real one.
+EM_DASH_CHILD = (
+    "import sys; sys.stdout.reconfigure(encoding='utf-8'); print('healthy — in sync')"
+)
+
+
+def test_run_decodes_child_output_as_utf8_not_the_locale_encoding():
+    """`text=True` alone decodes with the locale encoding — cp1252 on Windows —
+    so a child's UTF-8 em dash arrived as three characters and the heartbeat
+    wrote them down without a word of complaint."""
+    r = mt.run([sys.executable, "-c", EM_DASH_CHILD])
+    assert r.returncode == 0
+    assert "healthy — in sync" in r.stdout
+    assert "â€”" not in r.stdout, "child output was decoded with the locale encoding"
+    assert "�" not in r.stdout
+
+
+def test_the_written_report_carries_the_character_the_child_printed(report_dir, monkeypatch):
+    """End to end: what a check prints is what the report says it printed."""
+    monkeypatch.setattr(
+        mt, "CHECKS", [("probe", [sys.executable, "-c", EM_DASH_CHILD], True)]
+    )
+    assert mt.main() == 0
+    text = next(report_dir.glob("*.md")).read_text(encoding="utf-8")
+    assert "healthy — in sync" in text
+    assert "â€”" not in text
+    assert "�" not in text

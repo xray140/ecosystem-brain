@@ -325,17 +325,80 @@ def append_to_moc(name: str, blurb: str, moc: Path | None = None) -> bool:
     return True
 
 
+def tool_override(name: str) -> str | None:
+    """An explicitly named binary for `name`, or None.
+
+    `uv run` prepends the interpreter's bin directory to PATH, so a tool
+    resolved inside a uv-run child can be a different copy than the one the
+    caller's shell resolves. On GitHub's ubuntu image that directory is
+    /usr/local/bin, which ships node and npm — so a pinned node installed by
+    actions/setup-node was shadowed, and four CI runs measured a toolchain
+    nobody had chosen. nvm, fnm and volta shadow the same way.
+
+    ECOSYSTEM_TOOL_NPM=/path/to/npm lets the caller settle it, because the
+    caller is the one whose PATH is intact.
+
+    The value names a TOOL, not necessarily a launchable file. `command -v
+    npm` in Git Bash answers the extensionless bash script, and Windows
+    answers CreateProcess with WinError 193; the launchable sibling is
+    npm.CMD. So the directory is what is trusted, and the executable inside
+    it is resolved the same way PATH would resolve it.
+    """
+    value = os.environ.get(f"ECOSYSTEM_TOOL_{name.upper().replace('-', '_')}")
+    if not value:
+        return None
+    parent = Path(value).parent
+    if parent.is_dir():
+        found = shutil.which(name, path=str(parent))
+        if found:
+            return found
+    # No launchable match in the named directory: fall back to PATH rather
+    # than hand the caller a file that cannot be executed. A stale override
+    # must degrade to the old behaviour, not to a traceback.
+    return None
+
+
+def tool_env(env: dict | None = None) -> dict:
+    """A child environment where every override's directory leads PATH.
+
+    Resolving the binary is not enough on its own: npm's shebang is
+    `#!/usr/bin/env node`, so a correctly-resolved npm still finds the wrong
+    node if PATH says so. Put the chosen tools in front for grandchildren too.
+
+    The directory is what is trusted, matching tool_override — the value may
+    name a file Windows cannot execute (`command -v npm` in Git Bash) while
+    still naming the right place to look.
+    """
+    out = dict(env or os.environ)
+    heads = []
+    for key, value in out.items():
+        if not key.startswith("ECOSYSTEM_TOOL_") or not value:
+            continue
+        parent = Path(value).parent
+        if parent.is_dir():
+            heads.append(str(parent))
+    if heads:
+        out["PATH"] = os.pathsep.join([*dict.fromkeys(heads), out.get("PATH", "")])
+    return out
+
+
 def resolve_exe(cmd: list[str]) -> list[str]:
     """argv with argv[0] resolved to a real executable path.
 
-    On Windows `npm` is `npm.CMD`. `subprocess.run` without a shell will not find
-    it by bare name and raises FileNotFoundError — so the typescript template's
-    baseline crashed the whole `init --apply` with a traceback instead of
-    reporting a failed check. `shutil.which` does find it, so resolve up front.
+    On Windows `npm` is `npm.CMD`. `subprocess.run` without a shell will not
+    find it by bare name and raises FileNotFoundError — so the typescript
+    template's baseline crashed the whole `init --apply` with a traceback
+    instead of reporting a failed check. `shutil.which` does find it, so
+    resolve up front.
+
+    An ECOSYSTEM_TOOL_<NAME> override wins over PATH: see tool_override.
 
     Returns cmd unchanged when the tool is absent, letting the caller's own
     error path report a missing tool rather than raising here.
     """
+    override = tool_override(cmd[0])
+    if override:
+        return [override, *cmd[1:]]
     exe = shutil.which(cmd[0])
     return [exe, *cmd[1:]] if exe else cmd
 
@@ -353,8 +416,13 @@ def verify_baseline(dest: Path, template: str) -> bool:
         label = " ".join(cmd)
         try:
             r = subprocess.run(  # noqa: PLW1510 — returncode is inspected below
-                resolve_exe(cmd), cwd=str(dest), capture_output=True, text=True,
-                encoding="utf-8", errors="replace",
+                resolve_exe(cmd),
+                cwd=str(dest),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env=tool_env(),
             )
         except OSError as e:
             # A missing or unlaunchable tool is a red baseline, not a crash.
@@ -404,7 +472,11 @@ def print_summary(
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
     # check=False: every caller reads .returncode and reports it itself.
-    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", check=False)
+    # errors=replace: npm and git on Windows do not promise UTF-8, and a
+    # decode error must not abort a baseline that otherwise ran.
+    return subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False
+    )
 
 
 def apply(
