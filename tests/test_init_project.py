@@ -187,29 +187,74 @@ def test_all_build_types_resolve_and_compose(profiles):
 # actions/setup-node was shadowed inside every uv-run child, and four CI runs
 # measured a toolchain nobody had chosen while the shell one step earlier
 # resolved it correctly. nvm, fnm and volta shadow the same way.
+#
+# The override names a TOOL, not necessarily a launchable file: `command -v npm`
+# in Git Bash answers the extensionless bash script, and Windows answers
+# CreateProcess with WinError 193. So the directory is trusted and the
+# executable inside it is resolved the way PATH would resolve it.
+
+
+def _which_in(chosen_dir, target, otherwise="/usr/local/bin/npm"):
+    """A which() that finds `target` when pointed at `chosen_dir`, else PATH's copy."""
+
+    def fake_which(name, path=None):
+        if path == str(chosen_dir):
+            return str(target)
+        return otherwise
+
+    return fake_which
 
 
 def test_an_override_wins_over_path(tmp_path, monkeypatch):
-    chosen = tmp_path / "npm"
-    chosen.write_text("#!/bin/sh\n", encoding="utf-8")
-    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(chosen))
-    monkeypatch.setattr(ip.shutil, "which", lambda name: "/usr/local/bin/npm")
-    assert ip.resolve_exe(["npm", "install"]) == [str(chosen), "install"]
+    chosen = tmp_path / "pinned"
+    chosen.mkdir()
+    target = chosen / "npm.CMD"
+    target.write_text("", encoding="utf-8")
+    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(chosen / "npm"))
+    monkeypatch.setattr(ip.shutil, "which", _which_in(chosen, target))
+    assert ip.resolve_exe(["npm", "install"]) == [str(target), "install"]
+
+
+def test_the_launchable_sibling_is_chosen_not_the_named_file(tmp_path, monkeypatch):
+    """WinError 193, in one test. `command -v npm` names `npm`; the file Windows
+    can actually start is `npm.CMD` beside it. Returning the named file failed
+    the whole template step on windows-latest."""
+    chosen = tmp_path / "pinned"
+    chosen.mkdir()
+    (chosen / "npm").write_text("#!/bin/sh\n", encoding="utf-8")
+    launchable = chosen / "npm.CMD"
+    launchable.write_text("", encoding="utf-8")
+    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(chosen / "npm"))
+    monkeypatch.setattr(ip.shutil, "which", _which_in(chosen, launchable))
+    assert ip.resolve_exe(["npm"]) == [str(launchable)]
 
 
 def test_path_is_used_when_no_override_is_set(monkeypatch):
     monkeypatch.delenv("ECOSYSTEM_TOOL_NPM", raising=False)
-    monkeypatch.setattr(ip.shutil, "which", lambda name: "/usr/local/bin/npm")
+    monkeypatch.setattr(ip.shutil, "which", lambda name, path=None: "/usr/local/bin/npm")
     assert ip.resolve_exe(["npm", "install"]) == ["/usr/local/bin/npm", "install"]
 
 
-def test_an_override_naming_a_missing_file_is_ignored(tmp_path, monkeypatch):
-    """A stale override must fall back to PATH, not point the baseline at
-    nothing — the caller would get a bare FileNotFoundError instead of the
-    'tool is missing' report resolve_exe exists to preserve."""
-    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(tmp_path / "not-here"))
-    monkeypatch.setattr(ip.shutil, "which", lambda name: "/usr/local/bin/npm")
+def test_an_override_naming_a_missing_directory_falls_back_to_path(tmp_path, monkeypatch):
+    """A stale override must degrade to the old behaviour, not to a traceback:
+    the caller would get a bare OSError instead of the 'tool is missing' report
+    resolve_exe exists to preserve."""
+    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(tmp_path / "gone" / "npm"))
+    monkeypatch.setattr(ip.shutil, "which", lambda name, path=None: "/usr/local/bin/npm")
     assert ip.resolve_exe(["npm", "install"]) == ["/usr/local/bin/npm", "install"]
+
+
+def test_an_override_directory_with_no_such_tool_falls_back_to_path(tmp_path, monkeypatch):
+    """The directory exists but holds nothing launchable for this tool."""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(empty / "npm"))
+
+    def fake_which(name, path=None):
+        return None if path == str(empty) else "/usr/local/bin/npm"
+
+    monkeypatch.setattr(ip.shutil, "which", fake_which)
+    assert ip.resolve_exe(["npm"]) == ["/usr/local/bin/npm"]
 
 
 def test_the_override_directory_leads_path_for_grandchildren(tmp_path, monkeypatch):
@@ -219,8 +264,7 @@ def test_the_override_directory_leads_path_for_grandchildren(tmp_path, monkeypat
     chosen.mkdir()
     (chosen / "npm").write_text("#!/bin/sh\n", encoding="utf-8")
     monkeypatch.setenv("ECOSYSTEM_TOOL_NPM", str(chosen / "npm"))
-    env = ip.tool_env()
-    assert env["PATH"].split(os.pathsep)[0] == str(chosen)
+    assert ip.tool_env()["PATH"].split(os.pathsep)[0] == str(chosen)
 
 
 def test_tool_env_is_unchanged_without_overrides(monkeypatch):

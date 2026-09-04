@@ -333,14 +333,28 @@ def tool_override(name: str) -> str | None:
     caller's shell resolves. On GitHub's ubuntu image that directory is
     /usr/local/bin, which ships node and npm — so a pinned node installed by
     actions/setup-node was shadowed, and four CI runs measured a toolchain
-    nobody had chosen. The same shadowing happens with nvm, fnm or volta.
+    nobody had chosen. nvm, fnm and volta shadow the same way.
 
     ECOSYSTEM_TOOL_NPM=/path/to/npm lets the caller settle it, because the
     caller is the one whose PATH is intact.
+
+    The value names a TOOL, not necessarily a launchable file. `command -v
+    npm` in Git Bash answers the extensionless bash script, and Windows
+    answers CreateProcess with WinError 193; the launchable sibling is
+    npm.CMD. So the directory is what is trusted, and the executable inside
+    it is resolved the same way PATH would resolve it.
     """
     value = os.environ.get(f"ECOSYSTEM_TOOL_{name.upper().replace('-', '_')}")
-    if value and Path(value).is_file():
-        return value
+    if not value:
+        return None
+    parent = Path(value).parent
+    if parent.is_dir():
+        found = shutil.which(name, path=str(parent))
+        if found:
+            return found
+    # No launchable match in the named directory: fall back to PATH rather
+    # than hand the caller a file that cannot be executed. A stale override
+    # must degrade to the old behaviour, not to a traceback.
     return None
 
 
@@ -350,12 +364,19 @@ def tool_env(env: dict | None = None) -> dict:
     Resolving the binary is not enough on its own: npm's shebang is
     `#!/usr/bin/env node`, so a correctly-resolved npm still finds the wrong
     node if PATH says so. Put the chosen tools in front for grandchildren too.
+
+    The directory is what is trusted, matching tool_override — the value may
+    name a file Windows cannot execute (`command -v npm` in Git Bash) while
+    still naming the right place to look.
     """
     out = dict(env or os.environ)
     heads = []
     for key, value in out.items():
-        if key.startswith("ECOSYSTEM_TOOL_") and Path(value).is_file():
-            heads.append(str(Path(value).parent))
+        if not key.startswith("ECOSYSTEM_TOOL_") or not value:
+            continue
+        parent = Path(value).parent
+        if parent.is_dir():
+            heads.append(str(parent))
     if heads:
         out["PATH"] = os.pathsep.join([*dict.fromkeys(heads), out.get("PATH", "")])
     return out

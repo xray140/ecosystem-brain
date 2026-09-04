@@ -6,7 +6,13 @@ suite proves nothing unless it would go red for the defect it claims to guard.
 
 Each mutation is a one-line textual change to the SOURCE, chosen to reintroduce
 the exact defect the tool exists for. The file is restored either way, including
-on failure.
+on failure — and the restore is VERIFIED by reading the file back, because a
+write can fail too. On 2026-09-04 one did: a concurrent reader made it fail with
+EINVAL, the exception escaped the `finally`, and a live `elif False:` was left
+in scripts/selfcheck.py. The old wording described the `finally`, which handles
+a failing test, not a failing restore. A harness that can silently leave a
+mutation behind is worse than no harness, because everything downstream then
+measures poisoned source.
 
 Its first run found a real hole: the truncation test subclassed the embedder
 and re-implemented the truncation inside the test, so it passed no matter what
@@ -21,6 +27,7 @@ mutation behind. Run it deliberately, after adding or changing a check:
 import pathlib
 import subprocess
 import sys
+import time
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -187,6 +194,13 @@ MUTATIONS = [
         "tests/test_selfcheck.py",
     ),
     (
+        "init_project: hand back the named override file, not the launchable one",
+        "scripts/init_project.py",
+        "        found = shutil.which(name, path=str(parent))",
+        "        found = str(Path(value)) if Path(value).is_file() else None",
+        "tests/test_init_project.py",
+    ),
+    (
         "verify_templates: stop following the log npm points at",
         "scripts/verify_templates.py",
         "            deeper = follow_debug_log(output)",
@@ -254,25 +268,68 @@ PYTEST = [
     "-x",
 ]
 
-caught = missed = skipped = 0
-for label, src, find, repl, tests in MUTATIONS:
-    p = pathlib.Path(src)
-    original = p.read_text(encoding="utf-8")
-    if original.count(find) != 1:
-        print(f"  [skip] {label}\n         anchor matched {original.count(find)}x")
-        skipped += 1
-        continue
-    p.write_text(original.replace(find, repl), encoding="utf-8", newline="\n")
-    try:
-        r = subprocess.run([*PYTEST, tests], capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
-    finally:
-        p.write_text(original, encoding="utf-8", newline="\n")
-    if r.returncode != 0:
-        caught += 1
-        print(f"  [caught] {label}")
-    else:
-        missed += 1
-        print(f"  [MISSED] {label}\n           {tests} still passed with the defect reintroduced")
+def restore(path: pathlib.Path, original: str, attempts: int = 5) -> bool:
+    """Put the file back and prove it. True only when the bytes match again.
 
-print(f"\ncaught {caught}, missed {missed}, skipped {skipped} of {len(MUTATIONS)}")
-sys.exit(1 if missed or skipped else 0)
+    Retried: on Windows a concurrent reader can make the write fail with EINVAL,
+    which is transient. Verified: a write that reports success but leaves the
+    file changed is the failure mode this whole harness exists to catch, and it
+    would be absurd to be blind to it here.
+    """
+    for attempt in range(attempts):
+        try:
+            path.write_text(original, encoding="utf-8", newline="\n")
+        except OSError:
+            time.sleep(0.2 * (attempt + 1))
+            continue
+        try:
+            if path.read_text(encoding="utf-8") == original:
+                return True
+        except OSError:
+            pass
+        time.sleep(0.2 * (attempt + 1))
+    return False
+
+
+def run(mutations=MUTATIONS) -> int:
+    caught = missed = skipped = 0
+    stranded: list[str] = []
+    for label, src, find, repl, tests in mutations:
+        p = pathlib.Path(src)
+        original = p.read_text(encoding="utf-8")
+        if original.count(find) != 1:
+            print(f"  [skip] {label}\n         anchor matched {original.count(find)}x")
+            skipped += 1
+            continue
+        p.write_text(original.replace(find, repl), encoding="utf-8", newline="\n")
+        try:
+            r = subprocess.run(
+                [*PYTEST, tests],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+        finally:
+            if not restore(p, original):
+                stranded.append(src)
+                print(f"  [!!] {label}")
+                print(f"       {src} IS STILL MUTATED — restore it before doing anything else:")
+                print(f"       git checkout -- {p.as_posix()}")
+        if r.returncode != 0:
+            caught += 1
+            print(f"  [caught] {label}")
+        else:
+            missed += 1
+            print(f"  [MISSED] {label}\n           {tests} still passed with the defect reintroduced")
+
+    print(f"\ncaught {caught}, missed {missed}, skipped {skipped} of {len(mutations)}")
+    if stranded:
+        print(f"\n[!!] {len(stranded)} file(s) left mutated: {', '.join(sorted(set(stranded)))}")
+        print("     Every check that runs before you fix this is measuring poisoned source.")
+    return 1 if missed or skipped or stranded else 0
+
+
+if __name__ == "__main__":
+    sys.exit(run())

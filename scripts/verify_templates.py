@@ -100,7 +100,12 @@ def runtime_versions(tool: str) -> str:
     parts: list[str] = []
     for probe in VERSION_PROBES.get(tool, ()):
         name = probe[0]
-        where = shutil.which(name)
+        # The path actually used, not what PATH would have offered: an
+        # override changes which binary runs, and a diagnostic that reports
+        # one while running the other is how ubuntu printed
+        # `node v24.20.0 [/usr/local/bin/node]` — two facts, one of them false.
+        where = ip.resolve_exe([name])[0]
+        where = where if where != name else None
         try:
             r = _run(probe, cwd=REPO)
         except OSError as e:  # pragma: no cover — a probe that will not run
