@@ -86,6 +86,27 @@ because a tag is mutable and runs with a `GITHUB_TOKEN`. See
 that the ecosystem "was pinning what it downloaded and floating what it ran".
 It was right, and it was describing Python only.
 
+**The destructive guard's entry point had no test, and two mutants proved it.**
+Every test called `check()` directly. `hooks.json` wires the *process* —
+`{"if": "Bash(rm *)", "command": "uv run ... guard_destructive.py"}` — so
+everything between stdin and the exit code was the part Claude Code depends on
+and the one part with nothing asserted about it. Both of these survived the full
+889-test suite:
+
+    [SURVIVED] block becomes allow                  889 passed, 2 skipped
+    [SURVIVED] read a key the payload never sends   889 passed, 2 skipped
+
+`rm -rf /` could stop being refused with every gate green, including the
+mutation harness — its only guard_destructive mutant flips a flag inside
+`check_rm`, measuring the parser rather than the guard.
+
+Seven tests now drive `main()` over real stdin: the block decision and exit 2,
+the silent allow, the exact `tool_input.command` key, unparseable stdin
+deliberately not blocking, and one end-to-end case per guarded family. Plus one
+asserting `hooks.json` still points at the script, because a rename would leave
+the tests green and the guard unwired. Both mutants are registered; the table is
+34, still 0 missed and 0 skipped.
+
 **selfcheck reported a red suite as "did NOT run".** The offline branch — added
 so a machine with no DNS is not accused of having broken tests — matched a
 network phrase anywhere in the child's output. A genuinely failing run whose own

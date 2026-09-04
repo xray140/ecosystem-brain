@@ -269,6 +269,20 @@ MUTATIONS = [
         'tests/test_update_agents.py',
     ),
     (
+        'guard_destructive: the hook decides allow instead of block',
+        'hooks/scripts/guard_destructive.py',
+        '        print(json.dumps({"decision": "block", "reason": reason}))\n        return 2',
+        '        print(json.dumps({"decision": "allow", "reason": reason}))\n        return 0',
+        'tests/test_guard_destructive.py',
+    ),
+    (
+        'guard_destructive: read a payload key that is never sent, so nothing is inspected',
+        'hooks/scripts/guard_destructive.py',
+        '    command = (payload.get("tool_input") or {}).get("command") or ""',
+        '    command = (payload.get("toolInput") or {}).get("command") or ""',
+        'tests/test_guard_destructive.py',
+    ),
+    (
         "ci: pin an action to a mutable tag",
         ".github/workflows/ci.yml",
         "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
