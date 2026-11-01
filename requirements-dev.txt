@@ -9,7 +9,7 @@
 # Bump deliberately: change the pin, run `scripts/selfcheck.py`, fix the fallout
 # in the same commit.
 ruff==0.16.5
-pytest==9.1.1
+pytest==9.2.0
 # Enforces the coverage floor in selfcheck.check_tests. Pinned for the same
 # reason as the rest: an unpinned resolve can change what counts as covered
 # between runs, and a gate whose threshold moves on its own is not a gate.
